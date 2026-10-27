@@ -24,14 +24,13 @@ collection. It provides a command-line tool and a Rust library.
 
 ## Install
 
-Install a prebuilt release with your package manager. WinGet becomes available
-after its listing is approved.
+Install with your package manager or download a prebuilt release.
 
 | Platform | Installation |
 | --- | --- |
 | macOS 15+ | `brew install pederbe/tap/esdieff` |
 | Linux | [Install with apt or dnf](docs/getting-started/README.md#linux) |
-| Windows | `winget install --id PederBergan.Esdieff --exact` |
+| Windows | [Download the Windows ZIP](https://github.com/pederbe/esdieff/releases/latest/download/esdieff-x86_64-pc-windows-msvc.zip) |
 
 With [Rust](https://rustup.rs) installed, you can also build the command using
 `cargo install --locked esdieff`. The
