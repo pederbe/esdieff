@@ -4,7 +4,7 @@
 //! acquisition and parsing of the plan's sources, an effective view of each model document,
 //! then the plan's Model checking, Sample-value checking and Revision comparison cases. The
 //! rich door lock plan's comparison of the minimal and rich models is the round's only one.
-//! Each round ends with two Recorded traces and one Generation request: thermostat readings
+//! Each round ends with two Recorded traces and one generation request: thermostat readings
 //! checked against the rich thermostat model, door lock credentials checked against the rich
 //! door lock model's length and pattern constraints, and generated values for every definition
 //! of the rich door lock model. Build with the `hotpath` feature for a profile, or without it
@@ -282,6 +282,13 @@ fn compare(
     tally.differences += comparison.differences().len();
 }
 
+/// One Trace entry line for the property at `pointer`, with the JSON `value`.
+fn entry(pointer: &str, value: &str, index: u32) -> String {
+    format!(
+        "{{\"kind\":\"property\",\"pointer\":\"{pointer}\",\"value\":{value},\"label\":\"reading {index}\"}}\n"
+    )
+}
+
 /// A Recorded trace of thermostat readings: target temperatures from 5 to 30 in half steps,
 /// with every hundredth reading at 35, which the thermostat model rejects.
 fn readings() -> String {
@@ -295,8 +302,10 @@ fn readings() -> String {
         } else {
             format!("{}.5", 5 + steps / 2)
         };
-        trace.push_str(&format!(
-            "{{\"kind\":\"property\",\"pointer\":\"/sdfObject/Thermostat/sdfProperty/targetTemperature\",\"value\":{value},\"label\":\"reading {index}\"}}\n"
+        trace.push_str(&entry(
+            "/sdfObject/Thermostat/sdfProperty/targetTemperature",
+            &value,
+            index,
         ));
     }
     trace
@@ -308,12 +317,14 @@ fn credentials() -> String {
     let mut trace = String::new();
     for index in 0..TRACE_ENTRIES {
         let value = if index % 100 == 99 {
-            format!("ab {}", index % 10)
+            format!("\"k {index:04}\"")
         } else {
-            format!("k{index:05}")
+            format!("\"k{index:05}\"")
         };
-        trace.push_str(&format!(
-            "{{\"kind\":\"property\",\"pointer\":\"/sdfObject/Lock/sdfProperty/credential\",\"value\":\"{value}\",\"label\":\"reading {index}\"}}\n"
+        trace.push_str(&entry(
+            "/sdfObject/Lock/sdfProperty/credential",
+            &value,
+            index,
         ));
     }
     trace

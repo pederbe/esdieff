@@ -604,6 +604,40 @@ fn entries_that_share_the_pattern_engine_keep_their_own_polls() {
 }
 
 #[test]
+fn an_entry_near_its_pattern_allowance_settles_as_it_would_alone() {
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied(
+            "model",
+            br#"{"sdfProperty":{"code":{"type":"string","pattern":"^a*a*c"}}}"#,
+        )],
+        esdieff::Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
+    )
+    .unwrap();
+    let code = |value: &str| {
+        format!(
+            "{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n"
+        )
+    };
+    // Backtracking over 992 letters needs just more than one Sample request's 100 polls, so
+    // the value is undetermined when checked alone. In a trace it must stay undetermined
+    // wherever it appears, before or after another entry and after an exhausted one.
+    let edge = "a".repeat(992);
+    let alone = check(&catalogue, &code(&edge));
+    assert_eq!(alone.count(TraceOutcome::Undetermined), 1);
+    let trace = [
+        code("ac"),
+        code(&edge),
+        code(&edge),
+        code(&"a".repeat(1200)),
+        code(&edge),
+    ]
+    .concat();
+    let result = check(&catalogue, &trace);
+    assert_eq!(result.count(TraceOutcome::Passed), 1);
+    assert_eq!(result.count(TraceOutcome::Undetermined), 4);
+}
+
+#[test]
 fn conditions_beyond_eight_are_counted_with_a_count_limit_record() {
     let catalogue = thermostat();
     let extra: String = (0..10)

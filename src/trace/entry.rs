@@ -68,8 +68,6 @@ pub(super) struct Selectors<'s, 'm> {
     model: &'s EffectiveModel<'m>,
     /// The resolution of each pointer for each kind, in `SampleKind::ALL` order.
     resolved: HashMap<String, [Option<Resolution>; 5]>,
-    /// Holds the pattern worker that entries borrow in turn, so the trace starts one engine.
-    patterns: MatchingWork,
 }
 
 impl<'s, 'm> Selectors<'s, 'm> {
@@ -77,7 +75,6 @@ impl<'s, 'm> Selectors<'s, 'm> {
         Self {
             model,
             resolved: HashMap::new(),
-            patterns: MatchingWork::default(),
         }
     }
 
@@ -124,8 +121,9 @@ impl<'s, 'm> Selectors<'s, 'm> {
         }
     }
 
-    /// Decode, read and check one line.
-    pub(super) fn check(&mut self, line: Line<'_>) -> Checked {
+    /// Decode, read and check one line, lending the entry's allowance the pattern worker that
+    /// `patterns` holds for the trace, so entries share one engine.
+    pub(super) fn check(&mut self, line: Line<'_>, patterns: &mut MatchingWork) -> Checked {
         let catalogue = self.model.catalogue;
         let limits = &catalogue.limits;
         // The decoding allowances a Sample source would have in this Catalogue.
@@ -163,9 +161,9 @@ impl<'s, 'm> Selectors<'s, 'm> {
             decoding.numeric,
             limits.equality_pairs,
         );
-        self.patterns.lend_worker(&mut allowance.budget.patterns);
+        patterns.lend_worker(&mut allowance.budget.patterns);
         let outcome = self.settle(&source, &mut allowance, &mut checked, &mut conditions);
-        self.patterns.reclaim_worker(&mut allowance.budget.patterns);
+        patterns.reclaim_worker(&mut allowance.budget.patterns);
         checked.entry.outcome = outcome;
         if outcome != TraceOutcome::Passed {
             checked.entry.conditions = conditions.kept;

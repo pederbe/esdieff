@@ -344,13 +344,17 @@ impl Catalogue {
         result.scope.set_aside |= budget.set_aside;
         let mut room = self.limits.report_bytes - reserve;
         let mut selectors = entry::Selectors::new(&model);
+        // The trace's own allowance holds the pattern worker that each entry borrows in turn.
         for (index, range) in lines.into_iter().enumerate() {
-            let checked = selectors.check(entry::Line {
-                id,
-                number: index as u32 + 1,
-                offset: range.start,
-                bytes: &request.trace[range],
-            });
+            let checked = selectors.check(
+                entry::Line {
+                    id,
+                    number: index as u32 + 1,
+                    offset: range.start,
+                    bytes: &request.trace[range],
+                },
+                &mut budget.patterns,
+            );
             result.partial |= checked.partial;
             result.scope.interpretations |= checked.interpretations;
             result.scope.set_aside |= checked.set_aside;

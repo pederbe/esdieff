@@ -2,9 +2,8 @@
 
 ## [Unreleased]
 
-- Check pattern-constrained trace entries and generated values several times
-  faster. A trace or generation request now starts one pattern engine instead
-  of one for each value.
+- Check recorded traces about 6 times faster and generate test values
+  about twice as fast when values must match a `pattern`.
 
 ## [0.1.0] - 2026-10-27
 

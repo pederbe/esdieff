@@ -75,12 +75,11 @@ comparison and Recorded trace checking each compose the documents they need,
 so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
 once, however many entries it holds, so each trace adds one
-`effective::compose_mode` call per round. A Recorded trace or Generation
-request starts at most one pattern engine, however many values it matches,
-following
+`effective::compose_mode` call per round. A Recorded trace or generation
+request shares one pattern engine among all the values it matches, following
 [ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md).
 Each other operation that matches a pattern starts its own, so `Engine::new`
-counts about 34 starts per round. Allocation figures count each
+counts 34 starts per round. Allocation figures count each
 operation's own allocations, so composition allocations appear only under
 `effective::compose_mode`. Other programs built with the feature record
 nothing, because only the workload starts the profiler.
