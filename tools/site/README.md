@@ -31,6 +31,19 @@ hover and focus, and through the page's motion control. Reduced-motion
 preferences show the complete static result, and so does a page without
 JavaScript.
 
+The main script is deferred. A small inline bootstrap prepares entrances before
+the first paint and restores the static page if the main script fails to load.
+It is authorized by its exact SHA-256 hash in the landing page's meta
+policy and the `/` and `/index.html` policies in `site/_headers`. If you change
+the bootstrap, recalculate its hash and update all three policies:
+
+```sh
+sed -n 's#.*<script id="entrance-bootstrap">\(.*\)</script>.*#\1#p' site/index.html \
+  | tr -d '\n' | openssl dgst -sha256 -binary | openssl base64 -A
+```
+
+Use the output after `sha256-`. Keep the stylesheet external and minified.
+
 ## Combined build and preview
 
 ```sh
