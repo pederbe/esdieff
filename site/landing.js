@@ -1,11 +1,8 @@
-// This head script prepares entrances before the body can paint. With JavaScript
-// disabled, unsupported animation APIs, or reduced motion, the HTML stays visible.
+// The inline bootstrap prepares entrances before paint. This deferred script
+// starts them and connects the controls once the document is ready.
 (function () {
   var capable = window.matchMedia && Element.prototype.animate && 'IntersectionObserver' in window;
   var reduced = capable && window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (capable && !reduced.matches) {
-    document.documentElement.setAttribute('data-entrances-ready', '');
-  }
 
   document.addEventListener('DOMContentLoaded', function () {
 
@@ -103,10 +100,10 @@
           frames = [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }];
           duration = 40000;
         } else if (kind === 'breathe') {
-          var opacity = Number(getComputedStyle(element).opacity);
-          frames = [{ opacity: opacity * .6, transform: 'scale(.96)' },
-            { opacity: opacity, transform: 'scale(1.05)' },
-            { opacity: opacity * .6, transform: 'scale(.96)' }];
+          // Match the hero glow's opacity-25 base level without reading styles.
+          frames = [{ opacity: .15, transform: 'scale(.96)' },
+            { opacity: .25, transform: 'scale(1.05)' },
+            { opacity: .15, transform: 'scale(.96)' }];
           duration = 7000;
         }
         var animation = frames && element.animate(frames, {
