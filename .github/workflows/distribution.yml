@@ -23,8 +23,21 @@ jobs:
   manifests:
     runs-on: windows-2025
     timeout-minutes: 15
-    environment: distribution
+    environment: ${{ inputs.submit_winget && 'distribution' || '' }}
     steps:
+      - name: Require automatic submission setup
+        if: inputs.submit_winget
+        shell: pwsh
+        env:
+          ENABLED: ${{ vars.WINGET_ENABLED }}
+          RELEASE_ENABLED: ${{ vars.RELEASE_ENABLED }}
+          PRIVATE: ${{ github.event.repository.private }}
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:PRIVATE -ne 'false' -or $env:RELEASE_ENABLED -ne 'true') { throw 'Release publication is not enabled' }
+          if ($env:ENABLED -ne 'true') { throw 'Automatic WinGet submission is disabled' }
+          if (!$env:WINGET_CREATE_GITHUB_TOKEN) { throw 'WINGET_TOKEN is not configured in the distribution environment' }
       - name: Download the published manifests and check their identity
         shell: pwsh
         env:
@@ -33,6 +46,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Expected a stable release tag' }
+          $release = gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json isDraft,isPrerelease | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $release.isDraft -or $release.isPrerelease) { throw 'Expected a published stable release' }
           New-Item -Type Directory artifacts | Out-Null
           gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern esdieff-winget-manifests.tar.gz --pattern SHA256SUMS --dir artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Release artifacts are unavailable' }
@@ -47,8 +62,54 @@ jobs:
           name: winget-update-${{ inputs.tag }}
           path: artifacts/manifests
           if-no-files-found: error
+      - name: Check whether this version already has a catalog submission
+        id: catalog
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:TAG.Substring(1)
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json' }
+          $url = "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/p/PederBergan/Esdieff/$version"
+          $response = Invoke-WebRequest $url -Headers $headers -SkipHttpErrorCheck
+          if ($response.StatusCode -eq 200) {
+            'needed=false' >> $env:GITHUB_OUTPUT
+            "WinGet already contains PederBergan.Esdieff $version." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+          if ($response.StatusCode -ne 404) { throw "Cannot check the WinGet catalog: HTTP $($response.StatusCode)" }
+          $search = gh api --method GET search/issues -f 'q=repo:microsoft/winget-pkgs is:pr is:open PederBergan.Esdieff in:title' | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $search.incomplete_results) { throw 'Cannot check existing WinGet submissions' }
+          $pattern = '(?<![0-9A-Za-z.+-])v?' + [regex]::Escape($version) + '(?![0-9A-Za-z.+-])'
+          $existing = @($search.items | Where-Object { $_.title -match $pattern })
+          if ($existing.Count -gt 0) {
+            'needed=false' >> $env:GITHUB_OUTPUT
+            $existing | ForEach-Object { "Existing WinGet submission: $($_.html_url)" >> $env:GITHUB_STEP_SUMMARY }
+          } else {
+            'needed=true' >> $env:GITHUB_OUTPUT
+            "WinGet submission is needed for PederBergan.Esdieff $version." >> $env:GITHUB_STEP_SUMMARY
+          }
+      - name: Check the official WinGet Create client
+        if: steps.catalog.outputs.needed == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot select the official WinGet Create release' }
+          $asset = $release.assets | Where-Object name -eq wingetcreate.exe
+          if (!$asset -or $asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw 'Official WinGet Create binary or checksum is unavailable' }
+          $expected = $asset.digest.Substring(7)
+          $client = "$env:RUNNER_TEMP/wingetcreate.exe"
+          Invoke-WebRequest $asset.browser_download_url -OutFile $client
+          if ((Get-FileHash $client -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'WinGet Create checksum mismatch' }
+          & $client
+          if ($LASTEXITCODE -ne 0) { throw 'WinGet Create cannot start' }
       - name: Submit through the supported WinGet tool
-        if: inputs.submit_winget && vars.WINGET_ENABLED == 'true' && vars.RELEASE_ENABLED == 'true' && !github.event.repository.private
+        if: inputs.submit_winget && steps.catalog.outputs.needed == 'true'
         shell: pwsh
         env:
           TAG: ${{ inputs.tag }}
@@ -57,10 +118,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if (!$env:WINGET_CREATE_GITHUB_TOKEN) { throw 'WINGET_TOKEN is not configured' }
-          $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
-          $asset = $release.assets | Where-Object name -eq wingetcreate.exe
-          if (!$asset) { throw 'Official WinGet Create binary is unavailable' }
-          Invoke-WebRequest $asset.browser_download_url -OutFile "$env:RUNNER_TEMP/wingetcreate.exe"
           $version = $env:TAG.Substring(1)
-          & "$env:RUNNER_TEMP/wingetcreate.exe" submit "artifacts/manifests/p/PederBergan/Esdieff/$version"
+          & "$env:RUNNER_TEMP/wingetcreate.exe" submit --no-open "artifacts/manifests/p/PederBergan/Esdieff/$version"
           if ($LASTEXITCODE -ne 0) { throw 'WinGet submission failed' }
+      - name: Report preparation-only run
+        if: ${{ !inputs.submit_winget }}
+        shell: pwsh
+        run: "'Checked the published manifests and submission prerequisites. No catalog submission was requested.' >> $env:GITHUB_STEP_SUMMARY"
