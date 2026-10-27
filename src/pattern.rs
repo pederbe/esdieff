@@ -132,15 +132,17 @@ impl MatchingWork {
     /// worker moves. Each allowance keeps its own counters and pays its own worker stack
     /// and engine heap.
     pub(crate) fn lend_worker(&mut self, borrower: &mut Self) {
-        borrower.worker = self.worker.take();
+        if self.worker.as_ref().is_some_and(MatchWorker::running) {
+            borrower.worker = self.worker.take();
+        }
     }
-    /// Take back the worker lent to `borrower`, or the one it started, unless it has
-    /// stopped. The next check then starts its own.
+    /// Take back the worker lent to `borrower`, or the one it started. A stopped worker is
+    /// never lent, so the next check starts its own.
     pub(crate) fn reclaim_worker(&mut self, borrower: &mut Self) {
-        self.worker = borrower
-            .worker
-            .take()
-            .filter(|worker| worker.requests.is_some());
+        let returned = borrower.worker.take().filter(MatchWorker::running);
+        if self.worker.is_none() {
+            self.worker = returned;
+        }
     }
 }
 pub(crate) enum MatchVerdict {
@@ -277,6 +279,10 @@ struct MatchWorker {
     thread: Option<std::thread::JoinHandle<()>>,
 }
 impl MatchWorker {
+    /// Whether the worker still takes requests. A stopped one stays with its allowance.
+    fn running(&self) -> bool {
+        self.requests.is_some()
+    }
     fn new() -> Option<Self> {
         let (requests, incoming) = std::sync::mpsc::sync_channel::<MatchRequest>(0);
         let (outgoing, results) = std::sync::mpsc::sync_channel(0);
@@ -423,33 +429,33 @@ impl Engine {
         // on a short match. Poll at entry as well so tiny matches still spend
         // the original operation allowance.
         *polls -= 1;
+        let remaining = Arc::new(AtomicUsize::new(*polls));
         let started = std::time::Instant::now();
         let allowed = *duration;
-        // A new context polls on its first call. A lent engine made that poll for the allowance
-        // that started it, so a borrowing allowance's first match makes it here, as the
-        // interrupt callback below would.
-        if first_poll {
-            if started.elapsed() >= allowed || *polls == 0 {
-                *duration = duration.saturating_sub(started.elapsed());
-                return MatchVerdict::Limit;
+        let interrupt = {
+            let remaining = Arc::clone(&remaining);
+            move || {
+                started.elapsed() >= allowed
+                    || remaining
+                        .try_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
+                            value.checked_sub(1)
+                        })
+                        .is_err()
             }
-            *polls -= 1;
-        }
-        let remaining = Arc::new(AtomicUsize::new(*polls));
-        let callback_remaining = Arc::clone(&remaining);
-        self.runtime.set_interrupt_handler(Some(Box::new(move || {
-            started.elapsed() >= allowed
-                || callback_remaining
-                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
-                        value.checked_sub(1)
-                    })
-                    .is_err()
-        })));
+        };
+        self.runtime
+            .set_interrupt_handler(Some(Box::new(interrupt.clone())));
         let result = self.context.with(|ctx| {
             let constructor: Function = match ctx.eval("pattern => new RegExp(pattern, 'u')") {
                 Ok(function) => function,
                 Err(_) => return MatchVerdict::Limit,
             };
+            // A new context polls on its first call, once that helper is compiled. A lent
+            // engine made that poll for the allowance that started it, so a borrowing
+            // allowance's first match makes it here instead, never earlier.
+            if first_poll && interrupt() {
+                return MatchVerdict::Limit;
+            }
             let regexp: rquickjs::Object = match constructor.call((pattern,)) {
                 Ok(regexp) => regexp,
                 Err(error) => {

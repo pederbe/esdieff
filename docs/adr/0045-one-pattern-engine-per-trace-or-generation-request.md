@@ -38,9 +38,9 @@ therefore leaves nothing behind, and the engine is lent on as it is.
 A new QuickJS context polls the interrupt handler on its first call and then
 once every 10,000 calls. The allowance that starts the engine makes that first
 poll as before. A lent engine has already made it, so each borrowing
-allowance's first match makes it in its place, checking polls and duration as
-the interrupt handler would. Every allowance therefore spends the polls a fresh
-engine would on its first match.
+allowance's first match calls the handler itself, once its first helper is
+compiled and so never earlier than a new context would. Every allowance
+therefore spends the polls a fresh engine would on its first match.
 
 The later polls keep their 10,000-call rhythm across allowances, so a borrowing
 allowance reaches its next poll within 10,000 calls rather than exactly 10,000
@@ -49,9 +49,9 @@ or value being checked spends one poll more than it would alone. An entry with
 no poll to spare can then be undetermined in a trace while it settles on its
 own, as 2 of 3,000 copies of such an entry did. Polls never let an entry settle
 in a trace when it would not on its own. The handler also checks the entry's
-duration at those polls, which is wall-clock time and already varies between
-runs. Reports are otherwise unchanged. The 100,000-entry trace now takes 1.4
-seconds.
+duration at those polls, so those checks move too. Duration is wall-clock time
+and already varies between runs. Reports are otherwise unchanged. The
+100,000-entry trace now takes 1.4 seconds.
 
 ## Considered Options
 
