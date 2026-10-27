@@ -204,6 +204,21 @@ jobs:
           "$tool" repository "$RUNNER_TEMP/repository" "$RUNNER_TEMP/check.asc" "$RUNNER_TEMP/packages/"*.deb "$RUNNER_TEMP/packages/"*.rpm
           bash scripts/check-packages.sh "$RUNNER_TEMP/repository" "$version" "$archive"
           rm -rf "$GNUPGHOME"
+      - name: Check the one-command Linux installer
+        run: |
+          set -euo pipefail
+          for image in debian:12-slim ubuntu:22.04 ubuntu:24.04 fedora:44; do
+            docker run --rm -v "$PWD/scripts/install.sh:/install.sh:ro" \
+              -v "$PWD/examples/thermostat-check/rich.sdf.json:/model.sdf.json:ro" "$image" sh -ec '
+              if command -v apt-get >/dev/null; then
+                apt-get update -q
+                apt-get install -qy --no-install-recommends curl ca-certificates
+              fi
+              cat /install.sh | sh
+              esdieff --version
+              esdieff check /model.sdf.json
+            '
+          done
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: packages-${{ matrix.target }}

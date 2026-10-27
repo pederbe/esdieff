@@ -36,30 +36,13 @@ after the community listing is approved.
 
 ### Linux
 
-For Debian and Ubuntu, first check that the downloaded signing key has fingerprint
-`CC3D 56B6 10AB C0EC A11D E59A 4D00 9227 6F27 920F`:
+Install on Debian, Ubuntu or Fedora:
 
 ```sh
-curl -fsSLo esdieff.gpg https://packages.esdieff.com/esdieff.gpg
-gpg --show-keys --fingerprint esdieff.gpg
-sudo install -m 644 esdieff.gpg /usr/share/keyrings/esdieff.gpg
-echo 'deb [signed-by=/usr/share/keyrings/esdieff.gpg] https://packages.esdieff.com/apt stable main' |
-  sudo tee /etc/apt/sources.list.d/esdieff.list
-sudo apt update
-sudo apt install esdieff
+curl -fsSL https://raw.githubusercontent.com/pederbe/esdieff/main/scripts/install.sh | sh
 ```
 
-For Fedora:
-
-```sh
-sudo curl -fsSLo /etc/yum.repos.d/esdieff.repo https://packages.esdieff.com/esdieff.repo
-sudo dnf install esdieff
-```
-
-Check the same signing-key fingerprint when dnf asks. Normal `apt upgrade` or
-`dnf upgrade` installs new versions. Remove the command with
-`sudo apt remove esdieff` or `sudo dnf remove esdieff`. To stop receiving updates,
-also remove the repository file and, for apt, `/usr/share/keyrings/esdieff.gpg`.
+Updates arrive through your package manager.
 
 ### Direct downloads and Cargo
 
