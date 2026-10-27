@@ -35,6 +35,10 @@ for image in docker.io/library/ubuntu:22.04 docker.io/library/ubuntu:24.04 docke
     "$image" bash -s <<'CLIENT'
 set -euo pipefail
 if command -v apt-get >/dev/null; then
+  if [[ -n $REPOSITORY_URL ]]; then
+    apt-get -q update
+    apt-get -qy --no-install-recommends install ca-certificates
+  fi
   rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
   cp /repository/esdieff.gpg /usr/share/keyrings/esdieff.gpg
   printf 'deb [signed-by=/usr/share/keyrings/esdieff.gpg] %s/apt stable main\n' "${REPOSITORY_URL:-file:/repository}" > /etc/apt/sources.list.d/esdieff.list

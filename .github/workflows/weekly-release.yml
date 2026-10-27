@@ -1,7 +1,8 @@
 name: Weekly release
 
 on:
-  # Enable the Monday schedule after the first public release.
+  schedule:
+    - cron: '17 7 * * 1'
   workflow_dispatch:
     inputs:
       check_only:

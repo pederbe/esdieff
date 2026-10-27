@@ -23,6 +23,7 @@ jobs:
   manifests:
     runs-on: windows-2025
     timeout-minutes: 15
+    environment: distribution
     steps:
       - name: Download the published manifests and check their identity
         shell: pwsh
@@ -52,14 +53,14 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
           GH_TOKEN: ${{ github.token }}
-          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if (!$env:WINGET_TOKEN) { throw 'WINGET_TOKEN is not configured' }
+          if (!$env:WINGET_CREATE_GITHUB_TOKEN) { throw 'WINGET_TOKEN is not configured' }
           $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
           $asset = $release.assets | Where-Object name -eq wingetcreate.exe
           if (!$asset) { throw 'Official WinGet Create binary is unavailable' }
           Invoke-WebRequest $asset.browser_download_url -OutFile "$env:RUNNER_TEMP/wingetcreate.exe"
           $version = $env:TAG.Substring(1)
-          & "$env:RUNNER_TEMP/wingetcreate.exe" submit --token $env:WINGET_TOKEN "artifacts/manifests/p/PederBergan/Esdieff/$version"
+          & "$env:RUNNER_TEMP/wingetcreate.exe" submit "artifacts/manifests/p/PederBergan/Esdieff/$version"
           if ($LASTEXITCODE -ne 0) { throw 'WinGet submission failed' }
