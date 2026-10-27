@@ -1,0 +1,16 @@
+{
+  "info": {},
+  "namespace": {
+    "b": "https://example.test/source",
+    "p": "https://example.test/importer"
+  },
+  "defaultNamespace": "p",
+  "sdfData": {"Outside": {"type": "string", "minLength": 3}},
+  "sdfObject": {
+    "Device": {
+      "sdfRef": "b:#/sdfObject/Base",
+      "sdfData": {"measurement": {"minimum": 10}}
+    },
+    "Base": {"sdfData": {"measurement": {"type": "number", "minimum": 99}}}
+  }
+}

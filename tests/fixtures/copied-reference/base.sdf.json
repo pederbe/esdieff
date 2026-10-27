@@ -1,0 +1,18 @@
+{
+  "info": {},
+  "namespace": {"p": "https://example.test/source"},
+  "defaultNamespace": "p",
+  "sdfData": {"Outside": {"type": "number", "minimum": 0}},
+  "sdfObject": {
+    "Base": {
+      "sdfData": {"measurement": {"type": "number", "minimum": 0}},
+      "sdfProperty": {
+        "value": {"sdfRef": "#/sdfObject/Base/sdfData/measurement"},
+        "qualified": {"sdfRef": "p:#/sdfObject/Base/sdfData/measurement"},
+        "outside": {"sdfRef": "p:#/sdfData/Outside"}
+      },
+      "sdfRequired": ["#/sdfObject/Base/sdfProperty/value"]
+    },
+    "BaseExtra": {"sdfData": {"measurement": {"type": "number", "minimum": 7}}}
+  }
+}

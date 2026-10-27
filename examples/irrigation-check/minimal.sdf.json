@@ -1,0 +1,27 @@
+{
+  "info": {
+    "title": "Minimal irrigation zone identifiers"
+  },
+  "sdfObject": {
+    "Irrigation": {
+      "sdfProperty": {
+        "zoneIds": {
+          "type": "array",
+          "nullable": false,
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "sdfChoice": {
+              "identifier": {
+                "type": "string",
+                "nullable": false,
+                "pattern": "^zone-[1-4]$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

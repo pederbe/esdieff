@@ -1,0 +1,17 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "count", "path": "count.sdf.json", "role": "model" }
+  ],
+  "cases": [
+    { "name": "Catalogue", "operation": "check", "scope": { "kind": "catalogue" } },
+    {
+      "name": "Count model",
+      "operation": "check",
+      "scope": { "kind": "selected", "roots": ["count"] },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    }
+  ]
+}

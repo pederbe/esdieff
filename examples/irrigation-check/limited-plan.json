@@ -1,0 +1,73 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "irrigation",
+      "path": "limited.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "configure",
+      "path": "samples/configure.json",
+      "role": "sample"
+    },
+    {
+      "key": "calibration",
+      "path": "samples/calibration.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-zones-calibration",
+      "path": "samples/missing-zones-calibration.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Limited Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Limited model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "irrigation"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Absent optional calibration",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "configure"
+    },
+    {
+      "name": "Present calibration needs definition",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "calibration"
+    },
+    {
+      "name": "Missing zones despite incomplete calibration",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "missing-zones-calibration"
+    }
+  ]
+}

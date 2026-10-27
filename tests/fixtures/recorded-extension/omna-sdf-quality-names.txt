@@ -1,0 +1,20 @@
+SDF Quality Names
+OMA has registered a
+Semantic Definition Format (SDF)
+Quality Name Prefix "oma" in the
+IANA registry
+for SDF Quality Name Prefixes. OMA uses this prefix to include LwM2M specific information in the LwM2M models represented with SDF.
+OMNA SDF Quality Names Registry maintains the SDF quality names that can be used together with the registered prefix.
+The following table table contains currently registered quality names.
+Quality Name
+Description
+Applicable for
+id
+LwM2M Object or Resource ID for the SDF definition
+sdfObject, sdfProperty, sdfAction, sdfData
+The following CDDL provides extensions to the
+SDF feature CDDL
+for the registered quality names.
+$$SDF-EXTENSION-OBJECT //= ("oma:id" => uint)
+$$SDF-EXTENSION-DATA //= ("oma:id" => uint)
+$$SDF-EXTENSION-ACTION //= ("oma:id" => uint)

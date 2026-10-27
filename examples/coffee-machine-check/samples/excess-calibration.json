@@ -1,0 +1,10 @@
+{
+  "recipe": {
+    "drink": "latte",
+    "size": 150
+  },
+  "servings": 6,
+  "calibration": {
+    "offset": 0
+  }
+}

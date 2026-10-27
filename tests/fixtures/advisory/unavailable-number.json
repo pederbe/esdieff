@@ -1,0 +1,1 @@
+{"info":{},"sdfData":{"IntegerUnknown":{"type":"integer","const":1e1000001},"StringKnownKind":{"type":"string","const":1e1000001},"IntervalUnknown":{"type":"number","nullable":false,"minimum":1e1000001,"maximum":0},"Independent":{"type":"boolean","const":""}}}

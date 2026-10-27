@@ -1,0 +1,10 @@
+{
+  "info": {},
+  "namespace": {"d": "https://example.com/combined"},
+  "sdfProperty": {
+    "p": {
+      "sdfRef": "d:#/sdfData/Record",
+      "properties": {"level": {"maximum": 9007199254740993}}
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "lock",
+      "path": "limited.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "locked",
+      "path": "samples/state-locked.json",
+      "role": "sample"
+    },
+    {
+      "key": "credential",
+      "path": "samples/credential-dependency.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Limited Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Limited model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "lock"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "State survives unrelated model faults",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/state",
+      "sample": "locked"
+    },
+    {
+      "name": "Credential needs dependency",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/credential",
+      "sample": "credential"
+    }
+  ]
+}

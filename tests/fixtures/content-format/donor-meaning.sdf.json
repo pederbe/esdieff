@@ -1,0 +1,16 @@
+{
+  "info": { "title": "Restricted donor meaning" },
+  "sdfData": {
+    "Array": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "contentFormat": "text/plain;",
+        "sdfChoice": {
+          "Inherited": {},
+          "Override": { "contentFormat": "application/json" }
+        }
+      }
+    }
+  }
+}

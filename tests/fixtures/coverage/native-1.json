@@ -1,0 +1,55 @@
+{
+  "info": {
+    "title": "Temperature device model"
+  },
+  "namespace": {
+    "cap": "https://example.com/esdieff/capabilities"
+  },
+  "defaultNamespace": "cap",
+  "sdfData": {
+    "Temperature": {
+      "type": "number",
+      "nullable": false,
+      "minimum": -50,
+      "maximum": 150,
+      "unit": "Cel"
+    }
+  },
+  "sdfObject": {
+    "Sensor": {
+      "description": "Reusable temperature sensing",
+      "sdfRequired": ["temperature"],
+      "sdfProperty": {
+        "temperature": {
+          "sdfRef": "#/sdfData/Temperature",
+          "writable": false
+        }
+      },
+      "sdfAction": {
+        "reset": {}
+      },
+      "sdfEvent": {
+        "changed": {
+          "sdfOutputData": {
+            "sdfRef": "#/sdfData/Temperature"
+          }
+        }
+      }
+    }
+  },
+  "sdfThing": {
+    "Device": {
+      "sdfObject": {
+        "ambient": {
+          "sdfRef": "#/sdfObject/Sensor",
+          "description": null,
+          "sdfProperty": {
+            "temperature": {
+              "maximum": 100
+            }
+          }
+        }
+      }
+    }
+  }
+}

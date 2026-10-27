@@ -1,0 +1,24 @@
+{
+  "info": { "title": "Reusable outlet and meter definitions" },
+  "namespace": { "meter": "https://example.test/power-meter" },
+  "defaultNamespace": "meter",
+  "sdfData": {
+    "Power": { "description": "Nonnegative power in watts", "type": "number", "nullable": false, "minimum": 0, "maximum": 3600, "unit": "W" },
+    "Energy": { "description": "Exact demonstration counter in watt-hours", "type": "number", "nullable": false, "minimum": 0, "maximum": 9007199254740994, "multipleOf": 0.125, "unit": "Wh" }
+  },
+  "sdfObject": {
+    "Outlet": {
+      "sdfProperty": {
+        "on": { "type": "boolean", "nullable": false, "readable": true, "writable": true },
+        "power": { "type": "number", "nullable": false, "minimum": 0, "maximum": 3600, "unit": "W", "writable": false }
+      }
+    },
+    "RequiredOutlet": {
+      "description": "Separate definition demonstrating copied requiredness",
+      "sdfRequired": ["#/sdfObject/RequiredOutlet/sdfProperty/on"],
+      "sdfProperty": {
+        "on": { "type": "boolean", "nullable": false, "readable": true, "writable": true }
+      }
+    }
+  }
+}

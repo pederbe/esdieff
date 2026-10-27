@@ -1,0 +1,42 @@
+{
+  "info": {},
+  "namespace": { "own": "https://example.com/combined" },
+  "defaultNamespace": "own",
+  "sdfData": {
+    "Record": {
+      "type": "object",
+      "nullable": false,
+      "required": ["level", "mode", "payload"],
+      "const": {"level": 9007199254740993, "mode": "on", "payload": {"values": [1, "x"]}},
+      "properties": {
+        "level": {"type": "integer", "minimum": 9007199254740991, "maximum": 9007199254740995},
+        "mode": {"type": "string", "enum": ["on", "off"], "default": "on"},
+        "payload": {
+          "nullable": false,
+          "sdfChoice": {
+            "map": {
+              "type": "object",
+              "required": ["values"],
+              "properties": {
+                "values": {
+                  "type": "array", "uniqueItems": true,
+                  "items": {"sdfChoice": {
+                    "number": {"type": "number", "minimum": 0},
+                    "text": {"type": "string", "pattern": "^x+$"}
+                  }}
+                }
+              }
+            },
+            "array": {
+              "type": "array", "uniqueItems": true,
+              "items": {"sdfChoice": {
+                "map": {"type": "object", "required": ["n"], "properties": {"n": {"type": "integer", "minimum": 1}}},
+                "flag": {"type": "boolean"}
+              }}
+            }
+          }
+        }
+      }
+    }
+  }
+}

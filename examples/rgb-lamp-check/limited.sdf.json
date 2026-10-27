@@ -1,0 +1,22 @@
+{
+  "info": {
+    "title": "Lamp needing an unsupplied brightness calibration"
+  },
+  "namespace": {
+    "calibration": "https://example.test/lamp-calibration"
+  },
+  "sdfObject": {
+    "Lamp": {
+      "sdfProperty": {
+        "on": {
+          "type": "boolean",
+          "nullable": false
+        },
+        "brightness": {
+          "description": "Brightness semantics come from an intentionally unsupplied definition",
+          "sdfRef": "calibration:#/sdfData/Brightness"
+        }
+      }
+    }
+  }
+}

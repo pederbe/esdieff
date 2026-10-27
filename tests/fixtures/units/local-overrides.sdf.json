@@ -1,0 +1,1 @@
+{"info":{},"sdfData":{"Mass":{"type":"number","unit":"urn:ietf:params:unit:kg"}},"sdfProperty":{"Overridden":{"sdfRef":"#/sdfData/Mass","unit":"Cel"},"Deleted":{"sdfRef":"#/sdfData/Mass","unit":null}}}

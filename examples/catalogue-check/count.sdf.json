@@ -1,0 +1,4 @@
+{
+  "info": { "title": "Count model" },
+  "sdfData": { "Count": { "type": "integer", "minimum": 0, "maximum": 100 } }
+}

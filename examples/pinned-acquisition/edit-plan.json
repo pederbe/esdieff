@@ -1,0 +1,13 @@
+{
+  "key": "clarify-status",
+  "source": "switch",
+  "generated_key": "revised-switch",
+  "edits": [
+    {
+      "owner": "/sdfObject/switch.binary/sdfProperty/value",
+      "quality": "description",
+      "operation": "replace",
+      "value": "The switch status. True means on and false means off."
+    }
+  ]
+}

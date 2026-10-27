@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  changes:
+    name: Select checks
+    if: github.repository == 'pederbe/esdieff' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.paths.outputs.rust }}
+      docs: ${{ steps.paths.outputs.docs }}
+      styles: ${{ steps.paths.outputs.styles }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select applicable checks
+        id: paths
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          rust=false
+          docs=false
+          styles=false
+          if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            rust=true
+            docs=true
+            styles=true
+          else
+            git diff --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
+            while IFS= read -r -d '' path; do
+              case "$path" in
+                site/*|tools/site/*)
+                  docs=true
+                  styles=true
+                  ;;
+                *.md|docs/*|book.toml|wrangler.jsonc|scripts/build-site.sh|scripts/ansi-to-html.sh)
+                  docs=true
+                  ;;
+                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml)
+                  ;;
+                *)
+                  rust=true
+                  ;;
+              esac
+            done < "$RUNNER_TEMP/changed-paths"
+          fi
+          printf 'rust=%s\ndocs=%s\nstyles=%s\n' "$rust" "$docs" "$styles" >> "$GITHUB_OUTPUT"
+
+  checks:
+    name: Checks (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm, macos-15, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: '1.99.1'
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: |
+            . -> target
+            tools/release -> target
+          key: checks-${{ matrix.os }}
+      - name: Run maintained checks
+        run: bash scripts/check.sh
+
+  docs:
+    name: Documentation
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install mdBook
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 -fsSLo "$RUNNER_TEMP/mdbook.tar.gz" \
+            https://github.com/rust-lang/mdBook/releases/download/v0.5.4/mdbook-v0.5.4-x86_64-unknown-linux-gnu.tar.gz
+          echo "3f28de05dafca9d0f2eab99c662116b0e37b89b1d96a08f8f430b9eeae958cd7  $RUNNER_TEMP/mdbook.tar.gz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/mdbook"
+          tar -xzf "$RUNNER_TEMP/mdbook.tar.gz" -C "$RUNNER_TEMP/mdbook" mdbook
+          echo "$RUNNER_TEMP/mdbook" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: needs.changes.outputs.styles == 'true'
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: tools/site/package-lock.json
+      - name: Check generated landing styles
+        if: needs.changes.outputs.styles == 'true'
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund --prefix tools/site
+          npm run build:landing --prefix tools/site
+          git diff --exit-code -- site/landing.css
+      - name: Build documentation and check links
+        run: bash scripts/build-site.sh
+
+  artifacts:
+    name: Release checks
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    uses: ./.github/workflows/artifacts.yml
+    with:
+      tag: ${{ inputs.release_tag || '' }}
+
+  ci:
+    name: CI
+    needs: [changes, checks, docs, artifacts]
+    if: always() && (github.repository == 'pederbe/esdieff' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every applicable check
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          DOCS_RESULT: ${{ needs.docs.result }}
+          ARTIFACTS_RESULT: ${{ needs.artifacts.result }}
+          RUST_SELECTED: ${{ needs.changes.outputs.rust }}
+          DOCS_SELECTED: ${{ needs.changes.outputs.docs }}
+        run: |
+          set -euo pipefail
+          test "$CHANGES_RESULT" = success
+          if [ "$RUST_SELECTED" = true ]; then
+            test "$CHECKS_RESULT" = success
+            test "$ARTIFACTS_RESULT" = success
+          else
+            test "$CHECKS_RESULT" = skipped
+            test "$ARTIFACTS_RESULT" = skipped
+          fi
+          if [ "$DOCS_SELECTED" = true ]; then
+            test "$DOCS_RESULT" = success
+          else
+            test "$DOCS_RESULT" = skipped
+          fi

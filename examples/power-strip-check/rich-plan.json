@@ -1,0 +1,35 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "strip", "path": "rich.sdf.json", "role": "model" },
+    { "key": "meter", "path": "definitions.sdf.json", "role": "model" },
+    { "key": "fractional-power", "path": "samples/fractional-power.json", "role": "sample" },
+    { "key": "outlet-upper", "path": "samples/outlet-upper.json", "role": "sample" },
+    { "key": "ordinary-total", "path": "samples/ordinary-total.json", "role": "sample" },
+    { "key": "total-upper", "path": "samples/total-upper.json", "role": "sample" },
+    { "key": "above-total", "path": "samples/above-total.json", "role": "sample" },
+    { "key": "ordinary-energy", "path": "samples/ordinary-energy.json", "role": "sample" },
+    { "key": "large-fraction", "path": "samples/large-fractional-energy.json", "role": "sample" },
+    { "key": "energy-upper", "path": "samples/energy-upper.json", "role": "sample" },
+    { "key": "above-energy", "path": "samples/above-energy.json", "role": "sample" },
+    { "key": "off-step", "path": "samples/off-step.json", "role": "sample" },
+    { "key": "zero", "path": "samples/zero.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Rich Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Rich model", "operation": "check", "scope": { "kind": "selected", "roots": ["strip"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Outlet fractional power", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/power", "sample": "fractional-power" },
+    { "name": "Shared power above product bound", "operation": "sample", "document": "meter", "kind": "data", "pointer": "/sdfData/Power", "sample": "outlet-upper" },
+    { "name": "Total power within override", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/totalPower", "sample": "ordinary-total" },
+    { "name": "Total power override boundary", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/totalPower", "sample": "total-upper" },
+    { "name": "Total power just above override", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/totalPower", "sample": "above-total" },
+    { "name": "Total power rejects shared reading", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/totalPower", "sample": "outlet-upper" },
+    { "name": "Ordinary fractional energy", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/energy", "sample": "ordinary-energy" },
+    { "name": "Large fractional energy", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/energy", "sample": "large-fraction" },
+    { "name": "Large exact energy boundary", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/energy", "sample": "energy-upper" },
+    { "name": "Energy above exact boundary", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/energy", "sample": "above-energy" },
+    { "name": "Energy off eighth step", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/energy", "sample": "off-step" },
+    { "name": "Shared energy lower boundary", "operation": "sample", "document": "meter", "kind": "data", "pointer": "/sdfData/Energy", "sample": "zero" }
+  ]
+}

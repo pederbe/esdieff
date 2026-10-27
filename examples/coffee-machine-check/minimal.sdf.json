@@ -1,0 +1,47 @@
+{
+  "info": {
+    "title": "Minimal coffee resource readings and preparation"
+  },
+  "sdfObject": {
+    "CoffeeMachine": {
+      "sdfProperty": {
+        "resources": {
+          "type": "object",
+          "nullable": false,
+          "required": [
+            "water",
+            "beans"
+          ],
+          "properties": {
+            "water": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 100
+            },
+            "beans": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 100
+            },
+            "milk": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "preparation": {
+          "type": "string",
+          "nullable": false,
+          "enum": [
+            "espresso",
+            "latte"
+          ]
+        }
+      }
+    }
+  }
+}

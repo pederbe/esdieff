@@ -1,0 +1,166 @@
+# Install this workflow in pederbe/homebrew-tap after Esdieff is public.
+name: Update Esdieff
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-esdieff
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  candidate:
+    if: github.repository == 'pederbe/homebrew-tap' && !github.event.repository.private
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      changed: ${{ steps.release.outputs.changed }}
+      version: ${{ steps.release.outputs.version }}
+      previous: ${{ steps.release.outputs.previous }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare the published recipe
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/pederbe/esdieff/releases/latest > "$RUNNER_TEMP/release.json"
+          tag=$(jq -r .tag_name "$RUNNER_TEMP/release.json")
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          version=${tag#v}
+          previous=
+          if [[ -f Formula/esdieff.rb ]]; then
+            previous=$(sed -n 's/^  version "\([^"]*\)"$/\1/p' Formula/esdieff.rb)
+            [[ "$previous" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          fi
+          if [[ "$previous" == "$version" ]]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo "Esdieff $version is already in the tap." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ -n "$previous" ]]; then
+            test "$(printf '%s\n' "$previous" "$version" | sort -V | tail -1)" = "$version"
+          fi
+          mkdir "$RUNNER_TEMP/candidate"
+          cd "$RUNNER_TEMP/candidate"
+          for name in esdieff.rb esdieff-aarch64-apple-darwin.tar.xz esdieff-x86_64-unknown-linux-gnu.tar.xz esdieff-aarch64-unknown-linux-gnu.tar.xz; do
+            gh release download "$tag" --repo pederbe/esdieff --pattern "$name" --pattern "$name.sha256"
+            sha256sum -c "$name.sha256"
+          done
+          grep -qxF "  version \"$version\"" esdieff.rb
+          for archive in *.tar.xz; do
+            checksum=$(sha256sum "$archive" | cut -d' ' -f1)
+            grep -qF "https://github.com/pederbe/esdieff/releases/download/$tag/$archive" esdieff.rb
+            grep -qF "sha256 \"$checksum\"" esdieff.rb
+          done
+          {
+            echo 'changed=true'
+            echo "version=$version"
+            echo "previous=$previous"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7.0.2
+        if: steps.release.outputs.changed == 'true'
+        with:
+          name: esdieff-recipe
+          path: ${{ runner.temp }}/candidate
+          retention-days: 7
+          if-no-files-found: error
+
+  check:
+    name: Check Esdieff on ${{ matrix.os }}
+    needs: candidate
+    if: needs.candidate.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_ANALYTICS: '1'
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: esdieff-recipe
+          path: ${{ runner.temp }}/candidate
+      - uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # main
+        with:
+          stable: true
+      - name: Install, upgrade, exercise and remove the retained binary
+        env:
+          VERSION: ${{ needs.candidate.outputs.version }}
+          PREVIOUS: ${{ needs.candidate.outputs.previous }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          brew tap pederbe/tap
+          formula=$(brew --repository pederbe/tap)/Formula/esdieff.rb
+          if [[ -n "$PREVIOUS" ]]; then
+            test "$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$formula")" = "$PREVIOUS"
+            brew install pederbe/tap/esdieff
+            test "$(brew list --versions esdieff)" = "esdieff $PREVIOUS"
+          fi
+          cp "$RUNNER_TEMP/candidate/esdieff.rb" "$formula"
+          if [[ -n "$PREVIOUS" ]]; then
+            brew upgrade pederbe/tap/esdieff
+          else
+            brew install pederbe/tap/esdieff
+          fi
+          brew test pederbe/tap/esdieff
+          test "$(esdieff --version)" = "esdieff $VERSION"
+          mkdir "$RUNNER_TEMP/extracted"
+          tar -xJf "$RUNNER_TEMP/candidate/esdieff-$TARGET.tar.xz" --strip-components=1 -C "$RUNNER_TEMP/extracted"
+          cmp "$RUNNER_TEMP/extracted/esdieff" "$(brew --prefix)/bin/esdieff"
+          brew uninstall --force pederbe/tap/esdieff
+          test ! -e "$(brew --prefix)/bin/esdieff"
+          test ! -d "$(brew --cellar esdieff)"
+
+  update:
+    needs: [candidate, check]
+    if: needs.candidate.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: esdieff-recipe
+          path: ${{ runner.temp }}/candidate
+      - name: Commit the tested recipe
+        env:
+          VERSION: ${{ needs.candidate.outputs.version }}
+          PREVIOUS: ${{ needs.candidate.outputs.previous }}
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          current=
+          if [[ -f Formula/esdieff.rb ]]; then
+            current=$(sed -n 's/^  version "\([^"]*\)"$/\1/p' Formula/esdieff.rb)
+          fi
+          if [[ "$current" == "$VERSION" ]]; then exit 0; fi
+          test "$current" = "$PREVIOUS"
+          cp "$RUNNER_TEMP/candidate/esdieff.rb" Formula/esdieff.rb
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/esdieff.rb
+          git commit -m "Update Esdieff to $VERSION"
+          git push origin HEAD:main

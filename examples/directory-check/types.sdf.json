@@ -1,0 +1,6 @@
+{
+  "info": { "title": "Shared reading type" },
+  "namespace": { "types": "https://example.com/directory/types" },
+  "defaultNamespace": "types",
+  "sdfData": { "Reading": { "type": "number", "minimum": 0 } }
+}

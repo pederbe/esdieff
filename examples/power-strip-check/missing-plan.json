@@ -1,0 +1,16 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "strip", "path": "missing.sdf.json", "role": "model" },
+    { "key": "meter", "path": "absent-meter.sdf.json", "role": "model" },
+    { "key": "on", "path": "samples/on.json", "role": "sample" },
+    { "key": "ordinary-total", "path": "samples/ordinary-total.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Missing dependency Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Missing dependency model", "operation": "check", "scope": { "kind": "selected", "roots": ["strip"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Outlet state survives missing dependency", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/on", "sample": "on" },
+    { "name": "Total power needs dependency", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfProperty/totalPower", "sample": "ordinary-total" }
+  ]
+}

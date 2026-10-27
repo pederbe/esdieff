@@ -1,0 +1,8 @@
+{
+  "zoneIds": [
+    "zone-1"
+  ],
+  "calibration": {
+    "offset": 0
+  }
+}

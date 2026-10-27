@@ -1,0 +1,125 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "coffee",
+      "path": "minimal.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "resource-zero",
+      "path": "samples/resource-zero.json",
+      "role": "sample"
+    },
+    {
+      "key": "resource-upper",
+      "path": "samples/resource-upper.json",
+      "role": "sample"
+    },
+    {
+      "key": "resource-above",
+      "path": "samples/resource-above.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-beans",
+      "path": "samples/missing-beans.json",
+      "role": "sample"
+    },
+    {
+      "key": "null-beans",
+      "path": "samples/null-beans.json",
+      "role": "sample"
+    },
+    {
+      "key": "espresso",
+      "path": "samples/espresso.json",
+      "role": "sample"
+    },
+    {
+      "key": "unknown-preparation",
+      "path": "samples/unknown-preparation.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Minimal Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Minimal model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "coffee"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Resources lower boundary",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/resources",
+      "sample": "resource-zero"
+    },
+    {
+      "name": "Resources upper boundary",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/resources",
+      "sample": "resource-upper"
+    },
+    {
+      "name": "Water above maximum",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/resources",
+      "sample": "resource-above"
+    },
+    {
+      "name": "Missing required beans",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/resources",
+      "sample": "missing-beans"
+    },
+    {
+      "name": "Present null beans",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/resources",
+      "sample": "null-beans"
+    },
+    {
+      "name": "Espresso preparation",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/preparation",
+      "sample": "espresso"
+    },
+    {
+      "name": "Unknown preparation",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "property",
+      "pointer": "/sdfObject/CoffeeMachine/sdfProperty/preparation",
+      "sample": "unknown-preparation"
+    }
+  ]
+}

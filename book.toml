@@ -1,0 +1,32 @@
+[book]
+title = "Esdieff"
+description = "An SDF toolkit for connected-device models. Explore interfaces, catch mistakes, compare revisions and generate test values."
+authors = ["Peder Bergan"]
+language = "en"
+src = "docs"
+
+[build]
+build-dir = "target/book"
+create-missing = false
+
+[output.html]
+site-url = "/docs/"
+git-repository-url = "https://github.com/pederbe/esdieff"
+edit-url-template = "https://github.com/pederbe/esdieff/edit/main/{path}"
+default-theme = "navy"
+preferred-dark-theme = "navy"
+additional-css = ["docs/theme/esdieff.css"]
+additional-js = ["docs/theme/navigation.js", "docs/theme/footer.js"]
+no-section-label = true
+
+[output.html.redirect]
+"/README.html" = "index.html"
+"/adr/README.html" = "index.html"
+"/getting-started/README.html" = "index.html"
+
+[output.html.fold]
+enable = true
+level = 0
+
+[output.html.search]
+limit-results = 20

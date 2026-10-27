@@ -1,0 +1,151 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "lamp",
+      "path": "rich.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "rgb",
+      "path": "samples/rgb-boundaries.json",
+      "role": "sample"
+    },
+    {
+      "key": "invalid-rgb",
+      "path": "samples/rgb-invalid-green.json",
+      "role": "sample"
+    },
+    {
+      "key": "mode",
+      "path": "samples/mode-steady.json",
+      "role": "sample"
+    },
+    {
+      "key": "unknown-mode",
+      "path": "samples/mode-unknown.json",
+      "role": "sample"
+    },
+    {
+      "key": "dim-red",
+      "path": "samples/scene-dim-red.json",
+      "role": "sample"
+    },
+    {
+      "key": "bright-blue",
+      "path": "samples/scene-bright-blue.json",
+      "role": "sample"
+    },
+    {
+      "key": "mixed-scene",
+      "path": "samples/scene-mixed.json",
+      "role": "sample"
+    },
+    {
+      "key": "applied",
+      "path": "samples/scene-applied.json",
+      "role": "sample"
+    },
+    {
+      "key": "refused",
+      "path": "samples/scene-refused.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Rich Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Rich model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "lamp"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "RGB channel boundaries",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "property",
+      "pointer": "/sdfObject/Lamp/sdfProperty/rgb",
+      "sample": "rgb"
+    },
+    {
+      "name": "RGB green above maximum",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "property",
+      "pointer": "/sdfObject/Lamp/sdfProperty/rgb",
+      "sample": "invalid-rgb"
+    },
+    {
+      "name": "Steady mode",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "property",
+      "pointer": "/sdfObject/Lamp/sdfProperty/mode",
+      "sample": "mode"
+    },
+    {
+      "name": "Unknown mode",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "property",
+      "pointer": "/sdfObject/Lamp/sdfProperty/mode",
+      "sample": "unknown-mode"
+    },
+    {
+      "name": "Dim red scene",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lamp/sdfAction/setScene",
+      "sample": "dim-red"
+    },
+    {
+      "name": "Bright blue scene",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lamp/sdfAction/setScene",
+      "sample": "bright-blue"
+    },
+    {
+      "name": "Mixed scene has no Choice witness",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lamp/sdfAction/setScene",
+      "sample": "mixed-scene"
+    },
+    {
+      "name": "Scene applied output",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Lamp/sdfAction/setScene",
+      "sample": "applied"
+    },
+    {
+      "name": "Scene refused output",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Lamp/sdfAction/setScene",
+      "sample": "refused"
+    }
+  ]
+}

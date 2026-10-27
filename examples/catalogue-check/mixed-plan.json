@@ -1,0 +1,35 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "count", "path": "count.sdf.json", "role": "model" },
+    { "key": "ordinary", "path": "ordinary.json", "role": "sample" },
+    { "key": "excess", "path": "excess.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Catalogue", "operation": "check", "scope": { "kind": "catalogue" } },
+    {
+      "name": "Count model",
+      "operation": "check",
+      "scope": { "kind": "selected", "roots": ["count"] },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Ordinary count",
+      "operation": "sample",
+      "document": "count",
+      "kind": "data",
+      "pointer": "/sdfData/Count",
+      "sample": "ordinary"
+    },
+    {
+      "name": "Excess count",
+      "operation": "sample",
+      "document": "count",
+      "kind": "data",
+      "pointer": "/sdfData/Count",
+      "sample": "excess"
+    }
+  ]
+}

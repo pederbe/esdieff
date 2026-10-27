@@ -1,0 +1,147 @@
+{
+  "info": {
+    "title": "Coffee brewing with unavailable optional calibration"
+  },
+  "sdfObject": {
+    "CoffeeMachine": {
+      "sdfAction": {
+        "brew": {
+          "description": "Describe brewing data without asserting resource consumption or sequence behaviour",
+          "sdfInputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "recipe",
+              "servings"
+            ],
+            "properties": {
+              "recipe": {
+                "type": "object",
+                "nullable": false,
+                "required": [
+                  "drink",
+                  "size"
+                ],
+                "sdfChoice": {
+                  "espresso": {
+                    "properties": {
+                      "drink": {
+                        "type": "string",
+                        "nullable": false,
+                        "const": "espresso"
+                      },
+                      "size": {
+                        "type": "integer",
+                        "nullable": false,
+                        "minimum": 25,
+                        "maximum": 60
+                      }
+                    }
+                  },
+                  "latte": {
+                    "properties": {
+                      "drink": {
+                        "type": "string",
+                        "nullable": false,
+                        "const": "latte"
+                      },
+                      "size": {
+                        "type": "integer",
+                        "nullable": false,
+                        "minimum": 150,
+                        "maximum": 300
+                      }
+                    }
+                  }
+                }
+              },
+              "servings": {
+                "type": "integer",
+                "nullable": false,
+                "minimum": 1,
+                "maximum": 5,
+                "default": 1
+              },
+              "calibration": {
+                "description": "Only a supplied calibration value needs this unavailable definition",
+                "sdfRef": "calibration:#/sdfData/Calibration"
+              }
+            }
+          },
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "result",
+              "message"
+            ],
+            "properties": {
+              "result": {
+                "type": "boolean",
+                "nullable": false
+              },
+              "message": {
+                "type": "string",
+                "nullable": false,
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "sdfEvent": {
+        "maintenance": {
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "reason",
+              "resources"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "nullable": false,
+                "enum": [
+                  "clean",
+                  "refill"
+                ]
+              },
+              "resources": {
+                "type": "object",
+                "nullable": false,
+                "required": [
+                  "water",
+                  "beans"
+                ],
+                "properties": {
+                  "water": {
+                    "type": "integer",
+                    "nullable": false,
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "beans": {
+                    "type": "integer",
+                    "nullable": false,
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "milk": {
+                    "type": "integer",
+                    "nullable": false,
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "namespace": {
+    "calibration": "https://example.test/coffee-calibration"
+  }
+}

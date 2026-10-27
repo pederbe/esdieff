@@ -1,0 +1,65 @@
+name: Distribution updates
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag
+        required: true
+        default: v0.1.0
+      submit_winget:
+        description: Submit the updated WinGet manifests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distribution
+  cancel-in-progress: false
+
+jobs:
+  manifests:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Download the published manifests and check their identity
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Expected a stable release tag' }
+          New-Item -Type Directory artifacts | Out-Null
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern esdieff-winget-manifests.tar.gz --pattern SHA256SUMS --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Release artifacts are unavailable' }
+          $line = Get-Content artifacts/SHA256SUMS | Where-Object { $_ -match '  esdieff-winget-manifests.tar.gz$' }
+          if (!$line) { throw 'Manifest archive is missing from the release checksums' }
+          $expected = ($line -split ' ')[0]
+          if ((Get-FileHash artifacts/esdieff-winget-manifests.tar.gz -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'Manifest checksum mismatch' }
+          tar -xzf artifacts/esdieff-winget-manifests.tar.gz -C artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot extract manifests' }
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: winget-update-${{ inputs.tag }}
+          path: artifacts/manifests
+          if-no-files-found: error
+      - name: Submit through the supported WinGet tool
+        if: inputs.submit_winget && vars.WINGET_ENABLED == 'true' && vars.RELEASE_ENABLED == 'true' && !github.event.repository.private
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!$env:WINGET_TOKEN) { throw 'WINGET_TOKEN is not configured' }
+          $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
+          $asset = $release.assets | Where-Object name -eq wingetcreate.exe
+          if (!$asset) { throw 'Official WinGet Create binary is unavailable' }
+          Invoke-WebRequest $asset.browser_download_url -OutFile "$env:RUNNER_TEMP/wingetcreate.exe"
+          $version = $env:TAG.Substring(1)
+          & "$env:RUNNER_TEMP/wingetcreate.exe" submit --token $env:WINGET_TOKEN "artifacts/manifests/p/PederBergan/Esdieff/$version"
+          if ($LASTEXITCODE -ne 0) { throw 'WinGet submission failed' }

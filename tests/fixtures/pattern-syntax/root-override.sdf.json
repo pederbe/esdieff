@@ -1,0 +1,1 @@
+{"info":{},"namespace":{"d":"https://example.com/patterns"},"sdfProperty":{"Use":{"sdfRef":"d:#/sdfData/Base","pattern":"^a+$"}}}

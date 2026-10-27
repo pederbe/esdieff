@@ -1,0 +1,10 @@
+{
+  "info": { "title": "Deleted payload format" },
+  "namespace": { "shared": "urn:example:payload-model" },
+  "sdfProperty": {
+    "Payload": {
+      "sdfRef": "shared:#/sdfData/Payload",
+      "contentFormat": null
+    }
+  }
+}

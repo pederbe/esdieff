@@ -1,0 +1,296 @@
+name: Package repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published stable release tag
+        required: true
+        type: string
+      publish:
+        description: Publish the signed repository after checks
+        type: boolean
+        default: false
+      verify_only:
+        description: Check the live repository without signing or uploading
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-repository
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: packages
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      BUCKET: esdieff-packages
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the requested operation
+        env:
+          PUBLISH: ${{ inputs.publish }}
+          VERIFY_ONLY: ${{ inputs.verify_only }}
+          ENABLED: ${{ vars.RELEASE_ENABLED }}
+          PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "$PUBLISH" == true ]]; then
+            test "$VERIFY_ONLY" = false
+            test "$PRIVATE" = false
+            test "$ENABLED" = true
+          fi
+          if [[ "$VERIFY_ONLY" == true ]]; then test "$PRIVATE" = false; fi
+      - name: Select released artifacts
+        id: release
+        run: |
+          set -euo pipefail
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName > "$RUNNER_TEMP/release.json"
+          jq -e --arg tag "$TAG" '.tagName == $tag and .isDraft == false and .isPrerelease == false' "$RUNNER_TEMP/release.json"
+          previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq '.[].tagName' |
+            grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V |
+            awk -v current="$TAG" '$0 == current {exit} {previous=$0} END {print previous}')
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "PREVIOUS=$previous" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/assets" "$RUNNER_TEMP/repository"
+      - name: Download and verify retained packages
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/assets"
+          for tag in $PREVIOUS $TAG; do
+            version=${tag#v}
+            for pair in amd64:x86_64 arm64:aarch64; do
+              deb=${pair%:*}; rpm=${pair#*:}
+              for name in "esdieff_${version}_${deb}.deb" "esdieff-${version}-1.${rpm}.rpm"; do
+                gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$name" --pattern "$name.sha256"
+                sha256sum -c "$name.sha256"
+              done
+            done
+          done
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+            name=esdieff-$target.tar.xz
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$name" --pattern "$name.sha256"
+            sha256sum -c "$name.sha256"
+          done
+      - uses: dtolnay/rust-toolchain@stable
+        if: ${{ !inputs.verify_only }}
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2.9.3
+        if: ${{ !inputs.verify_only }}
+        with:
+          workspaces: tools/release -> target
+      - name: Install standard repository tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -qy --no-install-recommends rpm apt-utils createrepo-c gnupg gnupg2 gpgv xz-utils
+      - name: Set up signing
+        if: ${{ !inputs.verify_only }}
+        env:
+          PUBLISH: ${{ inputs.publish }}
+          PACKAGE_SIGNING_KEY: ${{ inputs.publish && secrets.PACKAGE_SIGNING_KEY || '' }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME=$RUNNER_TEMP/signing
+          mkdir -m 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          if [[ "$PUBLISH" == true ]]; then
+            test -n "$PACKAGE_SIGNING_KEY"
+            printf '%s\n' "$PACKAGE_SIGNING_KEY" | gpg --batch --import
+            echo "KEY=$PWD/packaging/esdieff.asc" >> "$GITHUB_ENV"
+          else
+            gpg --batch --passphrase '' --quick-gen-key 'Esdieff repository check' rsa4096 sign 0
+            gpg --armor --export > "$RUNNER_TEMP/check.asc"
+            echo "KEY=$RUNNER_TEMP/check.asc" >> "$GITHUB_ENV"
+          fi
+      - name: Fetch and authenticate earlier packages
+        if: inputs.publish
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL_S3: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          set -euo pipefail
+          test -n "$AWS_ACCESS_KEY_ID"
+          test -n "$AWS_SECRET_ACCESS_KEY"
+          aws s3 sync --only-show-errors "s3://$BUCKET" "$RUNNER_TEMP/repository"
+          # Storage access cannot authorize a new package to be signed.
+          shopt -s nullglob
+          for file in "$RUNNER_TEMP/repository/apt/pool/main/e/esdieff/"*.deb; do
+            name=$(basename "$file")
+            [[ "$name" =~ ^esdieff_([0-9]+\.[0-9]+\.[0-9]+)_(amd64|arm64)\.deb$ ]]
+            tag=v${BASH_REMATCH[1]}
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$name.sha256" --output "$RUNNER_TEMP/expected.sha256" --clobber
+            read -r expected recorded < "$RUNNER_TEMP/expected.sha256"
+            [[ "$expected" =~ ^[0-9a-f]{64}$ ]]
+            test "$recorded" = "$name"
+            test "$expected" = "$(sha256sum "$file" | cut -d' ' -f1)"
+          done
+      - name: Generate and verify signed metadata
+        if: ${{ !inputs.verify_only }}
+        env:
+          PACKAGE_SIGNING_PASSPHRASE: ${{ inputs.publish && secrets.PACKAGE_SIGNING_PASSPHRASE || '' }}
+        run: |
+          set -euo pipefail
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- repository \
+            "$RUNNER_TEMP/repository" "$KEY" "$RUNNER_TEMP/assets/"*.deb "$RUNNER_TEMP/assets/"*.rpm
+      - name: Prepare trusted live checks
+        if: inputs.verify_only
+        run: |
+          set -euo pipefail
+          repo=$RUNNER_TEMP/repository
+          cp packaging/esdieff.asc "$repo/esdieff.asc"
+          gpg --batch --dearmor --output "$repo/esdieff.gpg" packaging/esdieff.asc
+          mkdir -p "$repo/rpm" "$repo/apt/pool/main/e/esdieff"
+          curl --proto '=https' -fsS https://packages.esdieff.com/rpm/mirrorlist -o "$repo/rpm/mirrorlist"
+          cp "$RUNNER_TEMP/assets/"*.deb "$repo/apt/pool/main/e/esdieff/"
+          for key in esdieff.asc esdieff.gpg; do
+            curl --proto '=https' -fsS "https://packages.esdieff.com/$key" -o "$RUNNER_TEMP/served-key"
+            cmp "$repo/$key" "$RUNNER_TEMP/served-key"
+          done
+      - name: Retain the candidate
+        run: |
+          mkdir "$RUNNER_TEMP/bundle"
+          cp -a "$RUNNER_TEMP/repository" "$RUNNER_TEMP/assets" "$RUNNER_TEMP/bundle/"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: package-repository-candidate
+          path: ${{ runner.temp }}/bundle
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          if [[ -n "${GNUPGHOME:-}" ]]; then
+            gpgconf --homedir "$GNUPGHOME" --kill all
+            rm -rf "$GNUPGHOME"
+          fi
+
+  check:
+    name: Check package repository on ${{ matrix.os }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: package-repository-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Check signed installation, upgrade and removal
+        env:
+          CONTAINER_ENGINE: docker
+          PACKAGE_REPOSITORY_URL: ${{ inputs.verify_only && 'https://packages.esdieff.com' || '' }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
+          bash scripts/check-packages.sh "$RUNNER_TEMP/candidate/repository" "$VERSION" \
+            "$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz"
+
+  publish:
+    needs: [prepare, check]
+    if: inputs.publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: packages
+    env:
+      BUCKET: esdieff-packages
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL_S3: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: package-repository-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Upload immutable files before advancing current indexes
+        env:
+          PRIVATE: ${{ github.event.repository.private }}
+          ENABLED: ${{ vars.RELEASE_ENABLED }}
+        run: |
+          set -euo pipefail
+          test "$PRIVATE" = false
+          test "$ENABLED" = true
+          repo=$RUNNER_TEMP/candidate/repository
+          current=(esdieff.asc esdieff.gpg esdieff.repo
+            apt/dists/stable/main/binary-amd64/Packages apt/dists/stable/main/binary-amd64/Packages.gz
+            apt/dists/stable/main/binary-arm64/Packages apt/dists/stable/main/binary-arm64/Packages.gz
+            apt/dists/stable/Release apt/dists/stable/Release.gpg apt/dists/stable/InRelease rpm/mirrorlist)
+          excludes=()
+          for path in "${current[@]}"; do excludes+=(--exclude "$path"); done
+          aws s3 sync --only-show-errors "$repo" "s3://$BUCKET" "${excludes[@]}" --cache-control 'public, max-age=31536000, immutable'
+          for path in "${current[@]}"; do
+            aws s3 cp --only-show-errors "$repo/$path" "s3://$BUCKET/$path" --cache-control no-cache
+          done
+          for path in "${current[@]}"; do
+            curl --proto '=https' -fsS "https://packages.esdieff.com/$path" -o "$RUNNER_TEMP/served"
+            cmp "$repo/$path" "$RUNNER_TEMP/served"
+          done
+
+  live:
+    name: Verify public installation on ${{ matrix.os }}
+    needs: [prepare, publish]
+    if: inputs.publish
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: package-repository-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Check the served repository
+        env:
+          CONTAINER_ENGINE: docker
+          PACKAGE_REPOSITORY_URL: https://packages.esdieff.com
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
+          bash scripts/check-packages.sh "$RUNNER_TEMP/candidate/repository" "$VERSION" \
+            "$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz"

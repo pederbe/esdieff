@@ -1,0 +1,10 @@
+{
+  "recipe": {
+    "drink": "espresso",
+    "size": 25
+  },
+  "servings": 1,
+  "calibration": {
+    "offset": 0
+  }
+}

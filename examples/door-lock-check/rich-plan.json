@@ -1,0 +1,162 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "lock",
+      "path": "rich.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "unicode",
+      "path": "samples/authorize-unicode.json",
+      "role": "sample"
+    },
+    {
+      "key": "short-unicode",
+      "path": "samples/authorize-short-unicode.json",
+      "role": "sample"
+    },
+    {
+      "key": "spaced",
+      "path": "samples/authorize-spaced.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-operation",
+      "path": "samples/authorize-missing-operation.json",
+      "role": "sample"
+    },
+    {
+      "key": "null-credential",
+      "path": "samples/authorize-null-credential.json",
+      "role": "sample"
+    },
+    {
+      "key": "result",
+      "path": "samples/result-accepted.json",
+      "role": "sample"
+    },
+    {
+      "key": "wrong-result",
+      "path": "samples/result-wrong-type.json",
+      "role": "sample"
+    },
+    {
+      "key": "event",
+      "path": "samples/event-locked.json",
+      "role": "sample"
+    },
+    {
+      "key": "invalid-date",
+      "path": "samples/event-invalid-date.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Rich Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Rich model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "lock"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Minimal to rich revision",
+      "operation": "diff",
+      "earlier": {
+        "document": "minimal.sdf.json"
+      },
+      "later": {
+        "document": "rich.sdf.json"
+      },
+      "acknowledged": "acknowledged-differences.json"
+    },
+    {
+      "name": "Authorize Unicode credential",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "unicode"
+    },
+    {
+      "name": "Authorize short Unicode credential",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "short-unicode"
+    },
+    {
+      "name": "Authorize spaced credential",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "spaced"
+    },
+    {
+      "name": "Authorize missing operation",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "missing-operation"
+    },
+    {
+      "name": "Authorize null credential",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "null-credential"
+    },
+    {
+      "name": "Authorization result",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "result"
+    },
+    {
+      "name": "Authorization result wrong type",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Lock/sdfAction/authorize",
+      "sample": "wrong-result"
+    },
+    {
+      "name": "Timestamped locked event",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "event_output",
+      "pointer": "/sdfObject/Lock/sdfEvent/stateChanged",
+      "sample": "event"
+    },
+    {
+      "name": "Impossible event date",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "event_output",
+      "pointer": "/sdfObject/Lock/sdfEvent/stateChanged",
+      "sample": "invalid-date"
+    }
+  ]
+}

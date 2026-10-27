@@ -1,0 +1,14 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "device", "path": "device.sdf.json", "role": "model" },
+    { "key": "types", "path": "types.sdf.json", "role": "model" },
+    { "key": "reading", "path": "reading.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Catalogue", "operation": "check", "scope": { "kind": "catalogue" } },
+    { "name": "Sensor", "operation": "check", "scope": { "kind": "selected", "roots": ["device"] } },
+    { "name": "Reading", "operation": "sample", "document": "device", "kind": "property", "pointer": "/sdfObject/Sensor/sdfProperty/reading", "sample": "reading" }
+  ]
+}

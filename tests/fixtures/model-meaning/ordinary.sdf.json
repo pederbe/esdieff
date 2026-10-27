@@ -1,0 +1,14 @@
+{
+  "info": {},
+  "sdfData": {
+    "Scalar": {"type":"number","nullable":false,"minimum":0,"maximum":10,"multipleOf":0.5,"const":2},
+    "Text": {"type":"string","minLength":1,"maxLength":8,"pattern":"a+"},
+    "Date": {"type":"string","format":"date"},
+    "Bytes": {"sdfType":"byte-string"},
+    "Time": {"sdfType":"unix-time"},
+    "Array": {"type":"array","minItems":1,"maxItems":3,"uniqueItems":true,"items":{"type":"integer"},"const":[1,2]},
+    "Map": {"type":"object","required":["value"],"properties":{"value":{"type":"integer"}}},
+    "Content": {"contentFormat":"text/plain;charset=utf-8@gzip"}
+  },
+  "sdfThing": {"Device":{"minItems":1,"maxItems":2,"sdfObject":{"Sensor":{}}}}
+}

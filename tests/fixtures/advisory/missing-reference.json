@@ -1,0 +1,1 @@
+{"info":{},"namespace":{"missing":"https://example.invalid/needed"},"sdfProperty":{"value":{"sdfRef":"missing:#/sdfData/Base","type":"number","nullable":false,"minimum":2,"maximum":1}}}

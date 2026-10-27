@@ -1,0 +1,112 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "lock",
+      "path": "minimal.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "locked",
+      "path": "samples/state-locked.json",
+      "role": "sample"
+    },
+    {
+      "key": "unknown-state",
+      "path": "samples/state-unknown.json",
+      "role": "sample"
+    },
+    {
+      "key": "lower-pin",
+      "path": "samples/pin-lower.json",
+      "role": "sample"
+    },
+    {
+      "key": "upper-pin",
+      "path": "samples/pin-upper.json",
+      "role": "sample"
+    },
+    {
+      "key": "short-pin",
+      "path": "samples/pin-short.json",
+      "role": "sample"
+    },
+    {
+      "key": "letter-pin",
+      "path": "samples/pin-letter.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Minimal Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Minimal model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "lock"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Locked state",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/state",
+      "sample": "locked"
+    },
+    {
+      "name": "Unknown lock state",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/state",
+      "sample": "unknown-state"
+    },
+    {
+      "name": "PIN lower length boundary",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/credential",
+      "sample": "lower-pin"
+    },
+    {
+      "name": "PIN upper length boundary",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/credential",
+      "sample": "upper-pin"
+    },
+    {
+      "name": "PIN too short",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/credential",
+      "sample": "short-pin"
+    },
+    {
+      "name": "PIN has a letter",
+      "operation": "sample",
+      "document": "lock",
+      "kind": "property",
+      "pointer": "/sdfObject/Lock/sdfProperty/credential",
+      "sample": "letter-pin"
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" class="motion-safe:scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Esdieff | Put device models to work</title>
+  <meta name="description" content="Explore SDF device models, catch mistakes, compare revisions and generate test values with Esdieff, a command-line toolkit and Rust library.">
+  <link rel="canonical" href="https://esdieff.com/">
+  <meta property="og:url" content="https://esdieff.com/">
+  <meta property="og:site_name" content="Esdieff">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Esdieff: Put device models to work">
+  <meta property="og:description" content="Explore interfaces, catch mistakes, spot breaking changes and turn model constraints into useful tests.">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="author" content="Peder Bergan">
+  <meta name="theme-color" content="#003049">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <link rel="stylesheet" href="/landing.css">
+  <noscript><link rel="stylesheet" href="/landing-noscript.css"></noscript>
+  <script src="/landing.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Esdieff",
+    "url": "https://esdieff.com/",
+    "description": "A command-line toolkit and Rust library for connected-device models written in Semantic Definition Format (SDF, IETF RFC 9880): inspection, checking, revision comparison, test-value generation and recorded-value checking.",
+    "applicationCategory": "DeveloperApplication",
+    "license": ["https://opensource.org/license/mit", "https://www.apache.org/licenses/LICENSE-2.0"],
+    "copyrightHolder": {"@type": "Person", "name": "Peder Bergan", "url": "https://pederbe.dev"}
+  }
+  </script>
+</head>
+<body class="[html[data-entrances-ready]_&_[data-reveal]:not([data-revealed])]:opacity-0 [html[data-entrances-ready]_&_[data-word]:not([data-revealed])]:translate-y-full bg-base-100 text-base-content font-sans leading-relaxed antialiased [&_a]:touch-manipulation [&_:focus-visible]:outline-2 [&_:focus-visible]:outline-offset-4 [&_:focus-visible]:outline-primary [&_[hidden]]:hidden [&_code]:font-mono [&_button]:touch-manipulation">
+  <a class="absolute -translate-y-24 focus:translate-y-0 top-3 left-4 z-30 rounded-field bg-primary px-4 py-3 text-primary-content" href="#main-content">Skip to content</a>
+
+  <header class="border-b border-primary/20 bg-base-100/80 backdrop-blur-md">
+    <div class="navbar mx-auto min-h-16 w-full max-w-6xl flex-wrap gap-x-6 gap-y-2 px-5 sm:px-8">
+      <a class="flex min-h-11 items-center gap-2.5 text-xl font-bold tracking-tight" href="#top" aria-label="Esdieff homepage">
+        <svg class="text-primary drop-shadow-[0_0_9px_var(--color-primary)]" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 16a8 8 0 1 0-2.2 5.5"/><path d="M5 16h19.5"/></g><circle cx="26.5" cy="16" r="2.6" fill="currentColor"/></svg>
+        Esdieff
+      </a>
+      <nav class="flex w-full flex-wrap items-center gap-x-5 gap-y-1 pb-2 text-sm text-base-content/80 sm:w-auto sm:flex-1 sm:justify-end sm:pb-0 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:transition-colors [&_a:hover]:text-secondary" aria-label="Main navigation">
+        <a href="#workflows">What you can do</a>
+        <a href="#example">Example</a>
+        <a href="/docs/">Docs</a>
+        <a class="btn btn-sm btn-primary shadow-[0_0_18px] shadow-primary/40" href="/docs/getting-started/">Install Esdieff</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1" class="focus:outline-none">
+    <section class="relative isolate" id="top" aria-labelledby="hero-title">
+      <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(transparent,black_10%,black_88%,transparent)] forced-colors:hidden" aria-hidden="true">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_16%_30%,var(--color-primary),transparent_55%)] opacity-15"></div>
+        <div data-motion="breathe" class="absolute -right-32 -top-24 size-[720px] rounded-full bg-[radial-gradient(ellipse_at_center,var(--color-secondary),transparent_62%)] opacity-25"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(var(--color-primary)_1px,transparent_1px),linear-gradient(90deg,var(--color-primary)_1px,transparent_1px)] bg-size-[48px_48px] opacity-[.06] [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_72%)]"></div>
+        <div class="absolute -right-16 top-6 hidden size-[560px] rounded-full border border-primary/15 lg:block">
+          <div data-motion="orbit" class="absolute inset-8 rounded-full border border-dashed border-secondary/25"><span class="absolute top-3 left-1/3 size-2 rounded-full bg-secondary shadow-[0_0_18px] shadow-secondary/80"></span></div>
+          <div class="absolute inset-24 rounded-full border border-primary/10"></div>
+        </div>
+      </div>
+      <div class="mx-auto grid w-full max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-24">
+        <div class="min-w-0">
+          <p data-reveal class="mb-5 font-mono text-xs font-semibold uppercase tracking-[.14em] text-secondary">An SDF toolkit for connected-device models</p>
+          <h1 id="hero-title" class="text-5xl font-semibold tracking-[-.045em] leading-[1.05] sm:text-6xl lg:text-7xl [&_span]:inline-block">
+            <span class="overflow-hidden pb-1 align-bottom"><span data-word>Put</span></span>
+            <span class="overflow-hidden pb-1 align-bottom"><span data-word>device</span></span>
+            <span class="overflow-hidden pb-1 align-bottom"><span data-word>models</span></span><br>
+            <span class="overflow-hidden pb-1 align-bottom text-primary drop-shadow-[0_0_35px_var(--color-primary)]"><span data-word>to</span></span>
+            <span class="overflow-hidden pb-1 align-bottom text-primary drop-shadow-[0_0_35px_var(--color-primary)]"><span data-word>work.</span></span>
+          </h1>
+          <p data-reveal class="mt-7 max-w-lg text-lg leading-relaxed">Explore interfaces, catch mistakes, spot breaking changes and turn model constraints into useful tests.</p>
+          <p data-reveal class="mt-4 max-w-lg text-sm leading-relaxed text-base-content/75">Esdieff is a command-line toolkit and Rust library for connected-device models written in Semantic Definition Format, or SDF. Use it with models you create, receive from a partner or find in a public collection.</p>
+          <div data-reveal class="mt-8 flex flex-wrap items-center gap-3">
+            <a class="btn btn-primary min-h-12 shadow-[0_0_28px] shadow-primary/30 transition-transform motion-safe:hover:-translate-y-0.5" href="/docs/getting-started/">Install Esdieff <span aria-hidden="true">→</span></a>
+            <a class="btn min-h-12 border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20" href="#example">See it in action</a>
+          </div>
+          <p data-reveal class="mt-6 font-mono text-xs text-base-content/75">Start with the supplied thermostat example <span class="px-2 text-secondary">/</span> No physical device needed</p>
+        </div>
+
+        <div data-reveal class="min-w-0">
+          <div data-aura class="aura aura-glow w-full text-primary duration-[7000ms] before:[animation-play-state:paused] after:[animation-play-state:paused] data-motion-active:before:[animation-play-state:running] data-motion-active:after:[animation-play-state:running] motion-reduce:before:animate-none motion-reduce:after:animate-none forced-colors:before:hidden forced-colors:after:hidden">
+            <figure id="model-illustration" class="group/demo relative m-0 overflow-hidden rounded-xl border border-primary/40 bg-neutral p-4 text-neutral-content shadow-2xl sm:p-5">
+              <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_10%,var(--color-primary),transparent_60%)] opacity-15" aria-hidden="true"></div>
+              <svg class="relative block h-auto w-full" viewBox="0 0 560 300" role="img" aria-labelledby="illustration-title illustration-desc">
+                <title id="illustration-title">Four generated values on the thermostat's target-temperature range</title>
+                <desc id="illustration-desc">The rule allows 5 to 30 degrees Celsius in half-degree steps. 5 and 30 are accepted at the boundaries. 31 is rejected above the maximum. 5.25 is rejected because it falls between the half-degree steps.</desc>
+                <text x="28" y="40" class="fill-neutral-content font-mono" font-size="15" font-weight="600">targetTemperature</text>
+                <text x="28" y="62" class="fill-neutral-content/70" font-size="13">number · 5 to 30 °C · steps of 0.5</text>
+                <line x1="40" y1="140" x2="520" y2="140" class="stroke-neutral-content/30" stroke-width="2" stroke-linecap="round"/>
+                <g data-scene="band" class="origin-left">
+                  <rect x="72" y="134" width="400" height="12" rx="6" class="fill-primary/25 stroke-primary" stroke-width="1.5"/>
+                </g>
+                <g class="[&_line]:stroke-neutral-content/50 [&_text]:fill-neutral-content/70"><line x1="72" y1="146" x2="72" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="72" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">5</text><line x1="80" y1="146" x2="80" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="88" y1="146" x2="88" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="96" y1="146" x2="96" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="104" y1="146" x2="104" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="112" y1="146" x2="112" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="120" y1="146" x2="120" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="128" y1="146" x2="128" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="136" y1="146" x2="136" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="144" y1="146" x2="144" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="152" y1="146" x2="152" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="152" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">10</text><line x1="160" y1="146" x2="160" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="168" y1="146" x2="168" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="176" y1="146" x2="176" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="184" y1="146" x2="184" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="192" y1="146" x2="192" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="200" y1="146" x2="200" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="208" y1="146" x2="208" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="216" y1="146" x2="216" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="224" y1="146" x2="224" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="232" y1="146" x2="232" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="232" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">15</text><line x1="240" y1="146" x2="240" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="248" y1="146" x2="248" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="256" y1="146" x2="256" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="264" y1="146" x2="264" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="272" y1="146" x2="272" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="280" y1="146" x2="280" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="288" y1="146" x2="288" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="296" y1="146" x2="296" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="304" y1="146" x2="304" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="312" y1="146" x2="312" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="312" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">20</text><line x1="320" y1="146" x2="320" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="328" y1="146" x2="328" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="336" y1="146" x2="336" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="344" y1="146" x2="344" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="352" y1="146" x2="352" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="360" y1="146" x2="360" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="368" y1="146" x2="368" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="376" y1="146" x2="376" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="384" y1="146" x2="384" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="392" y1="146" x2="392" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="392" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">25</text><line x1="400" y1="146" x2="400" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="408" y1="146" x2="408" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="416" y1="146" x2="416" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="424" y1="146" x2="424" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="432" y1="146" x2="432" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="440" y1="146" x2="440" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="448" y1="146" x2="448" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="456" y1="146" x2="456" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="464" y1="146" x2="464" y2="153" class="stroke-base-content/35" stroke-width="1"/><line x1="472" y1="146" x2="472" y2="160" class="stroke-base-content/60" stroke-width="1.5"/><text x="472" y="178" text-anchor="middle" class="fill-base-content/70 font-mono" font-size="11">30</text></g>
+                <g data-scene="v5">
+                  <text x="72" y="112" text-anchor="middle" class="fill-neutral-content font-mono" font-size="15" font-weight="700">5</text>
+                  <circle cx="72" cy="140" r="12" class="fill-success"/>
+                  <path d="M66 140l4 4 7-8" fill="none" class="stroke-success-content" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="72" y="200" text-anchor="middle" class="fill-success" font-size="11" font-weight="600">accepted</text>
+                </g>
+                <g data-scene="v30">
+                  <text x="472" y="112" text-anchor="middle" class="fill-neutral-content font-mono" font-size="15" font-weight="700">30</text>
+                  <circle cx="472" cy="140" r="12" class="fill-success"/>
+                  <path d="M466 140l4 4 7-8" fill="none" class="stroke-success-content" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="450" y="200" text-anchor="middle" class="fill-success" font-size="11" font-weight="600">accepted</text>
+                </g>
+                <g data-scene="v31">
+                  <text x="508" y="112" text-anchor="middle" class="fill-neutral-content font-mono" font-size="15" font-weight="700">31</text>
+                  <circle cx="508" cy="140" r="12" class="fill-error"/>
+                  <path d="M503 135l10 10M513 135l-10 10" fill="none" class="stroke-error-content" stroke-width="2.4" stroke-linecap="round"/>
+                  <text x="508" y="216" text-anchor="middle" class="fill-error" font-size="11" font-weight="600">above max</text>
+                </g>
+                <g data-scene="loupe">
+                  <path d="M72 152L190 226M80 152L370 226" class="stroke-neutral-content/35" stroke-width="1" stroke-dasharray="3 3"/>
+                  <rect x="150" y="226" width="260" height="62" rx="8" class="fill-base-200/80 stroke-primary/40" stroke-width="1"/>
+                  <line x1="170" y1="257" x2="390" y2="257" class="stroke-neutral-content/35" stroke-width="2"/>
+                  <line x1="190" y1="247" x2="190" y2="267" class="stroke-neutral-content/80" stroke-width="2"/>
+                  <line x1="370" y1="247" x2="370" y2="267" class="stroke-neutral-content/80" stroke-width="2"/>
+                  <text x="190" y="281" text-anchor="middle" class="fill-neutral-content/70 font-mono" font-size="11">5</text>
+                  <text x="370" y="281" text-anchor="middle" class="fill-neutral-content/70 font-mono" font-size="11">5.5</text>
+                </g>
+                <g data-scene="v525">
+                  <text x="280" y="244" text-anchor="middle" class="fill-neutral-content font-mono" font-size="13" font-weight="700">5.25</text>
+                  <circle cx="280" cy="257" r="9" class="fill-error"/>
+                  <path d="M276 253l8 8M284 253l-8 8" fill="none" class="stroke-error-content" stroke-width="2.2" stroke-linecap="round"/>
+                  <text x="280" y="281" text-anchor="middle" class="fill-error" font-size="11" font-weight="600">not a half-degree step</text>
+                </g>
+              </svg>
+              <figcaption class="relative mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-neutral-content/15 pt-3 font-mono text-[11px] text-neutral-content/70"><span>One rule from the supplied thermostat model, four generated values.</span><span id="demo-state">Static result</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20" id="example" aria-labelledby="example-title">
+      <div data-reveal class="max-w-2xl">
+        <p class="mb-4 font-mono text-xs font-semibold uppercase tracking-[.14em] text-secondary">See it in action</p>
+        <h2 id="example-title" class="text-3xl font-semibold tracking-tight leading-tight sm:text-4xl">One model rule.<br><span class="text-primary">Four test values.</span></h2>
+        <p class="mt-5 text-base-content/80">A device model describes readings, settings, commands and events. Esdieff works with any SDF model; the supplied thermostat is just the example that ships with it. Here is one of its rules, and what Esdieff makes of it.</p>
+      </div>
+      <div class="mt-8 grid gap-6 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
+        <div data-reveal class="grid min-w-0 content-start gap-5">
+          <div class="min-w-0">
+            <p class="mb-3 text-sm text-base-content/80">This thermostat model accepts a target temperature from 5 to 30 °C in half-degree steps. The rule, as written in <code class="text-xs text-secondary">thermostat.sdf.json</code>:</p>
+            <div class="min-w-0 overflow-hidden rounded-xl border border-secondary/30 bg-base-200 shadow-[0_0_40px] shadow-primary/15" aria-label="Model excerpt in an editor window">
+              <div class="flex items-center gap-3 border-b border-secondary/20 bg-base-300/60 px-4 py-2.5 font-mono text-[11px] text-base-content/70">
+                <span class="flex gap-1.5" aria-hidden="true"><i class="size-2.5 rounded-full bg-primary"></i><i class="size-2.5 rounded-full bg-warning"></i><i class="size-2.5 rounded-full bg-success"></i></span>
+                <span class="rounded-t border-b-2 border-secondary px-2 pb-0.5 text-base-content">thermostat.sdf.json</span>
+                <span class="ml-auto text-secondary">JSON</span>
+              </div>
+              <pre class="m-0 w-full min-w-0 overflow-x-auto bg-neutral py-3 text-xs leading-[1.9] [&_.ln]:mr-3 [&_.ln]:inline-block [&_.ln]:w-6 [&_.ln]:text-right [&_.ln]:text-base-content/40 [&_.ln]:[user-select:none] [&_.k]:text-secondary [&_.s]:text-warning [&_.n]:text-error [&_.p]:text-base-content/60 [&_.row]:block [&_.row]:border-l-2 [&_.row]:border-transparent [&_.row]:px-3 [&_.hl]:border-primary [&_.hl]:bg-primary/15" tabindex="0" role="region" aria-label="Model excerpt"><code><span class="row"><span class="ln">1</span><span class="k">"targetTemperature"</span><span class="p">: {</span></span><span class="row"><span class="ln">2</span>  <span class="k">"description"</span><span class="p">: </span><span class="s">"Requested room temperature in half-degree increments"</span><span class="p">,</span></span><span class="row"><span class="ln">3</span>  <span class="k">"type"</span><span class="p">: </span><span class="s">"number"</span><span class="p">,</span></span><span class="row"><span class="ln">4</span>  <span class="k">"nullable"</span><span class="p">: </span><span class="n">false</span><span class="p">,</span></span><span class="row hl"><span class="ln">5</span>  <span class="k">"minimum"</span><span class="p">: </span><span class="n">5</span><span class="p">,</span></span><span class="row hl"><span class="ln">6</span>  <span class="k">"maximum"</span><span class="p">: </span><span class="n">30</span><span class="p">,</span></span><span class="row hl"><span class="ln">7</span>  <span class="k">"multipleOf"</span><span class="p">: </span><span class="n">0.5</span><span class="p">,</span></span><span class="row"><span class="ln">8</span>  <span class="k">"unit"</span><span class="p">: </span><span class="s">"Cel"</span><span class="p">,</span></span><span class="row"><span class="ln">9</span>  <span class="k">"readable"</span><span class="p">: </span><span class="n">true</span><span class="p">,</span></span><span class="row"><span class="ln">10</span>  <span class="k">"writable"</span><span class="p">: </span><span class="n">true</span></span><span class="row"><span class="ln">11</span><span class="p">}</span></span></code></pre>
+            </div>
+          </div>
+          <div class="min-w-0">
+            <p class="mb-3 text-sm text-base-content/80">Generate values from its rules with Esdieff:</p>
+            <div class="min-w-0 overflow-hidden rounded-xl border border-primary/40 bg-base-200 shadow-[0_0_40px] shadow-primary/15" aria-label="Terminal">
+              <div class="flex items-center gap-3 border-b border-primary/20 bg-base-300/60 px-4 py-2 font-mono text-[11px] text-base-content/70">
+                <span class="flex gap-1.5" aria-hidden="true"><i class="size-2.5 rounded-full bg-primary"></i><i class="size-2.5 rounded-full bg-warning"></i><i class="size-2.5 rounded-full bg-success"></i></span>
+                <span>Terminal</span>
+                <button type="button" class="copy btn btn-xs btn-primary ml-auto" data-copy="command-generate">Copy command</button>
+              </div>
+              <pre class="m-0 w-full min-w-0 overflow-x-auto bg-neutral px-4 py-3 text-xs leading-[1.9] whitespace-pre-wrap break-words [&_.row]:block" tabindex="0" role="region" aria-label="Terminal transcript"><code><span class="row"><span class="text-primary">$ </span><span id="command-generate">esdieff <span class="text-warning">generate</span> <span class="text-secondary">--document</span> thermostat.sdf.json thermostat.sdf.json</span></span><span class="row text-base-content/80">Generated values esdieff.generation/1: <span class="font-semibold text-success">passed</span></span><span class="row text-base-content/80">Values: <span class="text-success">15 admitted</span>, <span class="text-error">60 rejected</span>, 0 undetermined</span><span class="row text-base-content/80">Descriptions: 4</span></code></pre>
+            </div>
+            <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+        <div data-reveal class="min-w-0">
+          <p class="mb-2 text-sm text-base-content/80">Here are four of the generated target-temperature values:</p>
+          <div class="max-w-full overflow-x-auto rounded-box border border-primary/30 bg-linear-to-br from-primary/10 via-base-200 to-base-200 shadow-[0_0_40px] shadow-primary/10">
+            <table class="table table-sm">
+              <thead class="[&_th]:font-mono [&_th]:text-[10px] [&_th]:uppercase [&_th]:tracking-[.14em] [&_th]:text-secondary">
+                <tr><th>Generated value</th><th>Result</th><th>Why</th></tr>
+              </thead>
+              <tbody class="[&_td]:align-middle [&_tr]:border-primary/15">
+                <tr><td class="font-mono text-base font-semibold tabular-nums">5 °C</td><td><span class="badge badge-sm badge-success gap-1"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Accepted</span></td><td>At the lower boundary</td></tr>
+                <tr><td class="font-mono text-base font-semibold tabular-nums">30 °C</td><td><span class="badge badge-sm badge-success gap-1"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Accepted</span></td><td>At the upper boundary</td></tr>
+                <tr><td class="font-mono text-base font-semibold tabular-nums">31 °C</td><td><span class="badge badge-sm badge-error gap-1"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Rejected</span></td><td>Above the maximum</td></tr>
+                <tr><td class="font-mono text-base font-semibold tabular-nums">5.25 °C</td><td><span class="badge badge-sm badge-error gap-1"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Rejected</span></td><td>Outside the half-degree steps</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="mt-4 text-base-content/80">Bring values like these into your firmware or application tests.</p>
+          <a class="mt-3 inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/getting-started/#try-the-thermostat-example">Try this example <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20" id="workflows" aria-labelledby="workflows-title">
+      <div data-reveal class="mb-8 max-w-2xl">
+        <p class="mb-4 font-mono text-xs font-semibold uppercase tracking-[.14em] text-secondary">What you can do</p>
+        <h2 id="workflows-title" class="text-3xl font-semibold tracking-tight leading-tight sm:text-4xl">Get more from the models<br><span class="text-primary">you work with.</span></h2>
+      </div>
+      <div class="grid gap-5 lg:grid-cols-2">
+        <article data-reveal class="card min-w-0 border border-primary/30 bg-linear-to-br from-primary/10 to-base-200 text-base-content shadow-xl">
+          <div class="card-body p-6 sm:p-7">
+            <span class="font-mono text-xs text-primary">01 / INTEGRATE</span>
+            <h3 class="card-title text-xl"><svg class="shrink-0 text-primary" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8 11h6M11 8v6"/></svg>Understand an interface before you integrate it</h3>
+            <p class="text-sm leading-relaxed text-base-content/80">Explore a supplier's properties, actions, events and allowed values. See how shared definitions fit together, find model mistakes and follow findings back to their source. Start your integration with a clearer picture of the interface.</p>
+            <div class="card-actions"><a class="inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/guides/inspect-and-check">Explore and check a model <span aria-hidden="true">→</span></a></div>
+          </div>
+        </article>
+        <article data-reveal class="card min-w-0 border border-secondary/30 bg-linear-to-br from-secondary/10 to-base-200 text-base-content shadow-xl">
+          <div class="card-body p-6 sm:p-7">
+            <span class="font-mono text-xs text-secondary">02 / COMPOSE</span>
+            <h3 class="card-title text-xl"><svg class="shrink-0 text-secondary" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5-8 4.5-8-4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5L12 21l8-4.5"/></svg>Build on definitions you already have</h3>
+            <p class="text-sm leading-relaxed text-base-content/80">Reuse existing capabilities, compose new device descriptions and make repeatable edits. Keep the links to shared definitions as your model collection grows.</p>
+            <div class="card-actions"><a class="inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/guides/authoring-and-editing">Compose and edit models <span aria-hidden="true">→</span></a></div>
+          </div>
+        </article>
+        <article data-reveal class="card min-w-0 border border-secondary/30 bg-linear-to-br from-secondary/10 to-base-200 text-base-content shadow-xl">
+          <div class="card-body p-6 sm:p-7">
+            <span class="font-mono text-xs text-secondary">03 / REVIEW</span>
+            <h3 class="card-title text-xl"><svg class="shrink-0 text-secondary" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V13a3 3 0 0 0 3 3h6.5M18 15.5V11a3 3 0 0 0-3-3H8.5"/><path d="M13 13.5l2.5 2.5-2.5 2.5M11 5.5L8.5 8 11 10.5"/></svg>See what a change means for your apps</h3>
+            <p class="text-sm leading-relaxed text-base-content/80">Compare model revisions before updating an integration. Spot breaking changes and see where an edit to a shared definition reaches the models that use it. Give your team something concrete to review.</p>
+            <div class="card-actions"><a class="inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/guides/revision-comparison">Compare two revisions <span aria-hidden="true">→</span></a></div>
+          </div>
+        </article>
+        <article data-reveal class="card min-w-0 border border-primary/30 bg-linear-to-br from-primary/10 to-base-200 text-base-content shadow-xl">
+          <div class="card-body p-6 sm:p-7">
+            <span class="font-mono text-xs text-primary">04 / TEST</span>
+            <h3 class="card-title text-xl"><svg class="shrink-0 text-primary" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><path d="M7.5 15h9"/></svg>Bring the model into your tests</h3>
+            <p class="text-sm leading-relaxed text-base-content/80">Generate boundary values and invalid inputs, check individual samples and find recorded values that do not fit the model. Reuse those checks as your firmware, application and interface evolve.</p>
+            <div class="card-actions"><a class="inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/guides/testing-values">Test values against a model <span aria-hidden="true">→</span></a></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20" id="workflow" aria-labelledby="workflow-title">
+      <div class="grid items-center gap-8 lg:grid-cols-[.85fr_1.15fr] lg:gap-12">
+        <div data-reveal>
+          <p class="mb-4 font-mono text-xs font-semibold uppercase tracking-[.14em] text-secondary">Built for your workflow</p>
+          <h2 id="workflow-title" class="text-3xl font-semibold tracking-tight leading-tight sm:text-4xl">Fits the way<br><span class="text-primary">you work.</span></h2>
+          <p class="mt-5 max-w-lg text-base-content/80">Use Esdieff from the terminal, save repeatable checks or build on its Rust library. Keep model work close to the code, tests and reviews that depend on it.</p>
+          <a class="mt-4 inline-flex min-h-11 items-center gap-2 text-secondary underline underline-offset-4 transition-colors hover:text-primary" href="/docs/rust-library">Explore the Rust library <span aria-hidden="true">→</span></a>
+          <p class="mt-6 font-mono text-xs text-base-content/70">Built for SDF models based on IETF RFC 9880.</p>
+        </div>
+        <ul data-reveal class="grid min-w-0 overflow-hidden rounded-box border border-primary/30 bg-linear-to-br from-primary/10 via-base-200 to-secondary/10 shadow-[0_0_40px] shadow-primary/10 sm:grid-cols-3 [&_li]:grid [&_li]:content-start [&_li]:gap-2 [&_li]:p-6 [&_li+li]:border-t [&_li+li]:border-primary/20 sm:[&_li+li]:border-t-0 sm:[&_li+li]:border-l">
+          <li>
+            <svg class="text-primary" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+            <h3 class="font-semibold">Repeat useful checks</h3>
+            <p class="text-sm text-base-content/80">Save model, sample and revision checks to run again as your collection changes.</p>
+          </li>
+          <li>
+            <svg class="text-secondary" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13l-2 2 2 2M15 13l2 2-2 2"/></svg>
+            <h3 class="font-semibold">Bring results into your workflow</h3>
+            <p class="text-sm text-base-content/80">Use JSON reports for automation, SARIF for compatible code-review tools and Markdown comparisons for change notes.</p>
+          </li>
+          <li>
+            <svg class="text-primary" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+            <h3 class="font-semibold">Create your own tools</h3>
+            <p class="text-sm text-base-content/80">Embed inspection, checking, generation and revision comparison in a Rust application.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="relative isolate mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24" id="get-started" aria-labelledby="get-started-title">
+      <div class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_30%_50%,var(--color-primary),transparent_60%)] opacity-10 [mask-image:linear-gradient(transparent,black_20%,black_80%,transparent)]" aria-hidden="true"></div>
+      <div data-reveal class="max-w-3xl">
+        <h2 id="get-started-title" class="text-4xl font-semibold tracking-[-.045em] leading-[1.05] sm:text-5xl lg:text-6xl">Install it.<br><span class="text-primary drop-shadow-[0_0_35px_var(--color-primary)]">Try a model.</span></h2>
+        <p class="mt-6 max-w-xl text-lg text-base-content/85">Start with the thermostat example or bring a model you already work with. Explore the interface, check its definitions and generate your first test values.</p>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a class="btn btn-primary min-h-12 shadow-[0_0_28px] shadow-primary/30 transition-transform motion-safe:hover:-translate-y-0.5" href="/docs/getting-started/">Install Esdieff <span aria-hidden="true">→</span></a>
+          <a class="btn min-h-12 border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20" href="/docs/getting-started/#try-the-thermostat-example">Try the thermostat example</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mx-auto w-full max-w-6xl px-5 pt-10 pb-24 text-xs leading-relaxed text-base-content/70 sm:px-8 [&_p]:mt-4 [&_a:not(.wordmark)]:text-secondary [&_a:not(.wordmark)]:underline [&_a]:underline-offset-4 [&_a:not(.wordmark):hover]:text-primary">
+    <div class="flex flex-wrap items-center justify-between gap-5 border-t border-primary/20 pt-8">
+      <a class="wordmark flex items-center gap-2 text-xl font-bold tracking-tight text-base-content" href="#top"><svg class="text-primary" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 16a8 8 0 1 0-2.2 5.5"/><path d="M5 16h19.5"/></g><circle cx="26.5" cy="16" r="2.6" fill="currentColor"/></svg>Esdieff</a>
+      <nav class="flex flex-wrap gap-5 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center" aria-label="Footer navigation"><a href="/docs/">Documentation</a><a href="https://github.com/pederbe/esdieff">Source on GitHub</a><a href="/sitemap.xml">Sitemap</a></nav>
+    </div>
+    <p>An SDF toolkit for connected-device models, built by <a href="https://pederbe.dev" rel="author me">Peder Bergan</a>. <span class="flex flex-wrap gap-4 sm:ml-4 sm:inline-flex [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:gap-2"><a href="https://github.com/pederbe" rel="me"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a><a href="https://www.linkedin.com/in/pederbergan/" rel="me"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M13.6 0H2.4C1.07 0 0 1.07 0 2.4v11.2C0 14.93 1.07 16 2.4 16h11.2c1.33 0 2.4-1.07 2.4-2.4V2.4C16 1.07 14.93 0 13.6 0zM4.9 13.4H2.6V6.1h2.3v7.3zM3.75 5.1a1.33 1.33 0 1 1 0-2.66 1.33 1.33 0 0 1 0 2.66zM13.4 13.4h-2.3V9.9c0-.85-.02-1.93-1.18-1.93-1.18 0-1.36.92-1.36 1.87v3.56H6.27V6.1h2.2v1h.03c.31-.58 1.05-1.18 2.16-1.18 2.31 0 2.74 1.52 2.74 3.5v3.98z"/></svg>LinkedIn</a><a href="https://bsky.app/profile/pederbe.dev" rel="me"><svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.47 1.93C5.3 3.3 7.27 6.1 8 7.6c.73-1.5 2.7-4.3 4.53-5.67C13.85.94 16 .18 16 2.62c0 .49-.28 4.1-.44 4.69-.57 2.03-2.64 2.55-4.48 2.24 3.22.55 4.04 2.36 2.27 4.17-3.36 3.45-4.83-.87-5.2-1.97L8 11.3l-.15.45c-.37 1.1-1.84 5.42-5.2 1.97-1.77-1.81-.95-3.62 2.27-4.17-1.84.31-3.91-.21-4.48-2.24C.28 6.72 0 3.11 0 2.62 0 .18 2.15.94 3.47 1.93z"/></svg>Bluesky</a></span></p>
+    <p class="flex flex-wrap items-center gap-x-0 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:gap-2 [&_span]:inline-flex [&_span]:min-h-11 [&_span]:items-center"><span class="mr-2">Also by Peder:</span><a href="https://ripscope.com"><svg width="16" height="16" viewBox="0 0 26 26" aria-hidden="true" focusable="false"><rect width="26" height="26" rx="5" fill="#0e1621"/><circle cx="13" cy="13" r="10.5" fill="none" stroke="#ffd24a" stroke-width="2"/><path d="M13 1.5v5M13 19.5v5M1.5 13h5M19.5 13h5" stroke="#ffd24a" stroke-width="2" fill="none"/><path d="M10.6 9.2c-1.2 0-1.8.6-1.8 1.8v.6c0 .8-.4 1.2-1.1 1.4.7.2 1.1.6 1.1 1.4v.6c0 1.2.6 1.8 1.8 1.8M15.4 9.2c1.2 0 1.8.6 1.8 1.8v.6c0 .8.4 1.2 1.1 1.4-.7.2-1.1.6-1.1 1.4v.6c0 1.2-.6 1.8-1.8 1.8" stroke="#e4ecf3" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>Ripscope</a><span class="mr-3 text-base-content/50">, C navigation for Vim, Neovim and Emacs <span class="ml-2" aria-hidden="true">·</span></span><a href="https://fastmash.io"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="7" fill="#1c2330"/><rect x="5" y="18" width="5.5" height="9" rx="1.5" fill="#2dd4bf"/><rect x="13.25" y="12" width="5.5" height="15" rx="1.5" fill="#2dd4bf"/><rect x="21.5" y="5" width="5.5" height="22" rx="1.5" fill="#fbbf24"/></svg>Fastmash</a><span class="text-base-content/50">, command-line statistics.</span></p>
+    <p class="max-w-4xl">Free software under <a href="https://github.com/pederbe/esdieff/blob/main/LICENSE-MIT">MIT</a> or <a href="https://github.com/pederbe/esdieff/blob/main/LICENSE-APACHE">Apache-2.0</a>, at your option.</p>
+  </footer>
+
+  <button type="button" id="motion-toggle" class="btn fixed bottom-4 right-4 z-20 border-primary/50 bg-base-200/90 text-base-content shadow-lg backdrop-blur-sm" hidden>Pause motion</button>
+</body>
+</html>

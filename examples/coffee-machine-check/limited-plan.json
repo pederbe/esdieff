@@ -1,0 +1,73 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "coffee",
+      "path": "limited.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "brew-espresso",
+      "path": "samples/brew-espresso.json",
+      "role": "sample"
+    },
+    {
+      "key": "calibration",
+      "path": "samples/calibration.json",
+      "role": "sample"
+    },
+    {
+      "key": "excess-calibration",
+      "path": "samples/excess-calibration.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Limited Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Limited model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "coffee"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Brew without optional calibration",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "brew-espresso"
+    },
+    {
+      "name": "Brew calibration needs definition",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "calibration"
+    },
+    {
+      "name": "Excess servings despite incomplete calibration",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "excess-calibration"
+    }
+  ]
+}

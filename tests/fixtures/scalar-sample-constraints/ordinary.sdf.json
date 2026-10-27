@@ -1,0 +1,22 @@
+{
+  "sdfData": {"Base": {"type": "number", "maximum": 5, "const": 5}},
+  "sdfProperty": {
+    "number": {"const": 10},
+    "wideInteger": {"const": 9007199254740992},
+    "text": {"const": "é"},
+    "boolean": {"const": true},
+    "null": {"const": null},
+    "enum": {"enum": ["on", "off", "on"]},
+    "override": {
+      "sdfRef": "#/sdfData/Base",
+      "sdfChoice": {"small": {}, "wide": {"maximum": 20, "const": 10}}
+    },
+    "nested": {
+      "type": "number",
+      "sdfChoice": {
+        "outside": {"sdfChoice": {"low": {"maximum": 5}, "high": {"minimum": 20}}},
+        "middle": {"minimum": 6, "maximum": 19}
+      }
+    }
+  }
+}

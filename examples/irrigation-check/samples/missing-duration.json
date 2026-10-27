@@ -1,0 +1,10 @@
+{
+  "zoneIds": [
+    "zone-1"
+  ],
+  "zones": [
+    {
+      "id": "zone-1"
+    }
+  ]
+}
