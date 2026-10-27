@@ -31,7 +31,7 @@ jobs:
 
   candidate:
     needs: validate
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7.0.1
@@ -87,7 +87,7 @@ jobs:
   publish:
     needs: candidate
     if: inputs.publish && vars.RELEASE_ENABLED == 'true' && !github.event.repository.private
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     environment: release
     permissions:
@@ -175,7 +175,7 @@ jobs:
   packages:
     needs: publish
     if: needs.publish.result == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       actions: write
     steps:
@@ -188,7 +188,7 @@ jobs:
   distribution:
     needs: publish
     if: needs.publish.result == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       actions: write
     steps:
@@ -201,7 +201,7 @@ jobs:
   website:
     needs: publish
     if: needs.publish.result == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     permissions:
       actions: write
     steps:

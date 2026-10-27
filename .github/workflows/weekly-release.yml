@@ -25,7 +25,7 @@ concurrency:
 jobs:
   prepare:
     if: github.ref == 'refs/heads/main' && (inputs.check_only || (vars.WEEKLY_RELEASE_ENABLED == 'true' && !github.event.repository.private))
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: write
