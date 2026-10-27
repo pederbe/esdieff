@@ -71,7 +71,7 @@ The conditions of a failed or undetermined entry explain its outcome: the decodi
 
 ## Composition and allowances
 
-The selected document is composed once, on the request's own allowance, as `esdieff generate` composes it. Each distinct selector, a kind and a pointer, is resolved once against that composition, and later entries reuse its resolution. Each entry is checked with an allowance of its own, with the work, allocation, numeric and equality limits that one `esdieff sample` request receives against the same Catalogue, as [ADR 0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md) states. A check that runs out of its allowance leaves only that entry undetermined, with an `operation.limit` condition.
+The selected document is composed once, on the request's own allowance, as `esdieff generate` composes it. Each distinct selector, a kind and a pointer, is resolved once against that composition, and later entries reuse its resolution. Each entry is checked with an allowance of its own, with the work, allocation, numeric and equality limits that one `esdieff sample` request receives against the same Catalogue, as [ADR 0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md) states. A check that runs out of its allowance leaves only that entry undetermined, with an `operation.limit` condition. Entries take turns with one pattern engine, so a trace starts it at most once, as [ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md) states. Each entry still has its own pattern polls and duration.
 
 ## Bounds
 

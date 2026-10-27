@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Check pattern-constrained trace entries and generated values several times
+  faster. A trace or generation request now starts one pattern engine instead
+  of one for each value.
+
 ## [0.1.0] - 2026-10-27
 
 The first public release of Esdieff provides a Rust library and command-line

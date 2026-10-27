@@ -8,6 +8,7 @@ use crate::budgeted::failure;
 use crate::effective::EffectiveModel;
 use crate::finding::Finding;
 use crate::json::{self, Issue, JsonView};
+use crate::pattern::MatchingWork;
 use crate::report::WireBasis;
 use crate::role::SetAside;
 use crate::sample::{
@@ -67,6 +68,8 @@ pub(super) struct Selectors<'s, 'm> {
     model: &'s EffectiveModel<'m>,
     /// The resolution of each pointer for each kind, in `SampleKind::ALL` order.
     resolved: HashMap<String, [Option<Resolution>; 5]>,
+    /// Holds the pattern worker that entries borrow in turn, so the trace starts one engine.
+    patterns: MatchingWork,
 }
 
 impl<'s, 'm> Selectors<'s, 'm> {
@@ -74,6 +77,7 @@ impl<'s, 'm> Selectors<'s, 'm> {
         Self {
             model,
             resolved: HashMap::new(),
+            patterns: MatchingWork::default(),
         }
     }
 
@@ -154,12 +158,14 @@ impl<'s, 'm> Selectors<'s, 'm> {
         };
         // The check of the value has the allowance one Sample-value checking request
         // receives, with the numeric work its decoding left.
-        let allowance = ValueAllowance::lend(
+        let mut allowance = ValueAllowance::lend(
             OperationBudget::new(limits),
             decoding.numeric,
             limits.equality_pairs,
         );
-        let outcome = self.settle(&source, allowance, &mut checked, &mut conditions);
+        self.patterns.lend_worker(&mut allowance.budget.patterns);
+        let outcome = self.settle(&source, &mut allowance, &mut checked, &mut conditions);
+        self.patterns.reclaim_worker(&mut allowance.budget.patterns);
         checked.entry.outcome = outcome;
         if outcome != TraceOutcome::Passed {
             checked.entry.conditions = conditions.kept;
@@ -172,7 +178,7 @@ impl<'s, 'm> Selectors<'s, 'm> {
     fn settle(
         &mut self,
         source: &Source,
-        mut allowance: ValueAllowance,
+        allowance: &mut ValueAllowance,
         checked: &mut Checked,
         conditions: &mut Conditions,
     ) -> TraceOutcome {
@@ -232,12 +238,8 @@ impl<'s, 'm> Selectors<'s, 'm> {
         };
         let model = self.model;
         let description = EffectiveDataDescription(EffectiveJson { model, node }, DataRole::Full);
-        let settled = check_value(
-            description,
-            SampleValueView::new(source, value),
-            &mut allowance,
-        )
-        .expect("a resolved description is a selectable root");
+        let settled = check_value(description, SampleValueView::new(source, value), allowance)
+            .expect("a resolved description is a selectable root");
         checked.interpretations = settled.interpretations;
         checked.set_aside = allowance.budget.set_aside;
         let admission = settled.admission;

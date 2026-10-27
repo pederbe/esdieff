@@ -1,5 +1,6 @@
-//! Follows ADR0014: Bounded partial ECMAScript pattern capability, and
-//! ADR0028: Bounded effective model pattern syntax.
+//! Follows ADR0014: Bounded partial ECMAScript pattern capability,
+//! ADR0028: Bounded effective model pattern syntax, and ADR0045: One pattern
+//! engine per trace or generation request.
 use crate::AssessmentStatus;
 
 pub(crate) const AREA: &str = "pattern-syntax/1";
@@ -124,6 +125,17 @@ impl MatchingWork {
         });
         Some(index)
     }
+    /// Lend this allowance's worker, with its engine, to `borrower`, a fresh allowance for
+    /// an independent check, so successive checks start one engine between them. Only the
+    /// worker moves. Each allowance keeps its own counters and pays its own worker stack
+    /// and engine heap.
+    pub(crate) fn lend_worker(&mut self, borrower: &mut Self) {
+        borrower.worker = self.worker.take();
+    }
+    /// Take back the worker lent to `borrower`, or the one it started.
+    pub(crate) fn reclaim_worker(&mut self, borrower: &mut Self) {
+        self.worker = borrower.worker.take();
+    }
 }
 pub(crate) enum MatchVerdict {
     Matched,
@@ -170,6 +182,7 @@ fn run(
     budget.patterns = matching;
     result
 }
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn match_inner(
     pattern: &str,
     subject: Option<&str>,
@@ -226,9 +239,12 @@ fn match_inner(
         .send(request)
         .is_err()
     {
+        // A stopped worker is never lent on, so the next check starts its own.
+        matching.worker = None;
         return MatchVerdict::Limit;
     }
     let Ok((result, request)) = worker.results.recv() else {
+        matching.worker = None;
         return MatchVerdict::Limit;
     };
     budget.work = request.work;
@@ -345,12 +361,18 @@ impl MatchRequest {
                 Err(verdict) => return verdict,
             }
         }
-        engine.as_ref().expect("initialized engine").matches(
+        let verdict = engine.as_ref().expect("initialized engine").matches(
             &request.pattern,
             request.subject.as_deref(),
             polls,
             duration,
-        )
+        );
+        // A limit can stop the engine part-way through its work. The next match, perhaps
+        // for another allowance, starts a fresh one.
+        if matches!(verdict, MatchVerdict::Limit) {
+            *engine = None;
+        }
+        verdict
     }
 }
 
@@ -360,6 +382,7 @@ struct Engine {
     runtime: rquickjs::Runtime,
 }
 impl Engine {
+    #[cfg_attr(feature = "hotpath", hotpath::measure(impl_type = "Engine"))]
     fn new(limits: &crate::Limits) -> Result<Self, MatchVerdict> {
         use rquickjs::{Context, Runtime};
         // The probe also protects embeddings that unify allocator features.

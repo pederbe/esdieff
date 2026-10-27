@@ -555,6 +555,55 @@ fn a_description_that_cannot_be_established_leaves_its_entries_undetermined() {
 }
 
 #[test]
+fn entries_that_share_the_pattern_engine_keep_their_own_polls() {
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied(
+            "model",
+            br#"{"sdfProperty":{"code":{"type":"string","pattern":"^(a+)+$"}}}"#,
+        )],
+        esdieff::Limits::default()
+            .pattern_interrupts(4)
+            .pattern_deadline(std::time::Duration::from_secs(1)),
+    )
+    .unwrap();
+    let code = |value: &str| {
+        format!(
+            "{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n"
+        )
+    };
+    // Backtracking over the heavy value needs more than the 4 polls one Sample request
+    // receives, while each other entry needs one. Entries borrow one engine in turn, never
+    // one another's polls, and an interrupted match leaves nothing behind for the next.
+    let heavy = format!("{}b", "a".repeat(40));
+    let trace = [code(&heavy), code("aa"), code("b"), code(&heavy), code("a")].concat();
+    let result = check(&catalogue, &trace);
+    assert_eq!(result.count(TraceOutcome::Passed), 2);
+    assert_eq!(
+        listed(&result),
+        [
+            (
+                1,
+                TraceOutcome::Undetermined,
+                Some(Admission::Undetermined),
+                vec!["operation.limit".to_owned()]
+            ),
+            (
+                3,
+                TraceOutcome::Failed,
+                Some(Admission::Rejected),
+                vec!["sample.pattern".to_owned()]
+            ),
+            (
+                4,
+                TraceOutcome::Undetermined,
+                Some(Admission::Undetermined),
+                vec!["operation.limit".to_owned()]
+            ),
+        ]
+    );
+}
+
+#[test]
 fn conditions_beyond_eight_are_counted_with_a_count_limit_record() {
     let catalogue = thermostat();
     let extra: String = (0..10)

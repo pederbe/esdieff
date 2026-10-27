@@ -685,7 +685,11 @@ impl<'m> Run<'_, 'm, '_> {
         // check leaves only its own value undetermined.
         let value = CheckedValue::new(value);
         let mut lent = ValueAllowance::new(self.root.json().model.catalogue);
-        let checked = check_generated(self.root, &value, &mut lent).map_err(|_| Exhausted::Work)?;
+        let patterns = &mut self.generator.allowance.budget.patterns;
+        patterns.lend_worker(&mut lent.budget.patterns);
+        let checked = check_generated(self.root, &value, &mut lent);
+        patterns.reclaim_worker(&mut lent.budget.patterns);
+        let checked = checked.map_err(|_| Exhausted::Work)?;
         self.generated.interpretations |= checked.interpretations;
         self.generated.set_aside |= lent.budget.set_aside;
         let mut codes = Vec::new();
