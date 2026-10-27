@@ -77,8 +77,8 @@ pub(crate) enum Verdict {
 pub(crate) struct MatchingWork {
     stack_charged: bool,
     heap_charged: bool,
-    /// Whether this allowance has called the engine, which then owes no first-call poll.
-    engine_called: bool,
+    /// Whether this allowance has spent the poll a new engine makes on its first call.
+    first_poll_charged: bool,
     worker: Option<MatchWorker>,
     remaining_interrupts: Option<usize>,
     remaining_time: Option<std::time::Duration>,
@@ -134,9 +134,13 @@ impl MatchingWork {
     pub(crate) fn lend_worker(&mut self, borrower: &mut Self) {
         borrower.worker = self.worker.take();
     }
-    /// Take back the worker lent to `borrower`, or the one it started.
+    /// Take back the worker lent to `borrower`, or the one it started, unless it has
+    /// stopped. The next check then starts its own.
     pub(crate) fn reclaim_worker(&mut self, borrower: &mut Self) {
-        self.worker = borrower.worker.take();
+        self.worker = borrower
+            .worker
+            .take()
+            .filter(|worker| worker.requests.is_some());
     }
 }
 pub(crate) enum MatchVerdict {
@@ -217,7 +221,7 @@ fn match_inner(
     if matching.worker.is_none() {
         matching.worker = MatchWorker::new();
     }
-    let Some(worker) = matching.worker.as_ref() else {
+    let Some(worker) = matching.worker.as_mut() else {
         return MatchVerdict::Limit;
     };
     let request = MatchRequest {
@@ -233,18 +237,16 @@ fn match_inner(
             .unwrap_or(limits.pattern_interrupts),
         duration: matching.remaining_time.unwrap_or(limits.pattern_deadline),
         heap_charged: matching.heap_charged,
-        engine_called: matching.engine_called,
+        first_poll_charged: matching.first_poll_charged,
     };
     let reply = worker
         .requests
         .as_ref()
-        .expect("live worker")
-        .send(request)
-        .ok()
+        .and_then(|requests| requests.send(request).ok())
         .and_then(|()| worker.results.recv().ok());
     let Some((result, request)) = reply else {
-        // A stopped worker is never lent on, so the next check starts its own.
-        matching.worker = None;
+        // Keep the stopped worker, so this allowance's later matches also reach a limit.
+        worker.requests = None;
         return MatchVerdict::Limit;
     };
     budget.work = request.work;
@@ -252,7 +254,7 @@ fn match_inner(
     matching.remaining_interrupts = Some(request.polls);
     matching.remaining_time = Some(request.duration);
     matching.heap_charged = request.heap_charged;
-    matching.engine_called = request.engine_called;
+    matching.first_poll_charged = request.first_poll_charged;
     result
 }
 
@@ -267,7 +269,7 @@ struct MatchRequest {
     polls: usize,
     duration: std::time::Duration,
     heap_charged: bool,
-    engine_called: bool,
+    first_poll_charged: bool,
 }
 struct MatchWorker {
     requests: Option<std::sync::mpsc::SyncSender<MatchRequest>>,
@@ -362,12 +364,14 @@ impl MatchRequest {
                 Ok(created) => *engine = Some(created),
                 Err(verdict) => return verdict,
             }
+            // The new engine makes this allowance's first poll on its own first call.
+            request.first_poll_charged = true;
         }
-        let first_call = !std::mem::replace(&mut request.engine_called, true);
+        let first_poll = !std::mem::replace(&mut request.first_poll_charged, true);
         engine.as_ref().expect("initialized engine").matches(
             &request.pattern,
             request.subject.as_deref(),
-            first_call,
+            first_poll,
             polls,
             duration,
         )
@@ -400,18 +404,13 @@ impl Engine {
         let Ok(context) = Context::full(&runtime) else {
             return Err(MatchVerdict::Limit);
         };
-        // A new context polls on its first call. Spend that poll now, before any interrupt
-        // handler exists, so it never depends on which allowance makes the first call.
-        if context.with(|ctx| ctx.eval::<(), _>("undefined")).is_err() {
-            return Err(MatchVerdict::Limit);
-        }
         Ok(Self { context, runtime })
     }
     fn matches(
         &self,
         pattern: &str,
         subject: Option<&str>,
-        first_call: bool,
+        first_poll: bool,
         polls: &mut usize,
         duration: &mut std::time::Duration,
     ) -> MatchVerdict {
@@ -424,18 +423,20 @@ impl Engine {
         // on a short match. Poll at entry as well so tiny matches still spend
         // the original operation allowance.
         *polls -= 1;
-        // An allowance's first call also spends the poll a fresh context would make, whoever
-        // started this engine. With no polls left that poll interrupts, as it would there.
-        if first_call {
-            let Some(left) = polls.checked_sub(1) else {
+        let started = std::time::Instant::now();
+        let allowed = *duration;
+        // A new context polls on its first call. A lent engine made that poll for the allowance
+        // that started it, so a borrowing allowance's first match makes it here, as the
+        // interrupt callback below would.
+        if first_poll {
+            if started.elapsed() >= allowed || *polls == 0 {
+                *duration = duration.saturating_sub(started.elapsed());
                 return MatchVerdict::Limit;
-            };
-            *polls = left;
+            }
+            *polls -= 1;
         }
         let remaining = Arc::new(AtomicUsize::new(*polls));
         let callback_remaining = Arc::clone(&remaining);
-        let started = std::time::Instant::now();
-        let allowed = *duration;
         self.runtime.set_interrupt_handler(Some(Box::new(move || {
             started.elapsed() >= allowed
                 || callback_remaining

@@ -3,7 +3,9 @@
 ## [Unreleased]
 
 - Check recorded traces about 6 times faster and generate test values
-  about twice as fast when values must match a `pattern`.
+  about twice as fast when values must match a `pattern`. Rarely, a value
+  with no pattern polls to spare is now undetermined in a trace or generation
+  request where it would settle on its own.
 
 ## [0.1.0] - 2026-10-27
 

@@ -31,21 +31,27 @@ A worker that has stopped is never lent again, so the next entry or value
 starts its own. The request's worker joins when the request finishes. Other
 operations keep one worker per allowance.
 
-A new QuickJS context polls the interrupt handler on its first call and then
-once every 10,000 calls. A shared engine would skip that first poll for every
-allowance after the first, letting an entry with no poll to spare settle in a
-trace when it would stay undetermined on its own. The worker therefore spends
-the context's first poll when it starts the engine, and each allowance's first
-match spends one of its own polls in its place. Every allowance then pays the
-polls a fresh engine would charge it.
+Each match builds its own regular expression, and afterwards the worker clears
+any pending exception and collects garbage. A match that reaches a limit
+therefore leaves nothing behind, and the engine is lent on as it is.
 
-The later polls keep their 10,000-call rhythm across allowances. A match makes
-7 calls, so about once every 1,429 matches the entry or value being checked
-spends one poll more than it would alone. An entry with no poll to spare can
-then be undetermined in a trace while it settles on its own, as 2 of 3,000
-copies of such an entry did. An entry never settles in a trace when it would
-not on its own. Reports are otherwise unchanged. The 100,000-entry trace now
-takes 1.4 seconds.
+A new QuickJS context polls the interrupt handler on its first call and then
+once every 10,000 calls. The allowance that starts the engine makes that first
+poll as before. A lent engine has already made it, so each borrowing
+allowance's first match makes it in its place, checking polls and duration as
+the interrupt handler would. Every allowance therefore spends the polls a fresh
+engine would on its first match.
+
+The later polls keep their 10,000-call rhythm across allowances, so a borrowing
+allowance reaches its next poll within 10,000 calls rather than exactly 10,000
+calls later. A match makes 7 calls, so about once every 1,429 matches the entry
+or value being checked spends one poll more than it would alone. An entry with
+no poll to spare can then be undetermined in a trace while it settles on its
+own, as 2 of 3,000 copies of such an entry did. Polls never let an entry settle
+in a trace when it would not on its own. The handler also checks the entry's
+duration at those polls, which is wall-clock time and already varies between
+runs. Reports are otherwise unchanged. The 100,000-entry trace now takes 1.4
+seconds.
 
 ## Considered Options
 
@@ -54,8 +60,8 @@ entry's polling identical to a separate request. Creating a full context costs
 about 42 µs, most of the startup cost. A context with only the RegExp and eval
 intrinsics still costs about 20 µs and would change the engine configuration
 whose capability ADR 0014 established. A fresh runtime and context for each
-allowance on one shared thread also keeps exact parity, but takes the
-100,000-entry trace only from 9.1 to 6.9 seconds.
+allowance on one shared thread also keeps exact parity, but only brings the
+100,000-entry trace down to 6.9 seconds.
 
 Lending the engine without charging each allowance the first poll was as fast,
 but let 1,427 of 3,000 entries settle that are undetermined on their own.

@@ -16,6 +16,11 @@ fn target(value: &str, rest: &str) -> String {
     format!("{{\"kind\":\"property\",\"pointer\":\"{TARGET}\",\"value\":{value}{rest}}}\n")
 }
 
+/// A Trace entry line for the string property `/sdfProperty/code`.
+fn code(value: &str) -> String {
+    format!("{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n")
+}
+
 fn check<'a>(catalogue: &'a Catalogue, trace: &str) -> TraceResult<'a> {
     let document = catalogue.source_id("model").unwrap();
     catalogue
@@ -566,13 +571,8 @@ fn entries_that_share_the_pattern_engine_keep_their_own_polls() {
             .pattern_deadline(std::time::Duration::from_secs(1)),
     )
     .unwrap();
-    let code = |value: &str| {
-        format!(
-            "{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n"
-        )
-    };
     // Backtracking over the heavy value needs more than the 4 polls one Sample request
-    // receives, while each other entry needs one. Entries borrow one engine in turn, never
+    // receives, while each other entry needs two. Entries borrow one engine in turn, never
     // one another's polls, and an interrupted match leaves nothing behind for the next.
     let heavy = format!("{}b", "a".repeat(40));
     let trace = [code(&heavy), code("aa"), code("b"), code(&heavy), code("a")].concat();
@@ -604,7 +604,7 @@ fn entries_that_share_the_pattern_engine_keep_their_own_polls() {
 }
 
 #[test]
-fn an_entry_near_its_pattern_allowance_settles_as_it_would_alone() {
+fn an_entry_undetermined_alone_stays_undetermined_after_other_entries() {
     let catalogue = Catalogue::with_limits(
         &[SourceInput::supplied(
             "model",
@@ -613,11 +613,6 @@ fn an_entry_near_its_pattern_allowance_settles_as_it_would_alone() {
         esdieff::Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
     )
     .unwrap();
-    let code = |value: &str| {
-        format!(
-            "{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n"
-        )
-    };
     // Backtracking over 992 letters needs just more than one Sample request's 100 polls, so
     // the value is undetermined when checked alone. In a trace it must stay undetermined
     // wherever it appears, before or after another entry and after an exhausted one.
