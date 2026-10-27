@@ -1,0 +1,107 @@
+{
+  "info": {
+    "title": "Irrigation configuration with optional nested feedback"
+  },
+  "sdfObject": {
+    "Irrigation": {
+      "sdfAction": {
+        "configure": {
+          "description": "Describe configuration data without asserting device behaviour",
+          "sdfInputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "zoneIds",
+              "zones"
+            ],
+            "properties": {
+              "zoneIds": {
+                "type": "array",
+                "nullable": false,
+                "minItems": 1,
+                "maxItems": 4,
+                "uniqueItems": true,
+                "items": {
+                  "sdfChoice": {
+                    "identifier": {
+                      "type": "string",
+                      "nullable": false,
+                      "pattern": "^zone-[1-4]$"
+                    }
+                  }
+                }
+              },
+              "zones": {
+                "type": "array",
+                "nullable": false,
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                  "sdfChoice": {
+                    "zone": {
+                      "type": "object",
+                      "nullable": false,
+                      "required": [
+                        "id",
+                        "duration"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "nullable": false,
+                          "pattern": "^zone-[1-4]$"
+                        },
+                        "duration": {
+                          "type": "integer",
+                          "nullable": false,
+                          "minimum": 1,
+                          "maximum": 60,
+                          "default": 10
+                        },
+                        "feedback": {
+                          "type": "object",
+                          "nullable": false,
+                          "required": [
+                            "moisture"
+                          ],
+                          "properties": {
+                            "moisture": {
+                              "type": "number",
+                              "nullable": false,
+                              "minimum": 0,
+                              "maximum": 100
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "applied",
+              "configuredZones"
+            ],
+            "properties": {
+              "applied": {
+                "type": "boolean",
+                "nullable": false
+              },
+              "configuredZones": {
+                "type": "integer",
+                "nullable": false,
+                "minimum": 1,
+                "maximum": 4
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

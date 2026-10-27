@@ -1,0 +1,14 @@
+{
+  "info": {},
+  "namespace": {"o": "https://example.test/ocf"},
+  "defaultNamespace": "o",
+  "sdfObject": {
+    "alarm": {
+      "sdfProperty": {
+        "status": {"type": "boolean"},
+        "duration": {"type": "number", "minimum": 0}
+      },
+      "sdfRequired": ["#/sdfObject/alarm/sdfProperty/status"]
+    }
+  }
+}

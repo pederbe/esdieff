@@ -1,0 +1,111 @@
+{
+  "info": {
+    "title": "Door lock with authorization and timestamped events"
+  },
+  "sdfObject": {
+    "Lock": {
+      "sdfProperty": {
+        "state": {
+          "type": "string",
+          "nullable": false,
+          "enum": [
+            "locked",
+            "unlocked",
+            "jammed"
+          ],
+          "readable": true,
+          "writable": false
+        },
+        "credential": {
+          "description": "An authored demonstration token with Unicode scalar length constraints",
+          "type": "string",
+          "nullable": false,
+          "minLength": 4,
+          "maxLength": 8,
+          "pattern": "^[^ ]+$"
+        }
+      },
+      "sdfAction": {
+        "authorize": {
+          "description": "Request locking or unlocking with an example credential",
+          "sdfInputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "credential",
+              "operation"
+            ],
+            "properties": {
+              "credential": {
+                "type": "string",
+                "nullable": false,
+                "minLength": 4,
+                "maxLength": 8,
+                "pattern": "^[^ ]+$"
+              },
+              "operation": {
+                "type": "string",
+                "nullable": false,
+                "enum": [
+                  "lock",
+                  "unlock"
+                ]
+              }
+            }
+          },
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "accepted",
+              "state"
+            ],
+            "properties": {
+              "accepted": {
+                "type": "boolean",
+                "nullable": false
+              },
+              "state": {
+                "type": "string",
+                "nullable": false,
+                "enum": [
+                  "locked",
+                  "unlocked",
+                  "jammed"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "sdfEvent": {
+        "stateChanged": {
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "state",
+              "at"
+            ],
+            "properties": {
+              "state": {
+                "type": "string",
+                "nullable": false,
+                "enum": [
+                  "locked",
+                  "unlocked",
+                  "jammed"
+                ]
+              },
+              "at": {
+                "type": "string",
+                "nullable": false,
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

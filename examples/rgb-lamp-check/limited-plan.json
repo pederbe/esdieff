@@ -1,0 +1,47 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "lamp",
+      "path": "limited.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "calibration",
+      "path": "samples/brightness-calibration.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Limited Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Limited model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "lamp"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Brightness needs calibration",
+      "operation": "sample",
+      "document": "lamp",
+      "kind": "property",
+      "pointer": "/sdfObject/Lamp/sdfProperty/brightness",
+      "sample": "calibration"
+    }
+  ]
+}

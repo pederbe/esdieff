@@ -1,0 +1,190 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "irrigation",
+      "path": "rich.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "configure",
+      "path": "samples/configure.json",
+      "role": "sample"
+    },
+    {
+      "key": "moisture-zero",
+      "path": "samples/moisture-zero.json",
+      "role": "sample"
+    },
+    {
+      "key": "moisture-upper",
+      "path": "samples/moisture-upper.json",
+      "role": "sample"
+    },
+    {
+      "key": "bad-moisture",
+      "path": "samples/bad-moisture.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-zones",
+      "path": "samples/missing-zones.json",
+      "role": "sample"
+    },
+    {
+      "key": "null-zones",
+      "path": "samples/null-zones.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-duration",
+      "path": "samples/missing-duration.json",
+      "role": "sample"
+    },
+    {
+      "key": "bad-feedback",
+      "path": "samples/bad-feedback.json",
+      "role": "sample"
+    },
+    {
+      "key": "empty-config",
+      "path": "samples/empty-config.json",
+      "role": "sample"
+    },
+    {
+      "key": "five-config",
+      "path": "samples/five-config.json",
+      "role": "sample"
+    },
+    {
+      "key": "configured",
+      "path": "samples/configured.json",
+      "role": "sample"
+    },
+    {
+      "key": "too-many-configured",
+      "path": "samples/too-many-configured.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Rich Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Rich model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "irrigation"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Configure without optional feedback",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "configure"
+    },
+    {
+      "name": "Configure moisture lower boundary",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "moisture-zero"
+    },
+    {
+      "name": "Configure moisture upper boundary",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "moisture-upper"
+    },
+    {
+      "name": "Configure excessive nested moisture",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "bad-moisture"
+    },
+    {
+      "name": "Configure missing required zones",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "missing-zones"
+    },
+    {
+      "name": "Configure null zones",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "null-zones"
+    },
+    {
+      "name": "Configure missing duration despite default",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "missing-duration"
+    },
+    {
+      "name": "Configure invalid optional feedback",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "bad-feedback"
+    },
+    {
+      "name": "Configure empty zone array",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "empty-config"
+    },
+    {
+      "name": "Configure excessive zone array",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_input",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "five-config"
+    },
+    {
+      "name": "Configuration applied output",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "configured"
+    },
+    {
+      "name": "Configuration output above maximum",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "action_output",
+      "pointer": "/sdfObject/Irrigation/sdfAction/configure",
+      "sample": "too-many-configured"
+    }
+  ]
+}

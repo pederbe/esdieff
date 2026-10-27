@@ -1,0 +1,7 @@
+{
+  "info": { "title": "Inherited payload format" },
+  "namespace": { "shared": "urn:example:payload-model" },
+  "sdfProperty": {
+    "Payload": { "sdfRef": "shared:#/sdfData/Payload" }
+  }
+}

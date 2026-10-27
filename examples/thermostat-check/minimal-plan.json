@@ -1,0 +1,21 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "thermostat", "path": "thermostat.sdf.json", "role": "model" },
+    { "key": "lower", "path": "samples/target-lower.json", "role": "sample" },
+    { "key": "upper", "path": "samples/target-upper.json", "role": "sample" },
+    { "key": "below", "path": "samples/target-below.json", "role": "sample" },
+    { "key": "text", "path": "samples/temperature-text.json", "role": "sample" },
+    { "key": "unavailable", "path": "samples/unavailable.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Minimal Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Minimal model", "operation": "check", "scope": { "kind": "selected", "roots": ["thermostat"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Target lower boundary", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "lower" },
+    { "name": "Target upper boundary", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "upper" },
+    { "name": "Target below minimum", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "below" },
+    { "name": "Target wrong type", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "text" },
+    { "name": "Target unavailable", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "unavailable" }
+  ]
+}

@@ -1,0 +1,11 @@
+# 0021: Explicit modified metadata assessment
+
+Revision metadata needs calendar and UTC-label checking without changing existing callers' promised assessment scope. The immutable `esdieff.expanded.modified/1` inventory combines the unchanged eight-area initial inventory and one `modified-date-time/1` area. The [modified metadata contract](../modified-metadata-contract.md) fixes its meaning independently of implementation progress, following [ADR 0013: Shared workflow and report guarantees](0013-shared-workflow-and-report-guarantees.md).
+
+The normative [RFC 9880 Appendix A](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-A) modified production is separate from sample format conventions. It admits full Gregorian dates and optional T/t clock labels ending Z/z with exact fractions. Applicable exceptional-slot rules and finite recorded IERS facts reuse [ADR 0018: Civil date and time sample conventions](0018-civil-date-time-sample-conventions.md); metadata retains its own UTC-only grammar. Checking depends on reliable source Information context without a reference-composition prerequisite, live knowledge update or version/license convention.
+
+One semantic status per requested area survives detail omission and distinguishes established absence of applicable metadata, unrequested work and unavailable inventory membership. The early shared Information pass preserves independent shape errors before unrelated traversal while unknown critical/member meaning defers dependent conclusions. Actual-use temporal knowledge remains visible when presentation is omitted and identifies the finite evidence supporting a conclusion.
+
+## Considered Options
+
+Expanding the initial identity would change existing callers' contract. A modified-only operation would make ordinary callers combine assessments themselves. Freezing future expanded meanings now would add unrelated decisions; arbitrary requirement combinations would add a selection interface with no current consumer need. Reusing a sample parser without constraining its grammar could admit prohibited numeric offsets or import date-free conventions. Host calendars, fixed precision and automatic IERS refresh would narrow accepted representations or change the evidence without a recorded decision. Retained coverage rows alone cannot provide semantic area status because presentation is optional.

@@ -1,0 +1,23 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "strip", "path": "minimal.sdf.json", "role": "model" },
+    { "key": "on", "path": "samples/on.json", "role": "sample" },
+    { "key": "off", "path": "samples/off.json", "role": "sample" },
+    { "key": "text-state", "path": "samples/text-state.json", "role": "sample" },
+    { "key": "zero", "path": "samples/zero.json", "role": "sample" },
+    { "key": "outlet-upper", "path": "samples/outlet-upper.json", "role": "sample" },
+    { "key": "above-outlet", "path": "samples/above-outlet.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Minimal Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Minimal model", "operation": "check", "scope": { "kind": "selected", "roots": ["strip"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Outlet on", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/on", "sample": "on" },
+    { "name": "Outlet off", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/on", "sample": "off" },
+    { "name": "Outlet text state", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/on", "sample": "text-state" },
+    { "name": "Outlet power lower boundary", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/power", "sample": "zero" },
+    { "name": "Outlet power upper boundary", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/power", "sample": "outlet-upper" },
+    { "name": "Outlet power above maximum", "operation": "sample", "document": "strip", "kind": "property", "pointer": "/sdfThing/PowerStrip/sdfObject/outlet/sdfProperty/power", "sample": "above-outlet" }
+  ]
+}

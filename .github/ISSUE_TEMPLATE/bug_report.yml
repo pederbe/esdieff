@@ -1,0 +1,29 @@
+name: Bug report
+description: Something failed or produced an unexpected result.
+labels: [bug]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead? Include relevant output.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Include the smallest example and the commands needed to reproduce it.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: For example, Linux x86_64 or Windows ARM64

@@ -1,0 +1,19 @@
+{
+  "info": {
+    "title": "Level controller"
+  },
+  "namespace": {
+    "data": "https://example.com/esdieff/data"
+  },
+  "sdfObject": {
+    "Controller": {
+      "sdfProperty": {
+        "level": {
+          "sdfRef": "data:#/sdfData/Level",
+          "description": null,
+          "maximum": 80
+        }
+      }
+    }
+  }
+}

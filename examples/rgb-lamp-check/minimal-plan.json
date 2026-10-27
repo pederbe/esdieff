@@ -1,0 +1,23 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "lamp", "path": "minimal.sdf.json", "role": "model" },
+    { "key": "on", "path": "samples/on.json", "role": "sample" },
+    { "key": "off", "path": "samples/off.json", "role": "sample" },
+    { "key": "text-on", "path": "samples/text-on.json", "role": "sample" },
+    { "key": "lower", "path": "samples/brightness-lower.json", "role": "sample" },
+    { "key": "upper", "path": "samples/brightness-upper.json", "role": "sample" },
+    { "key": "above", "path": "samples/brightness-above.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Minimal Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Minimal model", "operation": "check", "scope": { "kind": "selected", "roots": ["lamp"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Lamp on", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/on", "sample": "on" },
+    { "name": "Lamp off", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/on", "sample": "off" },
+    { "name": "Text is not on state", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/on", "sample": "text-on" },
+    { "name": "Brightness lower boundary", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/brightness", "sample": "lower" },
+    { "name": "Brightness upper boundary", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/brightness", "sample": "upper" },
+    { "name": "Brightness above maximum", "operation": "sample", "document": "lamp", "kind": "property", "pointer": "/sdfObject/Lamp/sdfProperty/brightness", "sample": "above" }
+  ]
+}

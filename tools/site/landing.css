@@ -1,0 +1,53 @@
+/* Esdieff landing page styles. Compile with `npm run build:landing --prefix tools/site`
+   and commit site/landing.css. One dark theme from the Fiery Ocean palette:
+   molten lava #780000, brick red #c1121f, papaya whip #fdf0d5,
+   deep space blue #003049, steel blue #669bbc.
+   Roles: primary = actions and the glowing second heading line, secondary = eyebrows,
+   links and code keys, accent = lava tints, neutral = code and terminal panels. */
+@import "tailwindcss" source("../../site");
+
+@plugin "daisyui" {
+  themes: false;
+  include: button, badge, card, link, table, menu, navbar, aura;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "fiery";
+  default: true;
+  prefersdark: false;
+  color-scheme: dark;
+  --color-base-100: #003049;
+  --color-base-200: #001c2b;
+  --color-base-300: #0b4668;
+  --color-base-content: #fdf0d5;
+  --color-primary: #c1121f;
+  --color-primary-content: #fdf0d5;
+  --color-secondary: #669bbc;
+  --color-secondary-content: #00131d;
+  --color-accent: #780000;
+  --color-accent-content: #fdf0d5;
+  --color-neutral: #001c2b;
+  --color-neutral-content: #fdf0d5;
+  --color-info: #a4c3d7;
+  --color-info-content: #00131d;
+  --color-success: #85afc9;
+  --color-success-content: #00131d;
+  --color-warning: #f9cf7b;
+  --color-warning-content: #180000;
+  --color-error: #ff6464;
+  --color-error-content: #180000;
+  --radius-selector: .5rem;
+  --radius-field: .5rem;
+  --radius-box: 1rem;
+  --size-selector: .25rem;
+  --size-field: .25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+}

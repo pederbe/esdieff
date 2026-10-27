@@ -1,0 +1,10 @@
+{
+  "info": { "title": "Payload consumer" },
+  "namespace": { "shared": "urn:example:payload-model" },
+  "sdfProperty": {
+    "Payload": {
+      "sdfRef": "shared:#/sdfData/Payload",
+      "contentFormat": "application/json"
+    }
+  }
+}

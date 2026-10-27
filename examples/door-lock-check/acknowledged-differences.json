@@ -1,0 +1,36 @@
+{
+  "schema": "esdieff.acknowledged-differences",
+  "version": "1",
+  "differences": [
+    {
+      "kind": "changed",
+      "subject": "quality",
+      "quality": "enum",
+      "classification": "breaking",
+      "earlier": {
+        "document": "document",
+        "pointer": "/sdfObject/Lock/sdfProperty/state/enum"
+      },
+      "later": {
+        "document": "document",
+        "pointer": "/sdfObject/Lock/sdfProperty/state/enum"
+      },
+      "note": "The rich lock reports a jammed state"
+    },
+    {
+      "kind": "changed",
+      "subject": "quality",
+      "quality": "pattern",
+      "classification": "breaking",
+      "earlier": {
+        "document": "document",
+        "pointer": "/sdfObject/Lock/sdfProperty/credential/pattern"
+      },
+      "later": {
+        "document": "document",
+        "pointer": "/sdfObject/Lock/sdfProperty/credential/pattern"
+      },
+      "note": "Credentials can now contain any non-space characters, not only digits"
+    }
+  ]
+}

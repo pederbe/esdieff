@@ -1,0 +1,6 @@
+{
+  "info": { "title": "Unavailable composition" },
+  "sdfProperty": {
+    "Payload": { "sdfRef": "#/sdfData/Absent", "contentFormat": "text/plain;" }
+  }
+}

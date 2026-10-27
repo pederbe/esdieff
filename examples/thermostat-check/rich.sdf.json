@@ -1,0 +1,49 @@
+{
+  "info": { "title": "Room thermostat with readings, configuration and alarms" },
+  "sdfObject": {
+    "Thermostat": {
+      "sdfProperty": {
+        "currentTemperature": {
+          "description": "Measured room temperature, or null while the sensor is unavailable",
+          "type": "number", "nullable": true, "minimum": -40, "maximum": 80,
+          "unit": "Cel", "readable": true, "writable": false
+        },
+        "targetTemperature": {
+          "description": "Requested room temperature in half-degree increments",
+          "type": "number", "nullable": false, "minimum": 5, "maximum": 30,
+          "multipleOf": 0.5, "unit": "Cel", "readable": true, "writable": true
+        }
+      },
+      "sdfAction": {
+        "configure": {
+          "description": "Choose the target temperature and heating mode",
+          "sdfInputData": {
+            "type": "object", "nullable": false,
+            "required": ["targetTemperature", "mode"],
+            "properties": {
+              "targetTemperature": {
+                "type": "number", "nullable": false, "minimum": 5, "maximum": 30,
+                "multipleOf": 0.5, "unit": "Cel"
+              },
+              "mode": { "type": "string", "nullable": false, "enum": ["off", "heat", "cool"] },
+              "label": { "type": "string", "nullable": false, "maxLength": 24 }
+            }
+          }
+        }
+      },
+      "sdfEvent": {
+        "alarm": {
+          "description": "An overheating or sensor fault notification",
+          "sdfOutputData": {
+            "type": "object", "nullable": false,
+            "required": ["temperature", "reason"],
+            "properties": {
+              "temperature": { "type": "number", "nullable": true, "minimum": -40, "maximum": 80, "unit": "Cel" },
+              "reason": { "type": "string", "nullable": false, "enum": ["overheat", "sensor-fault"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

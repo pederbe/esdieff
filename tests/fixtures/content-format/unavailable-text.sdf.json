@@ -1,0 +1,7 @@
+{
+  "info": { "title": "Unavailable string capability" },
+  "sdfData": {
+    "Unreadable": { "contentFormat": "\ud800" },
+    "Broken": { "contentFormat": "text/plain;" }
+  }
+}

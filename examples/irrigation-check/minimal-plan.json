@@ -1,0 +1,112 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "irrigation",
+      "path": "minimal.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "one-zone",
+      "path": "samples/one-zone.json",
+      "role": "sample"
+    },
+    {
+      "key": "four-zones",
+      "path": "samples/four-zones.json",
+      "role": "sample"
+    },
+    {
+      "key": "no-zones",
+      "path": "samples/no-zones.json",
+      "role": "sample"
+    },
+    {
+      "key": "five-zones",
+      "path": "samples/five-zones.json",
+      "role": "sample"
+    },
+    {
+      "key": "duplicate-zone",
+      "path": "samples/duplicate-zone.json",
+      "role": "sample"
+    },
+    {
+      "key": "bad-identifier",
+      "path": "samples/bad-identifier.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Minimal Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Minimal model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "irrigation"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "One zone lower count boundary",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "one-zone"
+    },
+    {
+      "name": "Four zones upper count boundary",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "four-zones"
+    },
+    {
+      "name": "No zones",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "no-zones"
+    },
+    {
+      "name": "Five zones",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "five-zones"
+    },
+    {
+      "name": "Duplicate zone identifier",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "duplicate-zone"
+    },
+    {
+      "name": "Invalid zone identifier",
+      "operation": "sample",
+      "document": "irrigation",
+      "kind": "property",
+      "pointer": "/sdfObject/Irrigation/sdfProperty/zoneIds",
+      "sample": "bad-identifier"
+    }
+  ]
+}

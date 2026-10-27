@@ -1,0 +1,128 @@
+{
+  "info": {
+    "title": "RGB lamp with modes and scene results"
+  },
+  "sdfObject": {
+    "Lamp": {
+      "sdfProperty": {
+        "on": {
+          "type": "boolean",
+          "nullable": false,
+          "readable": true,
+          "writable": true
+        },
+        "brightness": {
+          "type": "integer",
+          "nullable": false,
+          "minimum": 0,
+          "maximum": 100,
+          "readable": true,
+          "writable": true
+        },
+        "rgb": {
+          "description": "Independent integer red, green and blue channels",
+          "type": "object",
+          "nullable": false,
+          "required": [
+            "red",
+            "green",
+            "blue"
+          ],
+          "properties": {
+            "red": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 255
+            },
+            "green": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 255
+            },
+            "blue": {
+              "type": "integer",
+              "nullable": false,
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        },
+        "mode": {
+          "type": "string",
+          "nullable": false,
+          "enum": [
+            "steady",
+            "pulse"
+          ]
+        }
+      },
+      "sdfAction": {
+        "setScene": {
+          "description": "Apply a dim red or bright blue preset",
+          "sdfInputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "preset",
+              "brightness"
+            ],
+            "sdfChoice": {
+              "dimRed": {
+                "properties": {
+                  "preset": {
+                    "type": "string",
+                    "nullable": false,
+                    "const": "red"
+                  },
+                  "brightness": {
+                    "type": "integer",
+                    "nullable": false,
+                    "minimum": 0,
+                    "maximum": 20
+                  }
+                }
+              },
+              "brightBlue": {
+                "properties": {
+                  "preset": {
+                    "type": "string",
+                    "nullable": false,
+                    "const": "blue"
+                  },
+                  "brightness": {
+                    "type": "integer",
+                    "nullable": false,
+                    "minimum": 80,
+                    "maximum": 100
+                  }
+                }
+              }
+            }
+          },
+          "sdfOutputData": {
+            "type": "object",
+            "nullable": false,
+            "required": [
+              "applied"
+            ],
+            "properties": {
+              "applied": {
+                "type": "boolean",
+                "nullable": false,
+                "const": true
+              },
+              "brightness": {
+                "type": "integer",
+                "nullable": false,
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

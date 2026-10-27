@@ -1,0 +1,15 @@
+{
+  "info": { "title": "Lamp with Boolean state and bounded brightness" },
+  "sdfObject": {
+    "Lamp": {
+      "sdfProperty": {
+        "on": { "type": "boolean", "nullable": false, "readable": true, "writable": true },
+        "brightness": {
+          "description": "Requested brightness from fully dimmed to full intensity",
+          "type": "integer", "nullable": false, "minimum": 0, "maximum": 100,
+          "readable": true, "writable": true
+        }
+      }
+    }
+  }
+}

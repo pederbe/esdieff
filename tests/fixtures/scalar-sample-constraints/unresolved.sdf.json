@@ -1,0 +1,8 @@
+{
+  "sdfProperty": {
+    "unknown": {"type": "number", "sdfChoice": {"known": {"const": 10}, "unknown": {"sdfRef": false}}},
+    "noEquality": {"type": "number", "sdfChoice": {"known": {}, "unknown": {"sdfRef": false}}},
+    "textMeaning": {"type": "string", "sdfChoice": {"ordinary": {"const": "x"}, "dated": {"format": "date-time", "const": "x"}}},
+    "warning": {"type": "number", "const": 10, "unknownEqualityQuality": true}
+  }
+}

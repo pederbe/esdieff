@@ -1,0 +1,134 @@
+clause_family	model_owner_or_external_role	scope_and_deduplication
+B001	M001	model envelope; G001 same obligation
+B002	M003	model declaration identity
+B003	M002	model Object subdimension
+B004	M002	model Thing subdimension
+B005	AUTH001	support grammar convention; not extra evaluation
+B006	M016	model URI concatenation
+B007	M032	model repetition/count semantics
+B008	M003;PR004	model Property role; protocol behavior excluded
+B009	M002	model Action role; G006 same obligation
+B010	M002	model Event role; G006 same obligation
+B011	M003	model Data definition
+B012	M002	model named-map/class roles
+B013	M006	model pointer encoding
+B014	M004	model Given Name syntax
+B015	M005	model quality pattern
+B016	M005;M028;RG002	model prefix usage/meaning; registration excluded
+B017	M004;M005;M006	case sensitivity supports these identities, not separate traversal
+B018	M007;M008	model optional block versus unresolved group presence
+B019	M009;M021	info map/ordinary text owned M009; description/comment text owned M021
+B020	M010	model ordinary absence
+B021	M012	model modified; G019 duplicate
+B022	M013;RG004	model critical usage; registration excluded
+B023	M014	model namespace shape; G001 duplicate
+B024	M015	model default namespace
+B025	M015	model absent namespace subdimension
+B026	M016	model shared namespace contributions
+B027	M002	model named groups; G001 duplicate
+B028	M003	model declaration scope
+B029	M002;M003	root role/declaration subdimensions
+B030	M016	model global name assembly
+B031	M017	model CURIE grammar
+B032	M017	model local reference subdimension
+B033	M017	model external prefix subdimension
+B034	M018	model reference occurrence syntax
+B035	M019	model copied target/ref removal
+B036	M019	model target-root recursion
+B037	M019	model Merge Patch
+B038	M019	model consumer-role assessment
+B039	M019	model scoped cycles/copied reference relocation
+B040	M020	model declaration requiredness
+B041	M020	model target class/identity
+B042	M020	model abbreviated all-matching classes
+B043	M020	model true carrier
+B044	M018	short-name lexical grammar; required selection M020 support only
+B045	M018;M021	model common/ref syntax
+B046	M010	model absence/display convention
+B047	M022;M025;M029;M030	unit/contentFormat text M022; sdfType M025; nullable M029; choice/enum M030
+B048	M029;S010	modeled nullable meaning; actual sample membership excluded
+B049	M023	model unit URI/name distinction
+B050	M023	model unit URN restriction
+B051	M024;PR004	model content-format meaning; payload/protocol excluded
+B052	M025	model sdfType syntax
+B053	M026;S009	modeled byte meaning; actual decoding excluded
+B054	M027;S009	modeled time meaning; actual value excluded
+B055	M028;RG003	model registered meaning; registration excluded
+B056	M030	model choice map; G010 duplicate
+B057	M030	model inherited branch meaning
+B058	M030	model enum expansion; G010 duplicate
+B059	M030	model enum/choice exclusion; G010 duplicate
+B060	M002;M022	model Object/Data grammar repeated citations
+B061	M031	model Property characteristics
+B062	M002	model Action grammar repeated citation
+B063	M002	model Event grammar repeated citation
+B064	M016;M019	model pointer/patch order repeated citations
+B065	M002;M032	model Thing/repetition repeated citations
+B066	M001;PR004	model UTF-8 source; delivery/media excluded
+B067	PR003	processor bounded safety excluded denominator
+B068	OP001	operator provenance; P019 duplicate excluded
+B069	M008	model unresolved group-presence duty
+G001	M001;M002;M009;M014;M021	grammar repetitions assigned to root/class/info/namespace/metadata-text owners
+G002	M005;M033	model extension-key/admitted-content grammar
+G003	M013	model feature grammar subdimension
+G004	M018	all reference lexical unions/list shape; required selection M020 support only
+G005	M037	formal grouping uint; repetition meaning M032 support only
+G006	M002	model parameter/class map grammar duplicate
+G007	M018;M021;M022;M025;M029;M030;M031;M034;M035;M036;M037;M038;M039;M040	Full grammar clauses assigned individually; M022 owns only unit/contentFormat text
+G008	M035	model allowed constant/default literal domain
+G009	M038	model explicit-object compound grammar
+G010	M030;M034;M035	model choice/type/literal grammar repeated obligations
+G011	M036	model formal numeric parameter domain
+G012	M037	model formal count parameter domain
+G013	M039;M040	pattern/format/unique shape M039; restricted items container M040
+G014	M018;M021;M030;M034;M036;M037;M039;M040	Direct field clauses retain sole shared owners; M040 owns map-container role only
+G015	M030;M038	Full choice branches M030 and object properties M038; Direct parent M040 support only
+G016	M041;M033	model wider Direct meaning/admitted syntax
+G017	M036;M037	formal Direct number/uint; container M040 support only
+G018	M035	model constant/default base numeric domain, allowed extension alternatives
+G019	M012	model modified grammar duplicate
+G020	AUTH001->M035,M036,M037	imported numeric domains support sole formal-domain owners, no extra completed evaluation
+G021	M020	model required meaning ambiguity subdimension
+C001	M034;M042;S001	model syntax/meaning; actual sample type excluded
+C002	M043;S002	modeled const meaning; actual equality excluded
+C003	M044	model documentary default, no insertion duty
+C004	M042;S001	model mathematical integer meaning; actual sample type excluded
+C005	M045;S003	model bound meaning; actual sample bound verdict excluded
+C006	M045;S003	model exact step meaning; actual sample multiple verdict excluded
+C007	M042;S001	model Unicode scalar string meaning; actual sample type excluded
+C008	M046;S004	model scalar-count meaning; actual sample length excluded
+C009	M047	model ECMA syntax
+C010	M048;S005	modeled pattern semantics; actual sample match excluded
+C011	M049;S006	modeled temporal formats; actual sample validation excluded
+C012	M049;S006	modeled URI formats; actual sample validation excluded
+C013	M049;S006	modeled UUID format; actual sample validation excluded
+C014	M042;S001	modeled Boolean meaning; actual sample type excluded
+C015	M042;M050;S001;S007	modeled array/items; actual sample elements excluded
+C016	M051;S007	modeled array counts; actual sample counts excluded
+C017	M052;S007	modeled equality constraint; actual sample uniqueness excluded
+C018	M042;M053;S001;S008	modeled map/properties; actual sample entries excluded
+C019	M054;S008	modeled map requiredness; actual sample missing entries excluded
+C020	CV001	legacy converter duty excluded model denominator
+P001	AD001	author guidance excluded
+P002	AD002	author naming guidance excluded; mandatory M004 separate
+P003	AD003	validator recommendation excluded RFC violation count
+P004	AD004	lifecycle prior-version recommendation excluded current model
+P005	AD005	author license guidance excluded
+P006	PR001	processor dereference recommendation excluded
+P007	AD006	namespace/global-name convention excluded
+P008	M023	model SHOULD unit convention included, unknown registry evidence explicit
+P009	PR002	processor unit dereference recommendation excluded
+P010	AD007	conventional-type recommendation; M028 meaning separate
+P011	AD008	optional general refinement analysis excluded
+P012	AD009	portable subset suggestion excluded
+P013	PR004	media/CoAP registration/delivery excluded
+P014	CV002	unit-URN translator/registry nonoverlap excluded
+P015	RG001	quality-name registration excluded
+P016	RG002	prefix registration excluded
+P017	RG003;M028	registry duty excluded; modeled relevant representation included
+P018	RG004	feature registration excluded
+P019	OP001	duplicate B068 operator provenance excluded
+P020	OP002	operator ecosystem security excluded
+P021	AUTH001	applicable imports supporting existing rows, no extra evaluation
+P022	AUTH002	authority/historical partition supporting ledger, not evaluation
+$comment	M011	explicit no-model-semantics obligation; string shape remains separate

@@ -1,0 +1,44 @@
+{
+  "info": {
+    "title": "Temperature, shaped like a converted LwM2M Object"
+  },
+  "namespace": {
+    "oma": "https://models.example.test/oma"
+  },
+  "defaultNamespace": "oma",
+  "sdfObject": {
+    "Temperature": {
+      "label": "Temperature",
+      "oma:id": 3303,
+      "sdfProperty": {
+        "Sensor_Value": {
+          "label": "Sensor Value",
+          "oma:id": 5700,
+          "type": "number",
+          "minimum": -40,
+          "maximum": 125,
+          "writable": false
+        },
+        "Min_Measured_Value": {
+          "label": "Min Measured Value",
+          "oma:id": 5601,
+          "type": "number",
+          "writable": false
+        },
+        "Sensor_Units": {
+          "label": "Sensor Units",
+          "oma:id": 5701,
+          "type": "string",
+          "maxLength": 32,
+          "writable": false
+        }
+      },
+      "sdfAction": {
+        "Reset_Min_and_Max_Measured_Values": {
+          "label": "Reset Min and Max Measured Values",
+          "oma:id": 5605
+        }
+      }
+    }
+  }
+}

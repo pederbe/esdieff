@@ -1,0 +1,14 @@
+{
+  "info": { "title": "Power strip demonstrating copied requiredness" },
+  "namespace": { "meter": "https://example.test/power-meter" },
+  "sdfThing": {
+    "PowerStrip": {
+      "sdfObject": {
+        "outlet": { "sdfRef": "meter:#/sdfObject/RequiredOutlet", "minItems": 2, "maxItems": 4 }
+      },
+      "sdfProperty": {
+        "totalPower": { "type": "number", "nullable": false, "minimum": 0, "maximum": 1800, "unit": "W" }
+      }
+    }
+  }
+}

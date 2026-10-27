@@ -1,0 +1,19 @@
+{
+  "info": { "title": "Room thermostat" },
+  "sdfObject": {
+    "Thermostat": {
+      "sdfProperty": {
+        "targetTemperature": {
+          "description": "Requested room temperature in degrees Celsius",
+          "type": "number",
+          "nullable": false,
+          "minimum": 5,
+          "maximum": 30,
+          "unit": "Cel",
+          "readable": true,
+          "writable": true
+        }
+      }
+    }
+  }
+}

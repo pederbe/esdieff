@@ -1,0 +1,164 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {
+      "key": "coffee",
+      "path": "rich.sdf.json",
+      "role": "model"
+    },
+    {
+      "key": "brew-espresso",
+      "path": "samples/brew-espresso.json",
+      "role": "sample"
+    },
+    {
+      "key": "brew-latte",
+      "path": "samples/brew-latte.json",
+      "role": "sample"
+    },
+    {
+      "key": "mixed-recipe",
+      "path": "samples/mixed-recipe.json",
+      "role": "sample"
+    },
+    {
+      "key": "excess-servings",
+      "path": "samples/excess-servings.json",
+      "role": "sample"
+    },
+    {
+      "key": "missing-servings",
+      "path": "samples/missing-servings.json",
+      "role": "sample"
+    },
+    {
+      "key": "brew-result",
+      "path": "samples/brew-result.json",
+      "role": "sample"
+    },
+    {
+      "key": "bad-result",
+      "path": "samples/bad-result.json",
+      "role": "sample"
+    },
+    {
+      "key": "maintenance",
+      "path": "samples/maintenance.json",
+      "role": "sample"
+    },
+    {
+      "key": "unknown-maintenance",
+      "path": "samples/unknown-maintenance.json",
+      "role": "sample"
+    },
+    {
+      "key": "bad-maintenance-resource",
+      "path": "samples/bad-maintenance-resource.json",
+      "role": "sample"
+    }
+  ],
+  "cases": [
+    {
+      "name": "Rich Catalogue",
+      "operation": "check",
+      "scope": {
+        "kind": "catalogue"
+      },
+      "assessment": "initial-v1",
+      "strict_warnings": true
+    },
+    {
+      "name": "Rich model",
+      "operation": "check",
+      "scope": {
+        "kind": "selected",
+        "roots": [
+          "coffee"
+        ]
+      },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Brew espresso lower boundaries",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "brew-espresso"
+    },
+    {
+      "name": "Brew latte upper boundaries",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "brew-latte"
+    },
+    {
+      "name": "Mixed recipe has no Choice witness",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "mixed-recipe"
+    },
+    {
+      "name": "Recipe witness cannot admit excessive servings",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "excess-servings"
+    },
+    {
+      "name": "Missing servings despite default",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_input",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "missing-servings"
+    },
+    {
+      "name": "Structured brew result",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_output",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "brew-result"
+    },
+    {
+      "name": "Brew result wrong type",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "action_output",
+      "pointer": "/sdfObject/CoffeeMachine/sdfAction/brew",
+      "sample": "bad-result"
+    },
+    {
+      "name": "Maintenance clean event",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "event_output",
+      "pointer": "/sdfObject/CoffeeMachine/sdfEvent/maintenance",
+      "sample": "maintenance"
+    },
+    {
+      "name": "Unknown maintenance reason",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "event_output",
+      "pointer": "/sdfObject/CoffeeMachine/sdfEvent/maintenance",
+      "sample": "unknown-maintenance"
+    },
+    {
+      "name": "Maintenance nested resource above maximum",
+      "operation": "sample",
+      "document": "coffee",
+      "kind": "event_output",
+      "pointer": "/sdfObject/CoffeeMachine/sdfEvent/maintenance",
+      "sample": "bad-maintenance-resource"
+    }
+  ]
+}

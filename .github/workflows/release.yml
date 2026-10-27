@@ -1,0 +1,212 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag matching Cargo.toml
+        required: true
+        default: v0.1.0
+      publish:
+        description: Publish the checked candidate
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_tag: ${{ inputs.tag }}
+
+  candidate:
+    needs: validate
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: |
+            . -> target
+            tools/release -> target
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: archives-*
+          path: target/distrib
+          merge-multiple: true
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: packages-*
+          path: target/distrib
+          merge-multiple: true
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: winget-manifests
+          path: target/winget
+      - name: Prepare the immutable candidate
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          test "$TAG" = "v$version"
+          cargo package --locked
+          cp "target/package/esdieff-$version.crate" target/distrib/
+          cargo build --locked --manifest-path tools/release/Cargo.toml
+          tool=tools/release/target/debug/esdieff-release
+          "$tool" homebrew target/distrib "$version"
+          "$tool" release-notes "$TAG" target/distrib/RELEASE-NOTES.md
+          tar -czf target/distrib/esdieff-winget-manifests.tar.gz -C target/winget .
+          git rev-parse HEAD > target/distrib/SOURCE
+          cd target/distrib
+          sha256sum esdieff.rb > esdieff.rb.sha256
+          sha256sum esdieff* RELEASE-NOTES.md SOURCE > SHA256SUMS
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: candidate-${{ inputs.tag }}
+          path: target/distrib/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: candidate
+    if: inputs.publish && vars.RELEASE_ENABLED == 'true' && !github.event.repository.private
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: write
+      actions: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: candidate-${{ inputs.tag }}
+          path: target/distrib
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Verify the retained candidate and stage the release
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/tags/$TAG"
+          test "$(cat target/distrib/SOURCE)" = "$GITHUB_SHA"
+          (cd target/distrib && sha256sum -c SHA256SUMS)
+          if gh release view "$TAG" --json isDraft --jq .isDraft > "$RUNNER_TEMP/draft"; then
+            grep -Eq '^(true|false)$' "$RUNNER_TEMP/draft"
+          else
+            gh release create "$TAG" --verify-tag --draft --title "Esdieff $TAG" --notes-file target/distrib/RELEASE-NOTES.md
+            printf 'true\n' > "$RUNNER_TEMP/draft"
+          fi
+          mkdir "$RUNNER_TEMP/published"
+          gh release view "$TAG" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/assets"
+          for file in target/distrib/*; do
+            name=$(basename "$file")
+            if ! grep -qxF "$name" "$RUNNER_TEMP/assets"; then
+              test "$(cat "$RUNNER_TEMP/draft")" = true
+              gh release upload "$TAG" "$file"
+            fi
+            gh release download "$TAG" --pattern "$name" --dir "$RUNNER_TEMP/published"
+            cmp "$file" "$RUNNER_TEMP/published/$name"
+          done
+      - uses: actions/attest@v4.2.2
+        with:
+          subject-path: target/distrib/*
+      - name: Check whether the retained crate is already published
+        id: crate
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version=${TAG#v}
+          status=$(curl --silent --show-error -H "User-Agent: Esdieff release ($GITHUB_REPOSITORY)" --output "$RUNNER_TEMP/crate.json" --write-out '%{http_code}' "https://crates.io/api/v1/crates/esdieff/$version")
+          if [ "$status" = 200 ]; then
+            expected=$(jq -r .version.checksum "$RUNNER_TEMP/crate.json")
+            test "$expected" = "$(sha256sum "target/distrib/esdieff-$version.crate" | cut -d' ' -f1)"
+            echo 'published=true' >> "$GITHUB_OUTPUT"
+          else
+            test "$status" = 404
+            echo 'published=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: rust-lang/crates-io-auth-action@v1.0.6
+        if: steps.crate.outputs.published == 'false'
+        id: crate-auth
+      - name: Publish the checked crate and release
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          CRATE_PUBLISHED: ${{ steps.crate.outputs.published }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crate-auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          version=${TAG#v}
+          if [ "$CRATE_PUBLISHED" = false ]; then
+            test -n "$CARGO_REGISTRY_TOKEN"
+            cargo package --locked --no-verify
+            cmp "target/package/esdieff-$version.crate" "target/distrib/esdieff-$version.crate"
+            cargo publish --locked --dry-run
+            cargo publish --locked --no-verify
+          fi
+          if [ "$(cat "$RUNNER_TEMP/draft")" = true ]; then gh release edit "$TAG" --draft=false; fi
+
+  packages:
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch signed package delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh workflow run package-repository.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f publish=true
+
+  distribution:
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch distribution updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh workflow run distribution.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f submit_winget=true
+
+  website:
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch website delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh workflow run website.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f deploy=true

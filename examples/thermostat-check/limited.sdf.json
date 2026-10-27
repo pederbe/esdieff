@@ -1,0 +1,30 @@
+{
+  "info": { "title": "Thermostat with a faulty bound and unavailable calibration" },
+  "namespace": { "calibration": "https://example.test/thermostat-calibration" },
+  "sdfObject": {
+    "Thermostat": {
+      "sdfProperty": {
+        "currentTemperature": {
+          "description": "Reading semantics require an intentionally unsupplied calibration definition",
+          "sdfRef": "calibration:#/sdfData/Temperature"
+        },
+        "brokenTemperature": {
+          "description": "Deliberately faulty numeric maximum",
+          "type": "number", "maximum": "warm"
+        }
+      },
+      "sdfAction": {
+        "configure": {
+          "sdfInputData": {
+            "type": "object", "nullable": false,
+            "required": ["targetTemperature", "calibration"],
+            "properties": {
+              "targetTemperature": { "type": "number", "nullable": false, "minimum": 5, "maximum": 30, "unit": "Cel" },
+              "calibration": { "sdfRef": "calibration:#/sdfData/Calibration" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

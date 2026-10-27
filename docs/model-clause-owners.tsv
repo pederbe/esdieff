@@ -1,0 +1,55 @@
+owner	sole_counting_subclauses	support_only_not_counted_here
+M001	utf8-json-text;root-map	class/container shapes M002;delivery PR004
+M002	six-class-container-positions;named-class-map-keys-values;root-class-reuse;action-event-parameter-map-slots	declaration meaning M003;properties M038;choice M030
+M003	definition-declaration-distinction;containing-scope;data-not-declaration;property-state-role	declaration selection M020
+M004	given-name-colon-exclusion;given-name-case	pointer encoding M006
+M005	quality-name-pattern;prefix-lexical-pattern;quality-name-case	extension-content M033;registered meaning M028
+M006	pointer-encoding-order;definition-pointer-selection	name-case M004/M005
+M007	empty-optional-block-equivalence	metadata absence/default M010
+M008	body-versus-grammar-group-presence	root envelope M001
+M009	info-map;title-version-copyright-license-text	info description/comment M021;modified M012;features M013
+M010	ordinary-metadata-optionality;no-metadata-insertion;optional-display-fallback	block equivalence M007;comment semantics M011
+M011	comment-presence-no-model-meaning	comment text shape M021
+M012	modified-abnf-calendar-clock-leap	textual-regexp convention AUTH001
+M013	feature-array-and-admitted-members;needed-critical-feature-understanding	quality socket M033
+M014	namespace-map;namespace-uri-text	default selection M015;assembled names M016
+M015	default-namespace-selection;absent-default-contribution	URI assembly M016
+M016	global-uri-concatenation;multiple-distinct-contributors;no-precedence	prefix/pointer syntax M017/M018/M006
+M017	curie-prefix-resolution;global-versus-local-reference-meaning	formal reference union M018;pointer encoding M006
+M018	reference-occurrence-union;short-name-lexical-exclusion;pointer-list-shape;short-true-ref-meaning-question	selection M020;qualified resolution M017
+M019	ref-copy-remove;target-root-ref;merge-patch;consumer-result;order-and-cycle-handling	consumer class/parameter clauses retain their owners
+M020	required-declaration-selection;direct-all-class-selection;true-carrier;data-only-question;copied-pointer-relocation	syntax M018;definition classification M003
+M021	description-label-comment-text-at-admitted-positions	absence/default M010;comment meaning M011
+M022	unit-text-shape;content-format-text-shape	sdfType M025;nullable M029;choice M030;Property flags M031
+M023	unit-name-uri-meaning;unit-urn-restriction;registry-should-guidance	unit string shape M022;registration process excluded
+M024	content-format-spec-meaning	contentFormat text shape M022
+M025	sdfType-selector-pattern-base-and-extension	registered meaning M028;special meanings M026/M027
+M026	byte-string-modeled-meaning	selector syntax M025;actual value S009
+M027	unix-time-modeled-meaning	selector syntax M025;actual value S009
+M028	relevant-additional-description-meaning;additional-conventional-representation-consistency	lexical admission M005/M025/M034/M039;registrant RG
+M029	nullable-bool-shape;nullable-default-and-constraint-meaning	general type meaning M042
+M030	choice-map-full-branch-shape;enum-shape-exclusive-and-expansion;branch-override-meaning	branch-quality clauses retain sole owners;not counted twice
+M031	property-flag-bools;property-flag-defaults	data fields retain their sole owners
+M032	grouping-repetition-meaning;grouping-inclusive-count-meaning	uint parameter shape M037
+M033	additional-quality-any-json-admission	key grammar M005;value-union extension admission M013/M025/M034/M035/M039
+M034	full-direct-type-selector-admission	object map properties/required syntax M038;type meaning M042
+M035	constant-default-literal-domain-with-numeric-array-and-extension-alternatives	const/default meanings M043/M044;number definitions AUTH001
+M036	full-direct-numeric-parameter-domain	positive-step/bound meaning M045;numeric definitions AUTH001
+M037	full-direct-grouping-uint-parameter-domain	length/count meanings M032/M046/M051;uint definitions AUTH001
+M038	object-required-list-shape;properties-named-full-description-map	Direct parent M040;map meanings M053/M054
+M039	pattern-text-shape;full-format-selector-direct-format-text;uniqueItems-bool-shape	pattern syntax/meaning M047/M048;format meaning M049;items map M040
+M040	direct-items-map-container-role	individual admitted fields M018/M021/M030/M034/M036/M037/M038/M039
+M041	wider-direct-needed-meaning-question	admitted syntax retains other owners;not an extra syntax rejection
+M042	base-information-type-meaning	selector syntax M034;constraint meanings retain owners;actual value S001
+M043	const-single-value-meaning-and-equality	literal domain M035;type M042;actual value S002
+M044	documentary-default-no-insertion-meaning	literal domain M035;optional consistency advice excluded
+M045	numeric-bound-meaning;positive-exact-step-meaning	formal parameter domain M036;actual value S003
+M046	unicode-scalar-length-meaning	uint syntax M037;type M042;actual value S004
+M047	ecma-unicode-pattern-syntax	text shape M039;portability suggestion AD009
+M048	unanchored-pattern-modeled-matching-meaning	pattern syntax M047;actual value S005
+M049	base-format-information-meanings	format selector shape M039;actual value S006
+M050	every-element-items-description-meaning	array type M042;items map role M040;actual value S007
+M051	array-inclusive-element-count-meaning	uint shape M037;actual value S007
+M052	array-unique-value-equality-meaning	bool shape M039;actual value S007
+M053	map-properties-entry-meaning	properties map shape M038;map type M042;actual value S008
+M054	map-required-entry-meaning	required list shape M038;grouping requiredness M020;actual value S008

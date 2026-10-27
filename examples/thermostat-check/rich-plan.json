@@ -1,0 +1,31 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "thermostat", "path": "rich.sdf.json", "role": "model" },
+    { "key": "reading", "path": "samples/current-fraction.json", "role": "sample" },
+    { "key": "unavailable", "path": "samples/unavailable.json", "role": "sample" },
+    { "key": "off-step", "path": "samples/target-off-step.json", "role": "sample" },
+    { "key": "configure", "path": "samples/configure-heat.json", "role": "sample" },
+    { "key": "missing-mode", "path": "samples/configure-missing-mode.json", "role": "sample" },
+    { "key": "unknown-mode", "path": "samples/configure-unknown-mode.json", "role": "sample" },
+    { "key": "null-mode", "path": "samples/configure-null-mode.json", "role": "sample" },
+    { "key": "wrong-label", "path": "samples/configure-wrong-label.json", "role": "sample" },
+    { "key": "alarm", "path": "samples/alarm-overheat.json", "role": "sample" },
+    { "key": "unknown-reason", "path": "samples/alarm-unknown-reason.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Rich Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Rich model", "operation": "check", "scope": { "kind": "selected", "roots": ["thermostat"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Fractional current reading", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/currentTemperature", "sample": "reading" },
+    { "name": "Current reading unavailable", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/currentTemperature", "sample": "unavailable" },
+    { "name": "Target off half-degree step", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature", "sample": "off-step" },
+    { "name": "Configure heating", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "configure" },
+    { "name": "Configure missing mode", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "missing-mode" },
+    { "name": "Configure unknown mode", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "unknown-mode" },
+    { "name": "Configure null mode", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "null-mode" },
+    { "name": "Configure wrong optional label", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "wrong-label" },
+    { "name": "Overheating alarm", "operation": "sample", "document": "thermostat", "kind": "event_output", "pointer": "/sdfObject/Thermostat/sdfEvent/alarm", "sample": "alarm" },
+    { "name": "Unknown alarm reason", "operation": "sample", "document": "thermostat", "kind": "event_output", "pointer": "/sdfObject/Thermostat/sdfEvent/alarm", "sample": "unknown-reason" }
+  ]
+}

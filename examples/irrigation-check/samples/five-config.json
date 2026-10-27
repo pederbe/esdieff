@@ -1,0 +1,27 @@
+{
+  "zoneIds": [
+    "zone-1"
+  ],
+  "zones": [
+    {
+      "id": "zone-1",
+      "duration": 10
+    },
+    {
+      "id": "zone-1",
+      "duration": 10
+    },
+    {
+      "id": "zone-1",
+      "duration": 10
+    },
+    {
+      "id": "zone-1",
+      "duration": 10
+    },
+    {
+      "id": "zone-1",
+      "duration": 10
+    }
+  ]
+}

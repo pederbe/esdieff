@@ -1,0 +1,1 @@
+{"info":{},"namespace":{"own":"https://example.com/patterns"},"defaultNamespace":"own","sdfData":{"Base":{"type":"string","pattern":"["},"Unused":{"type":"string","pattern":"("}}}

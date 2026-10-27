@@ -1,0 +1,31 @@
+{
+  "info": {
+    "title": "Door lock with a faulty attempts bound and missing credential meaning"
+  },
+  "namespace": {
+    "credentials": "https://example.test/lock-credentials"
+  },
+  "sdfObject": {
+    "Lock": {
+      "sdfProperty": {
+        "state": {
+          "type": "string",
+          "nullable": false,
+          "enum": [
+            "locked",
+            "unlocked"
+          ]
+        },
+        "credential": {
+          "description": "Credential semantics require a deliberately unsupplied definition",
+          "sdfRef": "credentials:#/sdfData/Credential"
+        },
+        "attempts": {
+          "description": "Deliberately invalid textual numeric maximum",
+          "type": "integer",
+          "maximum": "many"
+        }
+      }
+    }
+  }
+}

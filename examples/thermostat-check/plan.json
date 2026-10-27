@@ -1,0 +1,35 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "thermostat", "path": "thermostat.sdf.json", "role": "model" },
+    { "key": "comfortable", "path": "comfortable.json", "role": "sample" },
+    { "key": "too-hot", "path": "too-hot.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Catalogue", "operation": "check", "scope": { "kind": "catalogue" } },
+    {
+      "name": "Thermostat model",
+      "operation": "check",
+      "scope": { "kind": "selected", "roots": ["thermostat"] },
+      "assessment": "full-baseline",
+      "strict_warnings": true
+    },
+    {
+      "name": "Comfortable target",
+      "operation": "sample",
+      "document": "thermostat",
+      "kind": "property",
+      "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature",
+      "sample": "comfortable"
+    },
+    {
+      "name": "Too hot target",
+      "operation": "sample",
+      "document": "thermostat",
+      "kind": "property",
+      "pointer": "/sdfObject/Thermostat/sdfProperty/targetTemperature",
+      "sample": "too-hot"
+    }
+  ]
+}

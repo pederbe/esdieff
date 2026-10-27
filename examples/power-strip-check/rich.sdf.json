@@ -1,0 +1,15 @@
+{
+  "info": { "title": "Power strip with supplied reusable meter definitions" },
+  "namespace": { "meter": "https://example.test/power-meter" },
+  "sdfThing": {
+    "PowerStrip": {
+      "sdfObject": {
+        "outlet": { "sdfRef": "meter:#/sdfObject/Outlet", "minItems": 2, "maxItems": 4 }
+      },
+      "sdfProperty": {
+        "totalPower": { "sdfRef": "meter:#/sdfData/Power", "description": "Total power narrowed to 1800 watts", "maximum": 1800, "writable": false },
+        "energy": { "sdfRef": "meter:#/sdfData/Energy", "writable": false }
+      }
+    }
+  }
+}

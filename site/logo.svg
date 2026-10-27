@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40" role="img" aria-labelledby="t">
+  <title id="t">Esdieff</title>
+  <g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
+    <path d="M28 20a10 10 0 1 0-2.8 7"/>
+    <path d="M8 20h24.5"/>
+  </g>
+  <circle cx="35" cy="20" r="3.2" fill="currentColor"/>
+  <text x="48" y="28" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="24" font-weight="650" letter-spacing="-0.5" fill="currentColor">Esdieff</text>
+</svg>

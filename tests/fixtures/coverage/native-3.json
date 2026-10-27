@@ -1,0 +1,18 @@
+{
+  "info": {
+    "title": "Reusable level data"
+  },
+  "namespace": {
+    "lib": "https://example.com/esdieff/data"
+  },
+  "defaultNamespace": "lib",
+  "sdfData": {
+    "Level": {
+      "description": "Reusable level",
+      "type": "number",
+      "nullable": false,
+      "minimum": 0,
+      "maximum": 100
+    }
+  }
+}

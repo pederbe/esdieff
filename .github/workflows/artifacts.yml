@@ -1,0 +1,420 @@
+name: Release artifacts
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag, or empty to use Cargo.toml
+        default: ''
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build and install on ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            ext: ''
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            ext: ''
+          - os: macos-15
+            target: aarch64-apple-darwin
+            ext: ''
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            ext: .exe
+    runs-on: ${{ matrix.os }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+      TARGET: ${{ matrix.target }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: |
+            . -> target
+            tools/release -> target
+          key: artifact-${{ matrix.target }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.3
+      - name: Install dist on Unix
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          installer=$RUNNER_TEMP/cargo-dist-installer.sh
+          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/axodotdev/cargo-dist/releases/download/v0.33.1/cargo-dist-installer.sh -o "$installer"
+          checksum=a7b3b0812d624a09a534ba272aa8e04c801e56a83d553327a4a8632bc03abb94
+          if [ "$RUNNER_OS" = macOS ]; then
+            printf '%s  %s\n' "$checksum" "$installer" | shasum -a 256 -c -
+          else
+            printf '%s  %s\n' "$checksum" "$installer" | sha256sum -c -
+          fi
+          CARGO_DIST_UNMANAGED_INSTALL="$RUNNER_TEMP/dist" sh "$installer"
+          echo "$RUNNER_TEMP/dist" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/dist/dist" --version
+      - name: Install dist on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = "$env:RUNNER_TEMP/cargo-dist-installer.ps1"
+          Invoke-WebRequest https://github.com/axodotdev/cargo-dist/releases/download/v0.33.1/cargo-dist-installer.ps1 -OutFile $installer
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'c0f180726e9045bfb2837e15f40330d8453a1f93338be48d4f48efcb09a5c0d4') { throw 'dist installer checksum mismatch' }
+          $env:CARGO_DIST_UNMANAGED_INSTALL = "$env:RUNNER_TEMP/dist"
+          & $installer
+          if (-not (Test-Path "$env:RUNNER_TEMP/dist/dist.exe")) { throw 'dist installation failed' }
+          "$env:RUNNER_TEMP/dist" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & "$env:RUNNER_TEMP/dist/dist.exe" --version
+      - name: Build the retained archive
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          tag=${TAG:-v$version}
+          test "$tag" = "v$version"
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- licenses "$TARGET" target/THIRD-PARTY-LICENSES.md
+          dist build --artifacts local --target "$TARGET" --tag "$tag"
+      - name: Make tar entries compatible with Binstall
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          prefix=esdieff-$TARGET
+          archive=$PWD/target/distrib/$prefix.tar.xz
+          work=$(mktemp -d "$RUNNER_TEMP/esdieff-tar.XXXXXX")
+          trap 'rm -rf "$work"' EXIT
+          tar -xJf "$archive" -C "$work"
+          # Binstall skips GNU sparse entries. Ustar retains ordinary files.
+          tar --format ustar -cJf "$archive" -C "$work" "$prefix"
+          cd target/distrib
+          if [ "$RUNNER_OS" = macOS ]; then
+            shasum -a 256 "$prefix.tar.xz" > "$prefix.tar.xz.sha256"
+          else
+            sha256sum "$prefix.tar.xz" > "$prefix.tar.xz.sha256"
+          fi
+      - name: Install and exercise the archive
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/esdieff-install"
+          cd target/distrib
+          if [[ "$TARGET" == *windows* ]]; then
+            sha256sum -c "esdieff-$TARGET.zip.sha256"
+            powershell -NoProfile -Command "Expand-Archive -LiteralPath 'esdieff-$TARGET.zip' -DestinationPath '$RUNNER_TEMP/esdieff-install'"
+          else
+            if [ "$RUNNER_OS" = macOS ]; then
+              shasum -a 256 -c "esdieff-$TARGET.tar.xz.sha256"
+            else
+              sha256sum -c "esdieff-$TARGET.tar.xz.sha256"
+            fi
+            tar -xJf "esdieff-$TARGET.tar.xz" --strip-components=1 -C "$RUNNER_TEMP/esdieff-install"
+          fi
+          cd ../..
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke "$RUNNER_TEMP/esdieff-install/esdieff${{ matrix.ext }}"
+          "$RUNNER_TEMP/esdieff-install/esdieff${{ matrix.ext }}" acquire \
+            --github one-data-model/playground --commit 41be1e0e564ad39f4d5a1c41fcccef435e388ee9 \
+            --path sdfObject/sdfobject-switch_binary.sdf.json \
+            --sha256 6fe5a1538da0b5f48898e367f0f03b6b70fa38b6ebaa67117e408ab87fb0b61a \
+            --document-output "$RUNNER_TEMP/acquired.sdf.json" --format json
+          cmp examples/pinned-acquisition/original.sdf.json "$RUNNER_TEMP/acquired.sdf.json"
+          if [[ "$TARGET" == *linux* ]]; then
+            ldd "$RUNNER_TEMP/esdieff-install/esdieff" | tee "$RUNNER_TEMP/linkage.txt"
+            if grep -Ei 'not found|libssl|libcrypto|libcurl' "$RUNNER_TEMP/linkage.txt"; then exit 1; fi
+          fi
+          rm -rf "$RUNNER_TEMP/esdieff-install"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: archives-${{ matrix.target }}
+          path: |
+            target/distrib/esdieff-${{ matrix.target }}.*
+          if-no-files-found: error
+          retention-days: 30
+
+  packages:
+    name: Signed package installation on ${{ matrix.os }}
+    needs: build
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    env:
+      TARGET: ${{ matrix.target }}
+      CONTAINER_ENGINE: docker
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: archives-${{ matrix.target }}
+          path: target/distrib
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: tools/release -> target
+      - name: Install standard package tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -qy --no-install-recommends rpm cpio apt-utils createrepo-c gnupg gnupg2 xz-utils
+          for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
+      - name: Prepare native packages and check signed upgrades
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          cargo build --locked --manifest-path tools/release/Cargo.toml
+          tool=$PWD/tools/release/target/debug/esdieff-release
+          archive=$PWD/target/distrib/esdieff-$TARGET.tar.xz
+          mkdir -p "$RUNNER_TEMP/packages" "$RUNNER_TEMP/previous"
+          "$tool" package-linux "$archive" "$TARGET" "$version" "$RUNNER_TEMP/packages"
+          # This older package is an upgrade fixture using the retained binary.
+          "$tool" package-linux "$archive" "$TARGET" 0.0.0 "$RUNNER_TEMP/previous"
+          export GNUPGHOME=$RUNNER_TEMP/signing
+          mkdir -m 700 "$GNUPGHOME"
+          gpg --batch --passphrase '' --quick-gen-key 'Esdieff package check' rsa4096 sign 0
+          gpg --armor --export > "$RUNNER_TEMP/check.asc"
+          "$tool" repository "$RUNNER_TEMP/repository" "$RUNNER_TEMP/check.asc" "$RUNNER_TEMP/previous/"*.deb "$RUNNER_TEMP/previous/"*.rpm
+          "$tool" repository "$RUNNER_TEMP/repository" "$RUNNER_TEMP/check.asc" "$RUNNER_TEMP/packages/"*.deb "$RUNNER_TEMP/packages/"*.rpm
+          bash scripts/check-packages.sh "$RUNNER_TEMP/repository" "$version" "$archive"
+          rm -rf "$GNUPGHOME"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: packages-${{ matrix.target }}
+          path: ${{ runner.temp }}/packages/*
+          if-no-files-found: error
+          retention-days: 30
+
+  homebrew:
+    name: Homebrew installation on ${{ matrix.os }}
+    needs: build
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: archives-*
+          path: target/distrib
+          merge-multiple: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # main
+        with:
+          stable: true
+      - name: Check installation, upgrade and removal from a temporary tap
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- homebrew target/distrib "$version"
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          brew tap-new esdieff/check
+          formula=$(brew --repository esdieff/check)/Formula/esdieff.rb
+          cp target/distrib/esdieff.rb "$formula"
+          # Cache the exact artifacts so the private check needs no public release.
+          mkdir -p "$(brew --cache)/downloads"
+          for archive in target/distrib/*.tar.xz; do
+            name=$(basename "$archive")
+            hash=$(printf '%s' "https://github.com/pederbe/esdieff/releases/download/v$version/$name" | shasum -a 256 | cut -d' ' -f1)
+            cp "$archive" "$(brew --cache)/downloads/$hash--$name"
+          done
+          cp "$formula" "$RUNNER_TEMP/current.rb"
+          sed -i.bak 's/version ".*"/version "0.0.0"/' "$formula"
+          brew install esdieff/check/esdieff
+          cp "$RUNNER_TEMP/current.rb" "$formula"
+          brew upgrade esdieff/check/esdieff
+          brew test esdieff/check/esdieff
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke "$(brew --prefix)/bin/esdieff"
+          brew uninstall esdieff/check/esdieff
+          test ! -e "$(brew --prefix)/bin/esdieff"
+
+  winget:
+    name: WinGet portable installation
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: archives-x86_64-pc-windows-msvc
+          path: target/distrib
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - name: Generate the portable manifest
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget target/distrib "$version"
+      - name: Prepare the qualified WinGet client
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Install-PSResource -Name Microsoft.WinGet.Client -Version '1.29.380' -Scope CurrentUser -Repository PSGallery -TrustRepository
+          Import-Module Microsoft.WinGet.Client
+          Repair-WinGetPackageManager -Version '1.29.380' -Force
+          $version = winget --version
+          if ($LASTEXITCODE -ne 0 -or $version.Trim() -ne 'v1.29.380') { throw 'WinGet 1.29.380 is unavailable' }
+      - name: Check WinGet against the retained ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          winget settings --enable LocalManifestFiles
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot enable local manifests' }
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          $manifest = "target/distrib/winget/manifests/p/PederBergan/Esdieff/$version"
+          winget validate --manifest $manifest
+          if ($LASTEXITCODE -ne 0) { throw 'Manifest validation failed' }
+          $tool = (Resolve-Path tools/release/target/debug/esdieff-release.exe).Path
+          $portFile = "$env:RUNNER_TEMP/artifact-port"
+          $server = Start-Process -FilePath $tool -ArgumentList @('serve-artifacts', (Resolve-Path target/distrib).Path, $portFile) -PassThru -NoNewWindow
+          try {
+            for ($i = 0; $i -lt 100 -and !(Test-Path $portFile); $i++) { Start-Sleep -Milliseconds 100 }
+            $port = (Get-Content $portFile).Trim()
+            $current = "$env:RUNNER_TEMP/current"
+            $previous = "$env:RUNNER_TEMP/previous"
+            Copy-Item $manifest $current -Recurse
+            Get-ChildItem $current -Filter *.installer.yaml | ForEach-Object {
+              $text = Get-Content $_.FullName -Raw
+              $text = $text -replace 'https://github.com/pederbe/esdieff/releases/download/[^/]+/', "http://127.0.0.1:$port/"
+              Set-Content $_.FullName $text -Encoding utf8
+            }
+            Copy-Item $current $previous -Recurse
+            Get-ChildItem $previous -Filter *.yaml | ForEach-Object {
+              (Get-Content $_.FullName -Raw) -replace "PackageVersion: $([regex]::Escape($version))", 'PackageVersion: 0.0.0' | Set-Content $_.FullName -Encoding utf8
+            }
+            # The previous version is a package-manager upgrade fixture.
+            winget install --manifest $previous --accept-package-agreements --accept-source-agreements --disable-interactivity
+            if ($LASTEXITCODE -ne 0) { throw 'WinGet fixture installation failed' }
+            winget upgrade --manifest $current --accept-package-agreements --accept-source-agreements --disable-interactivity
+            if ($LASTEXITCODE -ne 0) { throw 'WinGet upgrade failed' }
+            $env:Path = [Environment]::ExpandEnvironmentVariables([Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'))
+            $binary = (Get-Command esdieff).Source
+            & $tool smoke $binary $version
+            if ($LASTEXITCODE -ne 0) { throw 'Installed command failed its useful operation' }
+            winget uninstall --manifest $current --disable-interactivity
+            if ($LASTEXITCODE -ne 0) { throw 'WinGet removal failed' }
+            if (Test-Path $binary) { throw 'Removal left the installed command' }
+          } finally {
+            Stop-Process -Id $server.Id -ErrorAction SilentlyContinue
+          }
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: winget-manifests
+          path: target/distrib/winget
+          if-no-files-found: error
+          retention-days: 30
+
+  binstall:
+    name: Binstall on ${{ matrix.os }}
+    needs: build
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            format: txz
+            archive: tar.xz
+            binary: esdieff-x86_64-unknown-linux-gnu/esdieff
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            format: txz
+            archive: tar.xz
+            binary: esdieff-aarch64-unknown-linux-gnu/esdieff
+          - os: macos-15
+            target: aarch64-apple-darwin
+            format: txz
+            archive: tar.xz
+            binary: esdieff-aarch64-apple-darwin/esdieff
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            format: zip
+            archive: zip
+            binary: esdieff.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: archives-${{ matrix.target }}
+          path: target/distrib
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-binstall@1.26.1
+      - name: Install the exact upstream archive layout without source fallback
+        env:
+          TARGET: ${{ matrix.target }}
+          ARCHIVE: ${{ matrix.archive }}
+          PACKAGE_FORMAT: ${{ matrix.format }}
+          BIN_DIR: ${{ matrix.binary }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
+          cargo build --locked --manifest-path tools/release/Cargo.toml
+          suffix=''
+          [[ "$TARGET" != *windows* ]] || suffix=.exe
+          tool=$PWD/tools/release/target/debug/esdieff-release$suffix
+          "$tool" serve-artifacts target/distrib "$RUNNER_TEMP/binstall-port" &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          for _ in {1..100}; do test ! -f "$RUNNER_TEMP/binstall-port" || break; sleep 0.1; done
+          port=$(cat "$RUNNER_TEMP/binstall-port")
+          cargo binstall --no-confirm --allow-insecure-http --disable-strategies compile,quick-install \
+            --manifest-path Cargo.toml --version "$version" --target "$TARGET" \
+            --pkg-url "http://127.0.0.1:$port/esdieff-$TARGET.$ARCHIVE" \
+            --pkg-fmt "$PACKAGE_FORMAT" --bin-dir "$BIN_DIR" \
+            --install-path "$RUNNER_TEMP/binstall-bin" esdieff
+          "$tool" smoke "$RUNNER_TEMP/binstall-bin/esdieff$suffix" "$version"
+          rm -rf "$RUNNER_TEMP/binstall-bin"

@@ -1,0 +1,11 @@
+{
+  "info": { "title": "Directory sensor" },
+  "namespace": { "types": "https://example.com/directory/types" },
+  "sdfObject": {
+    "Sensor": {
+      "sdfProperty": {
+        "reading": { "sdfRef": "types:#/sdfData/Reading" }
+      }
+    }
+  }
+}

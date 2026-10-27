@@ -1,0 +1,22 @@
+{
+  "name": "esdieff-site-tools",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "description": "Build-time tools for the Esdieff website. Not shipped to visitors.",
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "daisyui": "5.7.50",
+    "tailwindcss": "4.3.3",
+    "wrangler": "4.152.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "sharp": "0.35.5",
+      "undici": "8.12.3"
+    }
+  },
+  "scripts": {
+    "build:landing": "tailwindcss -i landing.css -o ../../site/landing.css --minify",
+    "watch:landing": "tailwindcss -i landing.css -o ../../site/landing.css --watch"
+  }
+}

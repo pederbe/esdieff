@@ -1,0 +1,36 @@
+[package]
+name = "esdieff"
+version = "0.1.0"
+edition = "2024"
+description = "An SDF toolkit for connected-device models (RFC 9880)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pederbe/esdieff"
+homepage = "https://esdieff.com"
+readme = "README.md"
+keywords = ["sdf", "iot", "validation", "device-models", "cli"]
+categories = ["command-line-utilities", "development-tools", "parser-implementations"]
+rust-version = "1.99.1"
+include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "CHANGELOG.md", "LICENSE-MIT", "LICENSE-APACHE", "docs/**", "CONTEXT.md"]
+
+[dependencies]
+cap-std = "=4.0.3"
+curl = { version = "=0.4.51", features = ["static-curl", "static-ssl"] }
+sha2 = "=0.11.1"
+regress = "=0.12.0"
+rquickjs = "=0.14.0"
+serde_json = { version = "=1.0.154", features = ["raw_value"] }
+same-file = "=1.0.6"
+hotpath = { version = "=0.29.2", optional = true }
+
+# Profiling with hotpath-rs is off by default, so normal builds compile no
+# instrumentation. See docs/profiling.md.
+[features]
+hotpath = ["dep:hotpath", "hotpath/hotpath"]
+hotpath-alloc = ["hotpath", "hotpath/hotpath-alloc"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.dist]
+inherits = "release"
+lto = "thin"

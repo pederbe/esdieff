@@ -1,0 +1,9 @@
+{
+  "info": { "title": "Reusable payload declaration" },
+  "namespace": { "payload": "urn:example:payload-model" },
+  "defaultNamespace": "payload",
+  "sdfData": {
+    "Payload": { "type": "string", "contentFormat": "text/plain;" },
+    "Unused": { "type": "string", "contentFormat": "application/json@" }
+  }
+}

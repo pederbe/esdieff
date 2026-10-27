@@ -1,0 +1,17 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    { "key": "thermostat", "path": "limited.sdf.json", "role": "model" },
+    { "key": "reading", "path": "samples/current-fraction.json", "role": "sample" },
+    { "key": "calibration", "path": "samples/configure-calibration.json", "role": "sample" },
+    { "key": "too-hot-calibration", "path": "samples/configure-hot-calibration.json", "role": "sample" }
+  ],
+  "cases": [
+    { "name": "Limited Catalogue", "operation": "check", "scope": { "kind": "catalogue" }, "assessment": "initial-v1", "strict_warnings": true },
+    { "name": "Limited model", "operation": "check", "scope": { "kind": "selected", "roots": ["thermostat"] }, "assessment": "full-baseline", "strict_warnings": true },
+    { "name": "Current reading needs dependency", "operation": "sample", "document": "thermostat", "kind": "property", "pointer": "/sdfObject/Thermostat/sdfProperty/currentTemperature", "sample": "reading" },
+    { "name": "Configure needs calibration", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "calibration" },
+    { "name": "Configure too hot despite missing calibration", "operation": "sample", "document": "thermostat", "kind": "action_input", "pointer": "/sdfObject/Thermostat/sdfAction/configure", "sample": "too-hot-calibration" }
+  ]
+}
