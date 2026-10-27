@@ -4,8 +4,8 @@ This guide installs Esdieff and runs it on a supplied thermostat model. No devic
 
 ## Install Esdieff
 
-Esdieff supports macOS 15+, Linux and Windows. These package-manager routes
-install prebuilt releases and provide updates through your package manager.
+Esdieff supports macOS 15+, Linux and Windows. Prebuilt releases are available
+through Homebrew, apt and dnf, and as direct downloads.
 
 ### macOS
 
@@ -20,16 +20,19 @@ Update with `brew update && brew upgrade esdieff`. Remove it with
 
 ### Windows
 
-Install through WinGet:
+Download the [Windows ZIP](https://github.com/pederbe/esdieff/releases/latest/download/esdieff-x86_64-pc-windows-msvc.zip),
+extract it, and add the folder containing `esdieff.exe` to your `PATH`. Open a
+new terminal and check the installation:
 
 ```powershell
-winget install --id PederBergan.Esdieff --exact
+esdieff --version
 ```
 
-Update with `winget upgrade --id PederBergan.Esdieff --exact`. Remove it with
-`winget uninstall --id PederBergan.Esdieff --exact`. The community listing is
-subject to WinGet's review. Direct downloads remain available while that review
-is pending.
+To update, replace the extracted files with a newer release. To uninstall,
+remove the folder and its entry from your `PATH`.
+
+A WinGet listing is being prepared. WinGet installation will become available
+after the community listing is approved.
 
 ### Linux
 
@@ -96,7 +99,9 @@ to remove it.
 <span class="c">esdieff</span> <span class="c">check</span> [<span class="c">--directory</span> DIR] [<span class="c">--recursive</span>] [<span class="c">--exclude</span> RELATIVE_PATH] [<span class="c">--root</span> INPUT] [<span class="c">--assessment</span> initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [<span class="c">--registry-knowledge</span> recorded|withheld] [<span class="c">--strict-warnings</span>] [<span class="c">--format</span> human|json|sarif] [INPUT...]
 </code></pre>
 
-The help continues with one line per command. If the command is not found, add `~/.cargo/bin` to your `PATH` and open a new terminal.
+The help continues with one line per command. If the command is not found,
+check that its installation folder is on your `PATH` and open a new terminal.
+Cargo installations normally use `~/.cargo/bin`.
 
 ## Try the thermostat example
 
