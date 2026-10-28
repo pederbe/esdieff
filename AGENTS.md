@@ -31,4 +31,4 @@ Use the five default triage labels. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Use a single context: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
+Use a single context: root `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.

@@ -1,6 +1,6 @@
 # Recorded traces
 
-Esdieff checks a Recorded trace, a JSON Lines file of Trace entries, against one model document, so device QA can find every logged value that a model rejects in one run. Each entry names a Sample selector, carries a value and may carry an Expected admission and a label. The document is composed once, each distinct selector is resolved once, and every entry is checked on its own, so one bad line never stops the run. The rules follow [ADR 0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md), and the terms Recorded trace, Trace entry, Expected admission, Sample selector and Sample-value checking come from [the domain language](../CONTEXT.md).
+Esdieff checks a Recorded trace, a JSON Lines file of Trace entries, against one model document, so device QA can find every logged value that a model rejects in one run. Each entry names a Sample selector, carries a value and may carry an Expected admission and a label. The document is composed once, each distinct selector is resolved once, and every entry is checked on its own, so one bad line never stops the run. The rules follow [ADR 0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md), and the terms Recorded trace, Trace entry, Expected admission, Sample selector and Sample-value checking come from [the domain language](../GLOSSARY.md).
 
 ```rust
 use esdieff::{Admission, Catalogue, TraceOutcome, SourceInput, TraceRequest};

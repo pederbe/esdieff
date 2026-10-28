@@ -2,7 +2,7 @@
 
 ## Context
 
-A [Revision comparison](../../CONTEXT.md#revision-comparison) fails a CI job on
+A [Revision comparison](../../GLOSSARY.md#revision-comparison) fails a CI job on
 every Breaking change, following
 [ADR 0039: Client-side revision comparison](0039-client-side-revision-comparison.md).
 A deliberate major revision breaks Clients on purpose, and so does a change the
