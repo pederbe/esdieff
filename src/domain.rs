@@ -12,6 +12,8 @@ pub enum Class {
     Action,
     Event,
     Data,
+    /// Non-affordance metadata from the recorded Context extension draft.
+    Context,
 }
 impl Class {
     pub fn keyword(self) -> &'static str {
@@ -22,6 +24,7 @@ impl Class {
             Self::Action => "sdfAction",
             Self::Event => "sdfEvent",
             Self::Data => "sdfData",
+            Self::Context => "sdfContext",
         }
     }
     pub(crate) fn allows_child(self, class: Self) -> bool {
@@ -29,10 +32,10 @@ impl Class {
             Self::Thing => true,
             Self::Object => matches!(
                 class,
-                Self::Property | Self::Action | Self::Event | Self::Data
+                Self::Property | Self::Action | Self::Event | Self::Data | Self::Context
             ),
             Self::Action | Self::Event => class == Self::Data,
-            Self::Property | Self::Data => false,
+            Self::Property | Self::Data | Self::Context => false,
         }
     }
 }
@@ -206,7 +209,7 @@ macro_rules! typed_access {
                 }
             }
             pub fn data_description(self) -> Field<DataDescription<'a>> {
-                if matches!(self.class, Class::Property | Class::Data) {
+                if matches!(self.class, Class::Property | Class::Data | Class::Context) {
                     Field::Present(DataDescription(self.json, DataRole::Full))
                 } else {
                     Field::Absent
@@ -581,7 +584,11 @@ mod source_views {
                 return Field::Unavailable("sample sources have no model definitions");
             }
             match self.json() {
-                Field::Present(json) => definitions(json, class),
+                Field::Present(json) if class != Class::Context => definitions(json, class),
+                Field::Present(json) => match json.get(class.keyword()) {
+                    Field::Absent => Field::Absent,
+                    _ => Field::Unavailable("Context groups occur only under Objects and Things"),
+                },
                 Field::Unavailable(r) => Field::Unavailable(r),
                 Field::Absent => Field::Unavailable("source unavailable"),
             }

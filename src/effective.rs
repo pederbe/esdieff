@@ -271,6 +271,8 @@ struct Selected<'a> {
     /// and as an ambiguous contributor's location.
     written: JsonView<'a>,
     position: Position,
+    /// Context ownership survives selection of nested data descriptions.
+    context_data: bool,
     /// The class of the definition enclosing the target's group, which classifies
     /// a composed target's declaration.
     enclosing: Option<Class>,
@@ -341,7 +343,7 @@ pub struct EffectiveModel<'a> {
     pub(crate) generation_failure: Option<Failure>,
     pub(crate) derived_remaining: usize,
     pub(crate) work_remaining: usize,
-    pub(crate) evaluated_roles: Vec<u32>,
+    pub(crate) evaluated_roles: Vec<u64>,
     pub(crate) clear_feature: bool,
     pub(crate) failure: Option<Failure>,
     pub(crate) dependencies: Vec<SourceId>,
@@ -1299,7 +1301,7 @@ impl<'a> Resolver<'a> {
         source: SourceId,
         budget: &mut OperationBudget,
         clear_feature: bool,
-        evaluated_roles: Vec<u32>,
+        evaluated_roles: Vec<u64>,
         sample: bool,
     ) -> Self {
         Self {
@@ -1444,7 +1446,7 @@ impl Catalogue {
         request: EffectiveRequest<'_>,
         budget: &mut OperationBudget,
         gate: crate::structure::FeatureContext<'a>,
-        evaluated_roles: Vec<u32>,
+        evaluated_roles: Vec<u64>,
         generate: bool,
     ) -> Result<EffectiveModel<'a>, &'static str> {
         self.compose_mode(
@@ -1485,7 +1487,7 @@ impl Catalogue {
         request: EffectiveRequest<'_>,
         budget: &mut OperationBudget,
         gate: crate::structure::FeatureContext<'a>,
-        evaluated_roles: Vec<u32>,
+        evaluated_roles: Vec<u64>,
         generate: bool,
         required: bool,
     ) -> Result<(EffectiveModel<'a>, Option<required::Collection<'a>>), &'static str> {
@@ -1502,7 +1504,7 @@ impl Catalogue {
         request: EffectiveRequest<'_>,
         budget: &mut OperationBudget,
         gate: crate::structure::FeatureContext<'a>,
-        evaluated_roles: Vec<u32>,
+        evaluated_roles: Vec<u64>,
         generate: bool,
         mut mode: ComposeMode<'a, '_>,
     ) -> Result<(EffectiveModel<'a>, Option<required::Collection<'a>>), &'static str> {
@@ -2329,6 +2331,7 @@ impl<'a> Resolver<'a> {
         let malformed = Failure::reference("reference target unavailable");
         let mut position = Position::Vocabulary(Role::Document);
         let mut enclosing = None;
+        let mut context_data = false;
         // The deepest written element on the path, which is the target until a
         // composed element is entered.
         let mut written = Some(root);
@@ -2377,6 +2380,7 @@ impl<'a> Resolver<'a> {
             }
             if let Position::Vocabulary(Role::Definition(class)) = position {
                 enclosing = Some(class);
+                context_data = class == Class::Context;
             } else if !matches!(position, Position::Named(_)) {
                 enclosing = None;
             }
@@ -2441,6 +2445,12 @@ impl<'a> Resolver<'a> {
             target,
             written: view,
             position,
+            context_data: (context_data
+                || matches!(
+                    position,
+                    Position::Vocabulary(Role::Definition(Class::Context))
+                ))
+                && matches!(position, Position::Vocabulary(role) if role.full_data()),
             enclosing,
         }))
     }
@@ -2891,6 +2901,11 @@ impl<'a> Resolver<'a> {
             }
             let selected = self.pointer_source(reference, copied_through.is_some())?;
             let (selected, _) = self.relocate(selected, copied_through)?;
+            if selected.context_data {
+                return Err(Failure::capability(
+                    "reference reuse of Context data descriptions is not yet supported",
+                ));
+            }
             if !matches!(
                 selected.position,
                 Position::Vocabulary(Role::Definition(_) | Role::Data)
@@ -3767,6 +3782,23 @@ impl EffectiveModel<'_> {
             Field::Unavailable(reason) => return Field::Unavailable(reason),
         };
         let role = self.nodes[parent].role;
+        if key == "nullable"
+            && (EffectiveJson {
+                model: self,
+                node: parent,
+            })
+            .context_data()
+        {
+            return match (EffectiveJson {
+                model: self,
+                node: parent,
+            })
+            .get(key)
+            {
+                Field::Present(_) => Field::Absent,
+                _ => Field::Unavailable(crate::context::DEFAULT_UNAVAILABLE),
+            };
+        }
         let supported = match key {
             "readable" | "writable" | "observable" => {
                 matches!(role, Some(Role::Definition(Class::Property)))
@@ -3911,6 +3943,23 @@ impl EffectiveModel<'_> {
             return Field::Unavailable(reason.reason);
         }
         let role = self.nodes[parent].role;
+        if key == "nullable"
+            && (EffectiveJson {
+                model: self,
+                node: parent,
+            })
+            .context_data()
+        {
+            return match (EffectiveJson {
+                model: self,
+                node: parent,
+            })
+            .get(key)
+            {
+                Field::Present(_) => Field::Absent,
+                _ => Field::Unavailable(crate::context::DEFAULT_UNAVAILABLE),
+            };
+        }
         let supported = match key {
             "readable" | "writable" | "observable" => {
                 matches!(role, Some(Role::Definition(Class::Property)))

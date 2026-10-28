@@ -1830,6 +1830,14 @@ impl Report<'_> {
                 output.push('\n');
             }
         }
+        if value["baseline"]["extensions"].is_array() {
+            output.heading("Draft support:");
+            output.push_str(&format!(
+                " {} (inline Context checking and inspection)\n",
+                crate::context::DRAFT
+            ));
+            output.push_str("Context limits: absent nullable defaults unresolved; sdfRequired meaning undefined; general link meaning unavailable\n");
+        }
         if value["baseline"]["temporal_knowledge"].is_object() {
             output.heading("Temporal knowledge:");
             output.push_str(&format!(
@@ -2705,6 +2713,14 @@ impl Report<'_> {
             request["sample"] = json!(state.sample.get());
         }
         let mut baseline = json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":[],"deviations":[],"registry_knowledge":[]});
+        if self.structure.context_used || matches!(self.operation, Operation::Inspect { .. }) {
+            baseline["extensions"] = json!([{
+                "id":crate::context::DRAFT,
+                "sha256":crate::context::SHA256,
+                "scope":"inline Context checking and inspection",
+                "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "general link meaning unavailable"]
+            }]);
+        }
         let temporal_use = self.structure.temporal_use
             | self.sample.as_ref().map_or(0, |state| state.temporal_use);
         if temporal_use & crate::civil::KNOWLEDGE_USED != 0

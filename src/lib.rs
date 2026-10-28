@@ -7,6 +7,7 @@ mod budgeted;
 mod civil;
 mod comparison;
 mod content_format;
+mod context;
 mod coordinate_scan;
 mod document_request;
 mod domain;

@@ -755,13 +755,17 @@ impl AuthorRequest {
                         .present()
                         .and_then(|value| value.text().present())
                         == Some("object");
-                    if !role.supports(key, object) {
+                    if !role.supports(key, object) || key == "sdfContext" {
                         opaque = true;
                         let condition = AuthorCondition::new(
                             "author.fidelity_unknown",
                             false,
                             0,
-                            "Opaque content is retained; meaning after containment changes is unknown",
+                            if key == "sdfContext" {
+                                "Context content is retained; authoring fidelity is not yet established"
+                            } else {
+                                "Opaque content is retained; meaning after containment changes is unknown"
+                            },
                         );
                         conditions.push(condition.affected(
                             crate::EffectiveJson {

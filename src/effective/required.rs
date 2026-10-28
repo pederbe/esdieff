@@ -57,6 +57,8 @@ pub enum RequiredReferenceStatus {
     WrongTarget,
     InvalidSyntax,
     UnsupportedContext,
+    /// The Context extension draft leaves Context requiredness undefined.
+    UndefinedContext,
 }
 impl RequiredReferenceStatus {
     pub fn as_str(self) -> &'static str {
@@ -69,6 +71,7 @@ impl RequiredReferenceStatus {
             Self::WrongTarget => "wrong_target",
             Self::InvalidSyntax => "invalid_syntax",
             Self::UnsupportedContext => "unsupported_context",
+            Self::UndefinedContext => "undefined_context",
         }
     }
 }
@@ -434,7 +437,7 @@ impl<'a> RequiredTarget<'a> {
 fn declaration_class(position: Position, enclosing: Option<Class>) -> Option<Class> {
     match (position, enclosing) {
         (Position::Vocabulary(Role::Definition(class)), Some(parent))
-            if class != Class::Data
+            if !matches!(class, Class::Data | Class::Context)
                 && ((parent == Class::Thing && parent.allows_child(class))
                     || (parent == Class::Object
                         && matches!(class, Class::Property | Class::Action | Class::Event))) =>
@@ -789,7 +792,9 @@ impl<'a> Resolver<'a> {
                     None
                 };
                 let class = match position {
-                    Position::Vocabulary(Role::Definition(class)) if class != Class::Data => {
+                    Position::Vocabulary(Role::Definition(class))
+                        if !matches!(class, Class::Data | Class::Context) =>
+                    {
                         Some(class)
                     }
                     _ => None,
@@ -854,7 +859,14 @@ impl<'a> Resolver<'a> {
                                         &mut collection,
                                     )?;
                                     if !owner.complete && class.is_none() {
-                                        row.status = RequiredReferenceStatus::UnsupportedContext;
+                                        row.status = if matches!(
+                                            position,
+                                            Position::Vocabulary(Role::Definition(Class::Context))
+                                        ) {
+                                            RequiredReferenceStatus::UndefinedContext
+                                        } else {
+                                            RequiredReferenceStatus::UnsupportedContext
+                                        };
                                         row.complete = false;
                                         row.targets.clear();
                                     }
@@ -1034,6 +1046,23 @@ impl<'a> Resolver<'a> {
             {
                 row.complete = false;
             }
+            if row.targets.is_empty()
+                && owner
+                    .class
+                    .is_some_and(|class| class.allows_child(Class::Context))
+                && let Some(group) = self.required_field(owner.json, Class::Context.keyword())?
+            {
+                for child in self.required_children(group)? {
+                    self.required_work(
+                        text.len() + self.required_name(child).map_or(0, str::len) + 1,
+                    )?;
+                    if self.required_name(child) == Some(text) {
+                        row.status = RequiredReferenceStatus::UndefinedContext;
+                        row.complete = false;
+                        return Ok(row);
+                    }
+                }
+            }
             if row.targets.is_empty() {
                 row.status = if row.complete {
                     RequiredReferenceStatus::Missing
@@ -1049,6 +1078,21 @@ impl<'a> Resolver<'a> {
         row.form = Some(RequiredReferenceForm::NameReference(text));
         match self.required_selection(source, text, syntax) {
             Ok((selected, coordinate)) => {
+                let context = match selected.target {
+                    Element::Composed(_) => matches!(
+                        selected.position,
+                        Position::Vocabulary(Role::Definition(Class::Context))
+                    ),
+                    Element::Written(target) => matches!(
+                        self.source_position(target)?.0,
+                        Position::Vocabulary(Role::Definition(Class::Context))
+                    ),
+                };
+                if context {
+                    row.status = RequiredReferenceStatus::UndefinedContext;
+                    row.complete = false;
+                    return Ok(row);
+                }
                 let class = match selected.target {
                     Element::Composed(_) => {
                         declaration_class(selected.position, selected.enclosing)

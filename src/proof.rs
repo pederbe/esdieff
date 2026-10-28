@@ -215,6 +215,9 @@ pub(crate) fn evaluate<'a>(
         return result;
     }
     let mut fields = [Quality::Absent; 15];
+    if (crate::EffectiveJson { model, node }).context_data() {
+        fields[NULLABLE] = Quality::Unknown;
+    }
     let names = [
         "type",
         "nullable",
@@ -622,6 +625,9 @@ pub(crate) fn evaluate_numeric<'a>(
         "multipleOf",
     ];
     let mut fields = [Quality::Absent; 16];
+    if (crate::EffectiveJson { model, node }).context_data() {
+        fields[NULLABLE] = Quality::Unknown;
+    }
     let mut blocked = false;
     let mut set_aside = crate::role::SetAside::default();
     let mut child = n.first;

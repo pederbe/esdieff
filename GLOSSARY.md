@@ -91,6 +91,10 @@ _Avoid_: sdfThing when referring to the physical item.
 **Affordance**:
 A network interaction opportunity described by the model: a Property, Action, or Event.
 
+**Context**:
+A named data description of non-interactive metadata under an Object or Thing, such as a serial number, installation location or calibration offset. The [Context extension draft](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt) defines it separately from affordances.
+_Avoid_: Read-only Property, device interaction.
+
 **Property**:
 An affordance for reading, writing, or observing state.
 _Avoid_: JSON entry, quality.

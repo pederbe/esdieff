@@ -87,7 +87,10 @@ pub(crate) enum Role {
     DirectItem,
 }
 impl Role {
-    pub(crate) fn mask(self) -> u32 {
+    pub(crate) const INFORMATION_STRINGS: u64 = 1 << 11;
+    pub(crate) const NAMED_SHIFT: u32 = 12;
+    pub(crate) const QUALITY_SHIFT: u32 = 24;
+    pub(crate) fn mask(self) -> u64 {
         1 << match self {
             Self::Document => 0,
             Self::Information => 1,
@@ -99,6 +102,7 @@ impl Role {
             Self::Definition(Class::Data) => 7,
             Self::Data => 8,
             Self::DirectItem => 9,
+            Self::Definition(Class::Context) => 10,
         }
     }
     pub(crate) fn reference_context(self) -> bool {
@@ -139,7 +143,7 @@ impl Role {
             Self::Definition(Class::Event) => {
                 matches!(key, "sdfRef" | "sdfRequired" | "sdfOutputData")
             }
-            Self::Definition(Class::Property | Class::Data) | Self::Data => {
+            Self::Definition(Class::Property | Class::Data | Class::Context) | Self::Data => {
                 matches!(
                     key,
                     "sdfRef"
@@ -206,7 +210,7 @@ impl Role {
     }
     pub(crate) fn allows(self, class: Class) -> bool {
         match self {
-            Self::Document => true,
+            Self::Document => class != Class::Context,
             Self::Definition(parent) => parent.allows_child(class),
             _ => false,
         }
@@ -214,7 +218,7 @@ impl Role {
     pub(crate) fn full_data(self) -> bool {
         matches!(
             self,
-            Self::Data | Self::Definition(Class::Property | Class::Data)
+            Self::Data | Self::Definition(Class::Property | Class::Data | Class::Context)
         )
     }
     /// The positions of the registered `oma:id` CDDL sockets: sdfObject and sdfAction
@@ -270,6 +274,7 @@ fn known_quality(key: &str) -> bool {
             | "sdfAction"
             | "sdfEvent"
             | "sdfData"
+            | "sdfContext"
             | "$comment"
             | "const"
             | "contentFormat"
@@ -315,6 +320,7 @@ pub(crate) fn class(key: &str) -> Option<Class> {
         "sdfAction" => Some(Class::Action),
         "sdfEvent" => Some(Class::Event),
         "sdfData" => Some(Class::Data),
+        "sdfContext" => Some(Class::Context),
         _ => None,
     }
 }

@@ -273,7 +273,11 @@ impl<'c, 'a> Walk<'c, 'a> {
             if let Some(child) = crate::role::class(key)
                 && class.allows_child(child)
             {
-                if child != Class::Data {
+                if child == Class::Context {
+                    // Context comparison has its own policy. Preserve the prior
+                    // unclassified quality result until that support is established.
+                    self.quality(Context::Grouping, pair, members, 0)?;
+                } else if child != Class::Data {
                     self.groups(child, pair, members, tasks)?;
                 }
                 continue;

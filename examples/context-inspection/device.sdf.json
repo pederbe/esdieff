@@ -1,0 +1,25 @@
+{
+  "info": {
+    "title": "Device with installation metadata",
+    "version": "2026-10-28"
+  },
+  "sdfObject": {
+    "Device": {
+      "sdfProperty": {
+        "temperature": { "type": "number", "unit": "Cel" }
+      },
+      "sdfContext": {
+        "serialNumber": { "type": "string", "nullable": false },
+        "installationLocation": {
+          "type": "object",
+          "properties": {
+            "floor": { "type": "integer" },
+            "room": { "type": "string" }
+          },
+          "required": ["room"]
+        },
+        "calibrationOffset": { "type": "number", "unit": "Cel" }
+      }
+    }
+  }
+}
