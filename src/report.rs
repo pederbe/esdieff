@@ -2714,12 +2714,7 @@ impl Report<'_> {
         }
         let mut baseline = json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":[],"deviations":[],"registry_knowledge":[]});
         if self.structure.context_used || matches!(self.operation, Operation::Inspect { .. }) {
-            baseline["extensions"] = json!([{
-                "id":crate::context::DRAFT,
-                "sha256":crate::context::SHA256,
-                "scope":"Context checking, composition, inspection and selected-value checking",
-                "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "reference reuse outside Context unavailable", "general link meaning unavailable"]
-            }]);
+            baseline["extensions"] = crate::context::support();
         }
         let temporal_use = self.structure.temporal_use
             | self.sample.as_ref().map_or(0, |state| state.temporal_use);

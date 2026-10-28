@@ -186,3 +186,171 @@ fn replaying_against_a_narrowed_maximum_fails_exactly_the_changed_admissions() {
     let vector: Value = serde_json::from_str(vector.lines().nth(line - 1).unwrap()).unwrap();
     assert_eq!(vector["value"], 20);
 }
+
+const CONTEXT: &str = "/sdfObject/Device/sdfContext/level";
+const CONTEXT_MODEL: &str = r#"{"sdfObject":{"Device":{"sdfContext":{"level":{"type":"integer","minimum":10,"maximum":20,"nullable":false}}}}}"#;
+
+fn generate_context(model: &TempFile, format: &str) -> Output {
+    run(&[
+        "generate",
+        "--document",
+        model.path(),
+        "--kind",
+        "context",
+        "--pointer",
+        CONTEXT,
+        "--format",
+        format,
+        model.path(),
+    ])
+}
+
+#[test]
+fn cli_context_vectors_are_deterministic_and_replay_changed_admissions() {
+    let model = TempFile::new(CONTEXT_MODEL);
+    let output = generate_context(&model, "jsonl");
+    assert!(output.status.success(), "{:?}", output);
+    assert!(output.stderr.is_empty());
+    let vectors = output.stdout;
+    assert_eq!(generate_context(&model, "jsonl").stdout, vectors);
+    let text = std::str::from_utf8(&vectors).unwrap();
+    for line in text.lines() {
+        let entry: Value = serde_json::from_str(line).unwrap();
+        assert_eq!(entry["kind"], "context");
+        assert_eq!(entry["pointer"], CONTEXT);
+    }
+    let count = text.lines().count() as u64;
+    let (report, code) = replay(&model, &vectors);
+    assert_eq!(code, 0);
+    assert_eq!(summary(&report), (count, 0, 0));
+
+    let narrowed = TempFile::new(CONTEXT_MODEL.replace("20", "15"));
+    let (report, code) = replay(&narrowed, &vectors);
+    assert_eq!(code, 1);
+    assert_eq!(summary(&report), (count - 1, 1, 0));
+    let changed = &report["result"]["entries"][0];
+    assert_eq!(changed["selector"]["kind"], "context");
+    assert_eq!(changed["label"], "maximum");
+    assert_eq!(changed["admission"], "rejected");
+
+    let mut rows: Vec<Value> = text
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    let minimum = rows
+        .iter()
+        .position(|row| row["label"] == "minimum")
+        .unwrap();
+    rows[minimum]["value"] = Value::from(9);
+    let edited = rows
+        .iter()
+        .map(Value::to_string)
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
+    let (report, code) = replay(&model, edited.as_bytes());
+    assert_eq!(code, 1);
+    assert_eq!(summary(&report), (count - 1, 1, 0));
+    assert_eq!(report["result"]["entries"][0]["line"], minimum + 1);
+    assert_eq!(report["result"]["entries"][0]["label"], "minimum");
+
+    let json = generate_context(&model, "json");
+    assert!(json.status.success());
+    let wire: Value = serde_json::from_slice(&json.stdout).unwrap();
+    assert_eq!(wire["request"]["generation"]["selector"]["kind"], "context");
+    let human = generate_context(&model, "human");
+    assert!(human.status.success());
+    assert!(
+        String::from_utf8(human.stdout)
+            .unwrap()
+            .contains(&format!("context {CONTEXT}"))
+    );
+}
+
+#[test]
+fn cli_context_generation_and_replay_keep_incomplete_and_missing_results_visible() {
+    let model = TempFile::new(CONTEXT_MODEL.replace(",\"nullable\":false", ""));
+    let json = generate_context(&model, "json");
+    assert_eq!(json.status.code(), Some(3));
+    let wire: Value = serde_json::from_slice(&json.stdout).unwrap();
+    assert_eq!(wire["result"]["descriptions"][0]["state"], "partial");
+    assert!(wire["result"]["summary"]["undetermined"].as_u64().unwrap() > 0);
+    let output = generate_context(&model, "jsonl");
+    assert_eq!(output.status.code(), Some(3));
+    assert!(output.stderr.is_empty());
+    assert!(
+        std::str::from_utf8(&output.stdout)
+            .unwrap()
+            .lines()
+            .all(|line| {
+                let entry: Value = serde_json::from_str(line).unwrap();
+                !entry["value"].is_null()
+            })
+    );
+    let (report, code) = replay(&model, &output.stdout);
+    assert_eq!(code, 0);
+    assert_eq!(
+        summary(&report),
+        (
+            std::str::from_utf8(&output.stdout).unwrap().lines().count() as u64,
+            0,
+            0
+        )
+    );
+
+    let trace =
+        format!(r#"{{"kind":"context","pointer":"{CONTEXT}","value":null,"expected":"rejected"}}"#);
+    let (report, code) = replay(&model, trace.as_bytes());
+    assert_eq!(code, 3);
+    assert_eq!(summary(&report), (0, 0, 1));
+    assert_eq!(report["result"]["entries"][0]["admission"], "undetermined");
+    let removed = TempFile::new(r#"{"sdfObject":{"Device":{"sdfContext":{}}}}"#);
+    let (report, code) = replay(&removed, trace.as_bytes());
+    assert_eq!(code, 1);
+    assert_eq!(
+        report["result"]["entries"][0]["conditions"][0]["code"],
+        "trace.unselectable"
+    );
+}
+
+#[test]
+fn cli_generates_and_replays_compound_context_from_supplied_references() {
+    let base = TempFile::new(include_bytes!("../examples/context-reuse/base.sdf.json"));
+    let device = TempFile::new(include_bytes!("../examples/context-reuse/device.sdf.json"));
+    let pointer = "/sdfThing/Installation/sdfObject/sensor/sdfContext/location";
+    let output = run(&[
+        "generate",
+        "--document",
+        device.path(),
+        "--kind",
+        "context",
+        "--pointer",
+        pointer,
+        "--format",
+        "jsonl",
+        base.path(),
+        device.path(),
+    ]);
+    assert!(output.status.success(), "{:?}", output);
+    let text = std::str::from_utf8(&output.stdout).unwrap();
+    assert!(text.lines().any(|line| {
+        let entry: Value = serde_json::from_str(line).unwrap();
+        entry["value"] == serde_json::json!({"room":"a","floor":2})
+            && entry["expected"] == "admitted"
+    }));
+    let trace = TempFile::new(&output.stdout);
+    let replay = run(&[
+        "trace",
+        "--document",
+        device.path(),
+        "--trace",
+        trace.path(),
+        "--format",
+        "json",
+        base.path(),
+        device.path(),
+    ]);
+    assert!(replay.status.success(), "{:?}", replay);
+    let wire: Value = serde_json::from_slice(&replay.stdout).unwrap();
+    assert_eq!(summary(&wire), (text.lines().count() as u64, 0, 0));
+}

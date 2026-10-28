@@ -17,6 +17,8 @@ pub(crate) struct SelectedScope {
     unavailable: Vec<SourceId>,
     /// Composition relied on copied-reference relocation.
     relocation: bool,
+    /// A requested selector names Context, including when its details are omitted.
+    pub(crate) context: bool,
     /// The value interpretations the checks relied on.
     pub(crate) interpretations: ValueInterpretations,
     /// The extension vocabulary composition and the checks set aside.
@@ -30,6 +32,7 @@ impl SelectedScope {
             dependencies: Vec::new(),
             unavailable: Vec::new(),
             relocation: false,
+            context: false,
             interpretations: ValueInterpretations::default(),
             set_aside: SetAside::default(),
         }
@@ -76,8 +79,12 @@ impl SelectedScope {
         if self.set_aside.relies_on_reading(false) {
             interpretations.push("undeclared-extensions-ignorable/1");
         }
-        json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],
-            "interpretations":interpretations,"deviations":[],"registry_knowledge":[]})
+        let mut baseline = json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],
+            "interpretations":interpretations,"deviations":[],"registry_knowledge":[]});
+        if self.context {
+            baseline["extensions"] = crate::context::support();
+        }
+        baseline
     }
 }
 

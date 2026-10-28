@@ -59,6 +59,8 @@ The reports are trimmed to the lines about the sample. A rejected sample is a fa
 
 Each value aims at one **target**, named in the middle column: the two bounds, a value just outside each, a value off the step, and one wrong type of each kind. Esdieff then checks every value against the model, and the first column is the result of that check, not the intention. The two agree here, but a model that allows null would list the `null` target as admitted. For a map, generation also builds a value missing each required entry, and a wrong value for each entry, as the full thermostat output in the getting-started guide shows for the `configure` action.
 
+For non-interactive metadata, select `--kind context` and its `sdfContext` pointer. Context requires explicit selection and uses the same value-checking rules, including unresolved nullability when `nullable` is absent. The [Context round trip](../context-contract.md#generate-and-replay-context-vectors) shows generation and offline replay with inherited and refined constraints.
+
 Generation is deterministic. The same model and selection always give the same values in the same order, so the output can live under version control. Save the values as test vectors with `--format jsonl`, which writes one JSON object per line:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --format jsonl thermostat.sdf.json &gt; vectors.jsonl

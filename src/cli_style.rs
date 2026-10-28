@@ -146,11 +146,11 @@ pub(crate) fn help(style: Style) -> String {
         ),
         (
             "sample",
-            "--document MODEL --kind property|data|action_input|action_output|event_output --pointer POINTER --sample SAMPLE [--strict-warnings] [--format human|json] MODEL_INPUT...",
+            "--document MODEL --kind property|data|action_input|action_output|event_output|context --pointer POINTER --sample SAMPLE [--strict-warnings] [--format human|json] MODEL_INPUT...",
         ),
         (
             "generate",
-            "--document MODEL [--kind property|data|action_input|action_output|event_output --pointer POINTER] [--format human|json|jsonl] MODEL_INPUT...",
+            "--document MODEL [--kind property|data|action_input|action_output|event_output|context --pointer POINTER] [--format human|json|jsonl] MODEL_INPUT...",
         ),
         (
             "trace",

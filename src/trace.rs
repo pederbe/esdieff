@@ -359,6 +359,10 @@ impl Catalogue {
             result.scope.interpretations |= checked.interpretations;
             result.scope.set_aside |= checked.set_aside;
             let entry = checked.entry;
+            result.scope.context |= entry
+                .selector
+                .as_ref()
+                .is_some_and(|(kind, _)| *kind == crate::SampleKind::Context);
             result.outcomes[slot(TraceOutcome::ALL, entry.outcome)] += 1;
             if let Some(admission) = entry.admission {
                 result.admissions[slot(ADMISSIONS, admission)] += 1;

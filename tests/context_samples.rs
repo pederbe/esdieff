@@ -1,7 +1,7 @@
 //! Context values use the selected-sample contract and the recorded draft defaults.
 use esdieff::{
-    Admission, Catalogue, Class, EffectiveRequest, Field, GenerationRequest, Limits, Lookup,
-    SampleKind, SampleRequest, SourceInput, TraceOutcome, TraceRequest,
+    Admission, Catalogue, Class, EffectiveRequest, Field, Limits, Lookup, SampleKind,
+    SampleRequest, SourceInput,
 };
 use serde_json::{Value, json};
 
@@ -411,32 +411,4 @@ fn context_rejections_keep_sample_locations_and_diagnostic_omission_independent(
             );
         }
     }
-}
-
-#[test]
-fn context_generation_and_trace_replay_remain_separate_capabilities() {
-    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied(
-        "model",
-        br#"{"sdfObject":{"Device":{"sdfContext":{"value":{"type":"number"}}}}}"#,
-    )])
-    .unwrap();
-    let model = catalogue.source_id("model").unwrap();
-    assert!(
-        catalogue
-            .generate(GenerationRequest::new(model).select(SampleKind::Context, POINTER))
-            .is_err()
-    );
-    let trace = json!({"kind":"context", "pointer":POINTER, "value":1}).to_string();
-    let result = catalogue
-        .check_trace(TraceRequest::new(model, trace.as_bytes()))
-        .unwrap();
-    assert_eq!(result.count(TraceOutcome::Failed), 1);
-    assert!(
-        result
-            .entries()
-            .next()
-            .unwrap()
-            .conditions()
-            .any(|row| row.code() == "trace.invalid_member")
-    );
 }
