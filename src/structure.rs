@@ -127,6 +127,10 @@ pub(crate) enum Rule {
     NamespaceDefault,
     GroupShape,
     DefinitionShape,
+    ContextPlacement,
+    ContextGroupShape,
+    ContextDefinitionShape,
+    ContextNullableDefault,
     RoleUnavailable,
     GroupingCount,
     PositiveStep,
@@ -172,6 +176,7 @@ impl Rule {
                 }
             }
             Self::Required(status) => match status {
+                crate::RequiredReferenceStatus::UndefinedContext => "context.required_undefined",
                 crate::RequiredReferenceStatus::InvalidSyntax => "required.syntax",
                 crate::RequiredReferenceStatus::WrongTarget => "required.target_role",
                 crate::RequiredReferenceStatus::Missing => "required.target_missing",
@@ -197,6 +202,10 @@ impl Rule {
             Self::NamespaceDefault => "namespace.default",
             Self::GroupShape => "structure.group_shape",
             Self::DefinitionShape => "structure.definition_shape",
+            Self::ContextPlacement => "context.placement",
+            Self::ContextGroupShape => "context.group_shape",
+            Self::ContextDefinitionShape => "context.definition_shape",
+            Self::ContextNullableDefault => "context.nullable_default_unavailable",
             Self::RoleUnavailable => "structure.role_unavailable",
             Self::GroupingCount => "grouping.count",
             Self::PositiveStep => "parameter.positive_step",
@@ -242,6 +251,9 @@ impl Rule {
                 }
             }
             Self::Required(status) => match status {
+                crate::RequiredReferenceStatus::UndefinedContext => {
+                    "The Context draft does not define Context use in sdfRequired"
+                }
                 crate::RequiredReferenceStatus::InvalidSyntax => {
                     "Required declaration syntax is invalid"
                 }
@@ -303,6 +315,12 @@ impl Rule {
             }
             Self::GroupShape => "A base definition group must be a map",
             Self::DefinitionShape => "A base named definition must be a map",
+            Self::ContextPlacement => "A Context group occurs only inside an Object or Thing",
+            Self::ContextGroupShape => "A Context group must be a map of named definitions",
+            Self::ContextDefinitionShape => "A named Context definition must be a map",
+            Self::ContextNullableDefault => {
+                "The Context draft leaves absent nullable defaults unresolved"
+            }
             Self::RoleUnavailable => {
                 "Retained content has no established base role at this position"
             }
@@ -383,6 +401,16 @@ impl Rule {
     }
     pub(crate) fn citation(self) -> Option<&'static str> {
         match self {
+            Self::Required(crate::RequiredReferenceStatus::UndefinedContext) => {
+                Some("draft-ietf-asdf-sdf-nonaffordance-06 Section 4.2")
+            }
+            Self::ContextPlacement => Some("draft-ietf-asdf-sdf-nonaffordance-06 Section 4.2"),
+            Self::ContextGroupShape | Self::ContextDefinitionShape => {
+                Some("draft-ietf-asdf-sdf-nonaffordance-06 Section 4.1")
+            }
+            Self::ContextNullableDefault => {
+                Some("draft-ietf-asdf-sdf-nonaffordance-06 Section 4.3")
+            }
             Self::ConsistencyExcluded(_) => Some("RFC 9880 Section 4.7.2; Appendix C"),
             Self::Required(_) => Some("RFC 9880 Section 4.5"),
             Self::Pattern(crate::pattern::Condition::Invalid) => {
@@ -447,6 +475,7 @@ impl Rule {
     }
     pub(crate) fn severity(self) -> &'static str {
         match self {
+            Self::ContextNullableDefault => "incomplete",
             Self::ConsistencyExcluded(_) => "warning",
             Self::Required(
                 crate::RequiredReferenceStatus::WrongTarget
@@ -475,6 +504,11 @@ impl Rule {
     }
     pub(crate) fn basis_kind(self) -> &'static str {
         match self {
+            Self::Required(crate::RequiredReferenceStatus::UndefinedContext) => "interpretation",
+            Self::ContextPlacement
+            | Self::ContextGroupShape
+            | Self::ContextDefinitionShape
+            | Self::ContextNullableDefault => "interpretation",
             Self::ConsistencyExcluded(_) => "advice",
             Self::Required(
                 crate::RequiredReferenceStatus::WrongTarget
@@ -499,6 +533,13 @@ impl Rule {
     }
     pub(crate) fn basis_id(self) -> Option<&'static str> {
         match self {
+            Self::Required(crate::RequiredReferenceStatus::UndefinedContext) => {
+                Some(crate::context::DRAFT)
+            }
+            Self::ContextPlacement
+            | Self::ContextGroupShape
+            | Self::ContextDefinitionShape
+            | Self::ContextNullableDefault => Some(crate::context::DRAFT),
             Self::ConsistencyExcluded(_) => Some(self.code()),
             Self::Required(
                 crate::RequiredReferenceStatus::WrongTarget
@@ -634,6 +675,7 @@ impl ModifiedScope {
 }
 #[derive(Default)]
 pub(crate) struct Structure<'a> {
+    pub(crate) context_used: bool,
     pub(crate) temporal_use: u8,
     pub(crate) format_use: u8,
     pub(crate) abstract_use: u8,
@@ -661,7 +703,7 @@ pub(crate) struct Structure<'a> {
 pub(crate) struct SourceContext<'a> {
     pub(crate) id: SourceId,
     pub(crate) gate: FeatureContext<'a>,
-    pub(crate) roles: Vec<u32>,
+    pub(crate) roles: Vec<u64>,
 }
 pub(crate) struct ParameterLedger {
     pub(crate) storage_remaining: usize,
@@ -881,7 +923,7 @@ impl<'a> Structure<'a> {
             let count = source.parsed.nodes.len();
             if crate::allowance::charge(
                 &mut checker.budget.allocation,
-                count * std::mem::size_of::<u32>(),
+                count * std::mem::size_of::<u64>(),
             ) {
                 checker.roles = vec![0; count];
             }
@@ -1098,7 +1140,7 @@ struct Checker<'a, 'view, 'run> {
     sample_rules: SampleRules,
     skip_local: bool,
     direct: bool,
-    roles: Vec<u32>,
+    roles: Vec<u64>,
     number_work: Option<crate::NumberWork>,
     alternative: Option<crate::AlternativeId<'a>>,
 }
@@ -1157,6 +1199,13 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                         .expect("shared effective numeric counter"),
                     self.equality.as_mut().expect("request equality counter"),
                 );
+                if candidate.kind() == JsonKind::Null
+                    && description.context_data()
+                    && matches!(description.get("nullable"), Field::Absent)
+                    && evaluation.admission == crate::Admission::Undetermined
+                {
+                    self.record(view, Rule::ContextNullableDefault);
+                }
                 self.result.temporal_use |= evaluation.temporal_use;
                 self.result.abstract_use |= self
                     .equality
@@ -1325,7 +1374,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                 }
                 self.information_strings = true;
                 if let Some(mask) = self.roles.get_mut(info.node) {
-                    *mask |= 1 << 10;
+                    *mask |= Role::INFORMATION_STRINGS;
                 }
             }
             return FeatureContext::Clear(modified);
@@ -1526,6 +1575,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
         true
     }
     fn visit(&mut self, json: CheckView<'a, 'view>, role: Role, mut possible_patch: bool) -> bool {
+        self.result.context_used |= role == Role::Definition(Class::Context);
         if self.consistency_enabled && role.full_data() {
             self.check_consistency(json);
         }
@@ -1635,7 +1685,9 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
             if key == "sdfChoice" {
                 choice = Some(child);
             }
-            if self.result.coverage.full_requested && role == Role::Document && class(key).is_some()
+            if self.result.coverage.full_requested
+                && role == Role::Document
+                && class(key).is_some_and(|class| role.allows(class))
             {
                 if !self.debit(child, 1) {
                     return false;
@@ -1819,7 +1871,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                             && model
                                 .evaluated_roles
                                 .get(model.nodes[node].source.node)
-                                .is_some_and(|mask| mask & (1 << 10) != 0)
+                                .is_some_and(|mask| mask & Role::INFORMATION_STRINGS != 0)
                     }
                 };
             if !self.skip_local
@@ -1831,6 +1883,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                 self.record(child, Rule::MetadataString);
             }
             if let Some(class) = class(key) {
+                self.result.context_used |= class == Class::Context;
                 if role.allows(class) {
                     if !self.direct
                         && !self.named(
@@ -1844,7 +1897,14 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                         return false;
                     }
                 } else if !self.skip_local && !(possible_patch && child.kind() == JsonKind::Null) {
-                    self.record(child, Rule::RoleUnavailable);
+                    self.record(
+                        child,
+                        if class == Class::Context {
+                            Rule::ContextPlacement
+                        } else {
+                            Rule::RoleUnavailable
+                        },
+                    );
                 }
                 if reliable_quality_member {
                     self.mark_quality(child, role);
@@ -2006,7 +2066,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
         if let CheckView::Source(source) = json
             && let Some(mask) = self.roles.get_mut(source.node)
         {
-            *mask |= role.mask() << 20;
+            *mask |= role.mask() << Role::QUALITY_SHIFT;
         }
     }
     fn quality_replay_proof(
@@ -2037,7 +2097,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
             || model
                 .evaluated_roles
                 .get(n.source.node)
-                .is_none_or(|mask| mask & (role.mask() << 20) == 0)
+                .is_none_or(|mask| mask & (role.mask() << Role::QUALITY_SHIFT) == 0)
             || n.source.source_id() != p.source.source_id()
             || n.source.n().parent != Some(p.source.node)
         {
@@ -2109,6 +2169,10 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
             }
         }
         if key == "sdfRequiredInputData" {
+            return true;
+        }
+        if key == "sdfContext" {
+            // Its placement and shape are checked as a recorded draft class below.
             return true;
         }
         match role.vocabulary(key, object) {
@@ -2279,7 +2343,14 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
         }
         if group.kind() != JsonKind::Map {
             if !skip_local && class_group && !(possible_patch && group.kind() == JsonKind::Null) {
-                self.record(group, Rule::GroupShape);
+                self.record(
+                    group,
+                    if role == Role::Definition(Class::Context) {
+                        Rule::ContextGroupShape
+                    } else {
+                        Rule::GroupShape
+                    },
+                );
             }
             return true;
         }
@@ -2324,7 +2395,14 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                 self.record(definition, Rule::NameColon);
             }
             if !skip_entry && class_group && definition.kind() != JsonKind::Map {
-                self.record(definition, Rule::DefinitionShape);
+                self.record(
+                    definition,
+                    if role == Role::Definition(Class::Context) {
+                        Rule::ContextDefinitionShape
+                    } else {
+                        Rule::DefinitionShape
+                    },
+                );
             }
             if !skip_entry && !class_group && role.full_data() && definition.kind() != JsonKind::Map
             {
@@ -2333,7 +2411,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
             if let CheckView::Source(source) = definition
                 && let Some(mask) = self.roles.get_mut(source.node)
             {
-                *mask |= role.mask() << 10;
+                *mask |= role.mask() << Role::NAMED_SHIFT;
             }
             if !self.schedule(definition, role, possible_patch) {
                 return false;
@@ -2353,7 +2431,7 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
             || model
                 .evaluated_roles
                 .get(n.source.node)
-                .is_none_or(|mask| mask & (role.mask() << 10) == 0)
+                .is_none_or(|mask| mask & (role.mask() << Role::NAMED_SHIFT) == 0)
         {
             return false;
         }

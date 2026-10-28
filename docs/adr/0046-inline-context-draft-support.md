@@ -1,0 +1,17 @@
+# 0046: Inline Context draft support
+
+Esdieff records `draft-ietf-asdf-sdf-nonaffordance-06`, dated 27 October 2026, as the basis for inline Context checking and inspection. Its SHA-256 is `404e5d06747cf5c78ae10e2867729cb751a40d3d35af58e3fdc7f5876a922661`. This deliberately adopted draft support extends the [recorded standards baseline](0002-recorded-standards-baseline.md) without attributing a new class or its placement rules to RFC 9880.
+
+Sections 4.1 and 4.2 define named Context data descriptions only under Objects and Things. They have the supported common and data qualities, without Property characteristics or interactive endpoints. Existing bounded checking and inspection apply, including nested map descriptions, alternatives and arrays. General `sdfType: "link"` meaning remains unavailable. An unrelated unknown critical feature still prevents the conclusions that require it.
+
+Reference reuse of a Context definition or its nested data descriptions remains a scoped unavailable capability in this inline slice. Otherwise a Property could acquire a base-SDF nullable default from Context content whose absent default is unresolved. Context composition needs its own support and qualification before that boundary is removed.
+
+Section 4.3 imports RFC data qualities but also says absent qualities have no assumed defaults. This does not settle the conflict with the RFC's default `nullable: true`, interpreted in [ADR 0005: Nullability and presence](0005-nullability-and-presence.md). Context descriptions and their nested data descriptions therefore expose absent nullability as unavailable in effective views. Explicit values remain meaningful. Only checks that need the disputed default become undetermined, such as the consistency of a declared null constant. Nonnull values and independent constraints continue. Source absence remains visible, no default is inserted, and ordinary base-SDF descriptions retain their existing defaults. Effective alternatives inherit the same boundary under [ADR 0024: Effective alternatives and nullable characteristics](0024-effective-alternatives-and-nullable-characteristics.md).
+
+Section 4.2 leaves Context use in `sdfRequired` undefined. Context entries are excluded from mandatory affordance targets. A bare name still selects eligible affordances when a same-name Context exists. An explicit Context reference, a Context-only bare-name match or requiredness authored on a Context receives an incomplete draft finding, without claiming that the draft prohibits it. Nested map-data `required` keeps its separate meaning.
+
+Reports identify the draft revision, digest and support boundaries in `baseline.extensions`. Draft-specific findings use the existing `interpretation` basis with that revision's identifier and section, preserving the report's basis vocabulary while distinguishing draft support from RFC rules. Imported data-quality rules retain their applicable RFC basis. The existing RFC requirement inventory remains the RFC inventory, without inventing extension obligations or a critical-feature identifier.
+
+## Considered Options
+
+Applying the RFC nullable default to every Context would silently resolve the draft's conflicting wording. Treating every Context result as unavailable would discard supported explicit qualities and independent checks. Keeping the uncertainty at the needed absent default preserves useful results while leaving the unresolved interpretation visible.

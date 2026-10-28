@@ -24,6 +24,7 @@
 - [Model meaning assessment](model-meaning-contract.md)
   - [Formal model admission](formal-admission-contract.md)
   - [Model coverage boundaries](model-coverage-boundaries.md)
+  - [Context metadata](context-contract.md)
   - [Model assessment inventory](model-assessment-inventory.md)
   - [Modified metadata assessment](modified-metadata-contract.md)
   - [Unit names](unit-contract.md)
@@ -92,3 +93,4 @@
   - [0043: SARIF and Markdown report projections](adr/0043-sarif-and-markdown-report-projections.md)
   - [0044: Versions of breaking revisions](adr/0044-versions-of-breaking-revisions.md)
   - [0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md)
+  - [0046: Inline Context draft support](adr/0046-inline-context-draft-support.md)

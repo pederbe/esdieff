@@ -124,6 +124,9 @@ impl<'a> EffectiveJson<'a> {
                 .map_or(Field::Present(value), |reason| {
                     Field::Unavailable(reason.reason)
                 }),
+            Field::Absent if key == "nullable" && self.context_data() => {
+                Field::Unavailable(crate::context::DEFAULT_UNAVAILABLE)
+            }
             field => field,
         }
     }

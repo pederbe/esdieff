@@ -444,6 +444,12 @@ impl Report<'_> {
                     continue;
                 }
                 let condition = match row.status {
+                    crate::RequiredReferenceStatus::UndefinedContext => (
+                        "context.required_undefined",
+                        "incomplete",
+                        "interpretation",
+                        "The Context draft does not define Context use in sdfRequired",
+                    ),
                     crate::RequiredReferenceStatus::InvalidSyntax => (
                         "required.syntax",
                         "error",
@@ -511,6 +517,10 @@ fn required_condition_value(
     let mut value = json!({"code":code,"severity":severity,"basis":{"kind":basis,"citation":"RFC 9880 Section 4.5"},"message":message,"assessment_unit":"inspection","primary":{"kind":"source","source_id":source.get(),"pointer":null,"span":[span.start,span.end]},"related":[],"arguments":{}});
     if basis != "rfc" && basis != "json" {
         value["basis"]["id"] = json!(code);
+    }
+    if code == "context.required_undefined" {
+        value["basis"]["id"] = json!(crate::context::DRAFT);
+        value["basis"]["citation"] = json!("draft-ietf-asdf-sdf-nonaffordance-06 Section 4.2");
     }
     value
 }

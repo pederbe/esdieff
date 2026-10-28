@@ -610,6 +610,11 @@ fn establish(
             "edit owner must be an authored base named definition",
         ));
     };
+    if class == crate::Class::Context {
+        return Err(Establishment::Request(
+            "Context editing is not yet supported",
+        ));
+    }
     if current.kind() != JsonKind::Map {
         return Err(Establishment::Request(
             "edit owner must be a present definition map",
