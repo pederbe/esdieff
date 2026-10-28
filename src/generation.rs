@@ -230,7 +230,10 @@ impl Catalogue {
         if !source.role().is_model() {
             return Err("sample source cannot be a model root");
         }
-        if let Some((_, pointer)) = request.selector {
+        if let Some((kind, pointer)) = request.selector {
+            if kind == SampleKind::Context {
+                return Err("Context value generation is not supported");
+            }
             if pointer.len() > SELECTOR_BYTES {
                 return Err("invalid or oversized JSON pointer selector");
             }

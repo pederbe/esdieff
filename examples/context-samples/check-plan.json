@@ -1,0 +1,28 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {"key": "base", "path": "../context-reuse/base.sdf.json", "role": "model"},
+    {"key": "device", "path": "../context-reuse/device.sdf.json", "role": "model"},
+    {"key": "tag", "path": "asset-tag.json", "role": "sample"},
+    {"key": "location", "path": "location.json", "role": "sample"}
+  ],
+  "cases": [
+    {
+      "name": "Asset tag",
+      "operation": "sample",
+      "document": "device",
+      "kind": "context",
+      "pointer": "/sdfThing/Installation/sdfObject/sensor/sdfContext/assetTag",
+      "sample": "tag"
+    },
+    {
+      "name": "Installation location",
+      "operation": "sample",
+      "document": "device",
+      "kind": "context",
+      "pointer": "/sdfThing/Installation/sdfObject/sensor/sdfContext/location",
+      "sample": "location"
+    }
+  ]
+}

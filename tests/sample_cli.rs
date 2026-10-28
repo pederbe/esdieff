@@ -164,6 +164,119 @@ impl Drop for InputFile {
 }
 
 #[test]
+fn context_samples_report_admission_wrong_kind_and_incomplete_meaning() {
+    let model = InputFile::new(br##"{"namespace":{"missing":"https://example.invalid/unavailable"},"sdfObject":{"Device":{
+        "sdfContext":{
+            "tag":{"type":"string","const":"A-17"},
+            "location":{"type":"object","required":["room"],"properties":{"room":{"type":"string"},"floor":{"type":"integer","minimum":2}}},
+            "link":{"sdfType":"link"},
+            "missing":{"sdfRef":"missing:#/sdfData/D"},
+            "unknownNullable":{"type":"number"}
+        },
+        "sdfProperty":{"tag":{"type":"number"}}
+    }}}"##);
+    for (kind, name, value, exit, admission) in [
+        ("context", "tag", r#""A-17""#, 0, Some("admitted")),
+        ("context", "tag", r#""A-18""#, 1, Some("rejected")),
+        (
+            "context",
+            "location",
+            r#"{"room":"Lab","floor":2}"#,
+            0,
+            Some("admitted"),
+        ),
+        ("context", "location", r#"{"floor":2}"#, 1, Some("rejected")),
+        (
+            "context",
+            "link",
+            r#""https://example.com/device""#,
+            3,
+            Some("undetermined"),
+        ),
+        ("context", "missing", "4", 3, Some("undetermined")),
+        (
+            "context",
+            "unknownNullable",
+            "null",
+            3,
+            Some("undetermined"),
+        ),
+        ("property", "tag", r#""A-17""#, 2, None),
+    ] {
+        let sample = InputFile::new(value.as_bytes());
+        let pointer = format!("/sdfObject/Device/sdfContext/{name}");
+        let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+            .args([
+                "sample",
+                "--document",
+                model.path(),
+                "--kind",
+                kind,
+                "--pointer",
+                &pointer,
+                "--sample",
+                sample.path(),
+                "--format",
+                "json",
+                model.path(),
+            ])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(exit),
+            "{kind} {name}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        if let Some(admission) = admission {
+            assert!(output.stderr.is_empty());
+            let wire: Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(wire["result"]["admission"], admission);
+            assert_eq!(wire["request"]["selector"]["kind"], "context");
+            assert_eq!(wire["request"]["selector"]["pointer"], pointer);
+        } else {
+            assert!(output.stdout.is_empty());
+        }
+    }
+}
+
+#[test]
+fn context_sample_examples_check_final_reused_descriptions_in_both_output_formats() {
+    for (name, tail) in [("asset-tag", "assetTag"), ("location", "location")] {
+        for format in ["human", "json"] {
+            let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+                .args([
+                    "sample",
+                    "--document",
+                    "examples/context-reuse/device.sdf.json",
+                    "--kind",
+                    "context",
+                    "--pointer",
+                    &format!("/sdfThing/Installation/sdfObject/sensor/sdfContext/{tail}"),
+                    "--sample",
+                    &format!("examples/context-samples/{name}.json"),
+                    "--format",
+                    format,
+                    "examples/context-reuse/base.sdf.json",
+                    "examples/context-reuse/device.sdf.json",
+                ])
+                .output()
+                .unwrap();
+            assert_eq!(
+                output.status.code(),
+                Some(0),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stderr.is_empty());
+            let text = String::from_utf8(output.stdout).unwrap();
+            assert!(text.contains("admitted"), "{text}");
+            assert!(text.contains("context"), "{text}");
+        }
+    }
+}
+
+#[test]
 fn needed_sample_decoding_cause_is_visible_in_the_cli_report() {
     let model = InputFile::new(include_bytes!("fixtures/temperature-device.sdf.json"));
     let sample = InputFile::new(b"1e1000001");

@@ -1833,7 +1833,7 @@ impl Report<'_> {
         if value["baseline"]["extensions"].is_array() {
             output.heading("Draft support:");
             output.push_str(&format!(
-                " {} (Context checking, composition and inspection)\n",
+                " {} (Context checking, composition, inspection and selected-value checking)\n",
                 crate::context::DRAFT
             ));
             output.push_str("Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined, reuse outside Context unavailable and general link meaning unavailable\n");
@@ -2717,7 +2717,7 @@ impl Report<'_> {
             baseline["extensions"] = json!([{
                 "id":crate::context::DRAFT,
                 "sha256":crate::context::SHA256,
-                "scope":"Context checking, composition and inspection",
+                "scope":"Context checking, composition, inspection and selected-value checking",
                 "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "reference reuse outside Context unavailable", "general link meaning unavailable"]
             }]);
         }

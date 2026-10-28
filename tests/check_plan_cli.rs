@@ -172,6 +172,51 @@ fn sample_case(name: &str, kind: &str, pointer: &str) -> Value {
 }
 
 #[test]
+fn context_plan_cases_keep_admissions_request_errors_and_incomplete_results() {
+    let files = Files::new();
+    files.write(
+        "device.json",
+        br##"{"namespace":{"missing":"https://example.invalid/unavailable"},"sdfThing":{"Device":{"sdfContext":{
+        "admit":{"type":"number","maximum":5},
+        "reject":{"type":"number","minimum":5},
+        "unknown":{"sdfRef":"missing:#/sdfData/D"}
+    }}}}"##,
+    );
+    files.write("value.json", b"4");
+    let plan = files.mixed(json!([
+        sample_case("admitted", "context", "/sdfThing/Device/sdfContext/admit"),
+        sample_case("rejected", "context", "/sdfThing/Device/sdfContext/reject"),
+        sample_case(
+            "wrong kind",
+            "property",
+            "/sdfThing/Device/sdfContext/admit"
+        ),
+        sample_case(
+            "incomplete",
+            "context",
+            "/sdfThing/Device/sdfContext/unknown"
+        )
+    ]));
+    let result = wire(&run(&plan, &["--format", "json"]), 2);
+    assert_eq!(result["cases"][0]["admission"], "admitted");
+    assert_eq!(result["cases"][1]["admission"], "rejected");
+    assert_eq!(result["cases"][2]["state"], "request_error");
+    assert_eq!(
+        result["cases"][2]["request_error"]["code"],
+        "sample.request"
+    );
+    assert_eq!(result["cases"][3]["admission"], "undetermined");
+    assert_eq!(result["cases"][3]["report"]["outcome"]["complete"], false);
+    assert_eq!(result["summary"]["admitted"], 1);
+    assert_eq!(result["summary"]["rejected"], 1);
+    assert_eq!(result["summary"]["request_errors"], 1);
+
+    let example = std::path::Path::new("examples/context-samples/check-plan.json");
+    let example = wire(&run(example, &["--format", "json"]), 0);
+    assert_eq!(example["summary"]["admitted"], 2);
+}
+
+#[test]
 fn sample_request_errors_retain_only_tagged_fields_and_continue_independent_cases() {
     let files = Files::new();
     files.write("device.json", br#"{"info":{},"sdfProperty":{"p":{"type":"integer"}},"sdfData":{"D":{"type":"string"}},"sdfAction":{"a":{}}}"#);
