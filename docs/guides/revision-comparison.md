@@ -45,7 +45,8 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 ## Compare them
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json
-<b>Revision comparison</b> esdieff.revision-comparison/2: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+Client interactions only. Context metadata compatibility is not assessed.
 <b>Documents:</b> 1 compared, 0 removed, 0 added
 <b>Differences:</b> 1 <span class="r">breaking</span>, 1 <span class="y">undetermined</span>, 1 <span class="g">compatible</span>
 <b>Warnings:</b>
@@ -68,10 +69,16 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 Esdieff takes the side of the **client**, the app or controller that talks to the device. Each difference is classified by what it means for a client built against the earlier revision:
 
 - **Breaking** means such a client can be surprised. Raising the maximum looks harmless for values the client writes, but the property is also readable, and a device may now report 35 where the client expects at most 30. The **witness** line shows the concrete value that proves it: `35` was rejected before and is admitted now, in the direction the device supplies.
-- **Compatible** means no client can tell the difference, as with a changed description.
+- **Compatible** means the difference preserves client interactions, as with a changed description.
 - **Undetermined** means Esdieff found neither a breaking witness nor a proof of compatibility, so the change needs a human look. Removing the step is such a case. An undetermined difference is never presented as safe.
 
 The warning says that a breaking change shipped under an unchanged `version`, which RFC 9880 advises against. Warnings do not change the result. The command exits 1 for a breaking comparison, 3 for an undetermined one and 0 for a compatible one, so a CI job can stop a breaking change from merging.
+
+## Context metadata
+
+Context definitions describe non-interactive metadata. Their additions, removals and changed content appear as `sdfContext` differences in the same comparison, including inherited and refined Context. These differences have no read or write direction and are compatible for client interactions. A metadata consumer may still need changes, so the report explicitly says that Context metadata compatibility is not assessed.
+
+Changing shared data used by a Property still receives the Property's usual compatibility assessment, even when a Context uses that data too. Moving a value from Property to Context removes the old client interaction and remains breaking. See [Context metadata](../revision-comparison-contract.md#context-metadata) for the scope and reference boundaries.
 
 ## Changes that reach other documents through a shared definition
 
@@ -102,7 +109,8 @@ A changed shared definition appears in every device model that reuses it, at the
 ```
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1 --new v2
-<b>Revision comparison</b> esdieff.revision-comparison/2: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+Client interactions only. Context metadata compatibility is not assessed.
 <b>Documents:</b> 2 compared, 0 removed, 0 added
 <b>Differences:</b> 1 <span class="r">breaking</span>, 0 <span class="y">undetermined</span>, 0 <span class="g">compatible</span>
 <span class="r">Breaking differences:</span>
@@ -156,7 +164,8 @@ The comparison report and exit status stay as before, and `reviewed.json` lists 
 Review the file, delete any entry you do not intend, add a `note` to each if you like, and keep it with the model. Then supply it:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json
-<b>Revision comparison</b> esdieff.revision-comparison/2: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+Client interactions only. Context metadata compatibility is not assessed.
 <b>Disposition:</b> <span class="g">passed</span>, with 1 breaking and 1 undetermined differences acknowledged
 <b>Documents:</b> 1 compared, 0 removed, 0 added
 <b>Differences:</b> 1 <span class="r">breaking</span>, 1 <span class="y">undetermined</span>, 1 <span class="g">compatible</span>

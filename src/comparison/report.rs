@@ -1,4 +1,4 @@
-//! The `diff` report 1.5 keeps every source, count, the outcome and the disposition when
+//! The `diff` report 1.6 keeps every source, count, the outcome and the disposition when
 //! difference or warning details are omitted, following ADR 0009: Bounded processing and
 //! reporting, ADR 0011: Machine-readable report contracts, ADR 0040: Acknowledged revision
 //! differences and ADR 0044: Versions of breaking revisions. The human report renders the same
@@ -153,13 +153,13 @@ fn wire(comparison: &RevisionComparison<'_>) -> Value {
         }
     }
     json!({
-        "schema":"esdieff.report","version":"1.5","operation":"diff",
+        "schema":"esdieff.report","version":"1.6","operation":"diff",
         "request":{"assessment":null,"inventory":null,"comparison":COMPARISON_CONTRACT,"scope":scope},
         "sources":sources,
-        // At most two fixed unit and three fixed content-format registry records, well within
+        // Fixed Context draft support, two unit and three content-format registry records, well within
         // both Catalogues' fixed reserves.
-        "baseline":{"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":interpretations,"deviations":[],"registry_knowledge":comparison.registry.wire(false)},
-        "policy":{"restrictions":["A002"],"strict_warnings":false,"recorded_registry":comparison.registry.policy.as_str(),
+        "baseline":{"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":interpretations,"deviations":[],"registry_knowledge":comparison.registry.wire(false),"extensions":crate::context::support()},
+        "policy":{"restrictions":["A002"],"strict_warnings":false,"compatibility_scope":"client_interactions","recorded_registry":comparison.registry.policy.as_str(),
             "acknowledgements":comparison.acknowledgements.map_or(0, |supplied| supplied.entries().len())},
         "outcome":{"complete":complete,"errors":errors,"warnings":warnings,"notices":0,"incomplete_checks":u32::from(!complete),"strict_warnings":false,"disposition":comparison.disposition().as_str()},
         "coverage":{"requested":{"inventory":null,"count_unit":"comparison","total":1,"assessed":u32::from(complete),"not_applicable":0,"unassessed":0,"undetermined":u32::from(!complete)},
@@ -350,6 +350,8 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
             acknowledged["breaking"], acknowledged["undetermined"]
         ));
     }
+    text.push_str(super::SCOPE_NOTICE);
+    text.push('\n');
     let documents = &result["summary"]["documents"];
     text.heading("Documents:");
     text.push_str(&format!(

@@ -591,11 +591,11 @@ The documents of an SDF model at one point in their evolution, supplied together
 _Avoid_: version, which is an authored document quality with no mandatory format.
 
 **Corresponding definition**:
-A grouping or affordance in a later Model revision with the same Given Name position, in the corresponding document, as one in the earlier revision. Correspondence rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
+A grouping, affordance or Context in a later Model revision with the same Given Name position, in the corresponding document, as one in the earlier revision. Correspondence rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 _Avoid_: Global name, which many device documents lack.
 
 **Revision comparison**:
-Classification of each difference between the corresponding groupings of two Model revisions as breaking, compatible or undetermined, from the Client's side. Changes to shared definitions appear through the effective groupings that use them. A difference Esdieff cannot classify remains undetermined, never compatible, following [ADR 0039: Client-side revision comparison](docs/adr/0039-client-side-revision-comparison.md).
+Classification of each difference between the corresponding groupings of two Model revisions as breaking, compatible or undetermined, for Client interactions. Changes to shared definitions appear through the effective groupings that use them. Context differences remain visible without assessing compatibility for metadata consumers. A difference Esdieff cannot classify remains undetermined, never compatible, following [ADR 0039: Client-side revision comparison](docs/adr/0039-client-side-revision-comparison.md) and [ADR 0049: Context revision comparison](docs/adr/0049-context-revision-comparison.md).
 _Avoid_: Model checking, which assesses one model against SDF requirements.
 
 **Client**:

@@ -38,6 +38,8 @@ pub(super) fn render(comparison: &RevisionComparison<'_>) -> String {
             comparison.acknowledged_count(Classification::Undetermined),
         ));
     }
+    text.push_str("\n\n");
+    text.push_str(super::SCOPE_NOTICE);
     text.push('\n');
 
     // Keep sections and items in order while they fit with the closing line's reserve. Version

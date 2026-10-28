@@ -430,7 +430,7 @@ pub fn compare_report(plan: &Plan, wire: &Value, exit: i32) -> Result<(), String
             None if case.classification.is_some() => {
                 equal(
                     &actual["request"]["comparison"],
-                    "esdieff.revision-comparison/2",
+                    "esdieff.revision-comparison/3",
                     &format!("{label}: comparison"),
                 )?;
                 // A comparison requests no model assessment and counts itself once.
@@ -461,7 +461,7 @@ pub fn compare_report(plan: &Plan, wire: &Value, exit: i32) -> Result<(), String
             &report["version"],
             match operation {
                 "sample" => "1.1",
-                "diff" => "1.5",
+                "diff" => "1.6",
                 _ => "1.0",
             },
             &format!("{label}: native version"),

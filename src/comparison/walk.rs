@@ -262,6 +262,9 @@ impl<'c, 'a> Walk<'c, 'a> {
 
     /// Compare the qualities and contained definitions of corresponding definitions.
     fn definition(&mut self, class: Class, pair: Pair<'c>, tasks: &mut Vec<Task<'c>>) -> Step<()> {
+        if class == Class::Context {
+            return self.context(pair.map(Some));
+        }
         let data = if class == Class::Property {
             self.property_data(pair)?
         } else {
@@ -273,11 +276,7 @@ impl<'c, 'a> Walk<'c, 'a> {
             if let Some(child) = crate::role::class(key)
                 && class.allows_child(child)
             {
-                if child == Class::Context {
-                    // Context comparison has its own policy. Preserve the prior
-                    // unclassified quality result until that support is established.
-                    self.quality(Context::Grouping, pair, members, 0)?;
-                } else if child != Class::Data {
+                if child != Class::Data {
                     self.groups(child, pair, members, tasks)?;
                 }
                 continue;
@@ -466,7 +465,7 @@ impl<'c, 'a> Walk<'c, 'a> {
                 [Some(_), Some(_)] => {
                     self.unavailable(DifferenceSubject::Definition(class), groups, definitions, 0)
                 }
-                _ => self.one_sided(DifferenceSubject::Definition(class), definitions, 0),
+                _ => self.one_sided(DifferenceSubject::Definition(class), definitions, 0)?,
             }
         }
         Ok(())
@@ -488,7 +487,7 @@ impl<'c, 'a> Walk<'c, 'a> {
             for child in self.children(group)? {
                 let mut definitions = [None, None];
                 definitions[revision.index()] = Some(child);
-                self.one_sided(DifferenceSubject::Definition(class), definitions, 0);
+                self.one_sided(DifferenceSubject::Definition(class), definitions, 0)?;
             }
         }
         Ok(())
@@ -876,11 +875,56 @@ impl<'c, 'a> Walk<'c, 'a> {
         self.unavailable_record(subject, directions, reason, sides);
     }
 
+    /// Context is compared as non-interactive metadata, without proving compatibility for
+    /// metadata consumers. Scan its whole effective content first: a definite structural
+    /// difference must not conceal an unresolved reference elsewhere in the same Context.
+    fn context(&mut self, members: Members<'c>) -> Step<()> {
+        let subject = DifferenceSubject::Definition(Class::Context);
+        let sides = self.present_sides(members);
+        let mut pending = Vec::new();
+        for json in members.into_iter().flatten() {
+            if !available_map(json) {
+                self.unavailable_record(subject, 0, unavailable_reason(json), sides);
+                return Ok(());
+            }
+            keep(&mut pending, json, self.allowance)?;
+        }
+        while let Some(json) = pending.pop() {
+            self.charge(1)?;
+            if failure(json).is_some() {
+                self.unavailable_record(subject, 0, unavailable_reason(json), sides);
+                return Ok(());
+            }
+            for child in json.children() {
+                keep(&mut pending, child, self.allowance)?;
+            }
+        }
+        let (kind, equality) = match members {
+            [Some(earlier), Some(later)] => (DifferenceKind::Changed, self.equal(earlier, later)?),
+            _ => (removal(members), Equality::Different),
+        };
+        match equality {
+            Equality::Equal => {}
+            Equality::Different => self.record(kind, subject, 0, Verdict::Compatible, sides),
+            Equality::Unavailable(reason) => self.unavailable_record(subject, 0, reason, sides),
+        }
+        Ok(())
+    }
+
     /// Record a definition that only one revision has.
-    fn one_sided(&mut self, subject: DifferenceSubject<'a>, members: Members<'c>, directions: u8) {
+    fn one_sided(
+        &mut self,
+        subject: DifferenceSubject<'a>,
+        members: Members<'c>,
+        directions: u8,
+    ) -> Step<()> {
+        if subject == DifferenceSubject::Definition(Class::Context) {
+            return self.context(members);
+        }
         let kind = removal(members);
         let sides = self.present_sides(members);
         self.record(kind, subject, directions, classify::definition(kind), sides);
+        Ok(())
     }
     /// The side of each revision that has the member.
     fn present_sides(&self, members: Members<'c>) -> [Option<Side<'a>>; 2] {
