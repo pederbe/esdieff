@@ -12,6 +12,7 @@ mod targets;
 
 use crate::allowance::OperationBudget;
 use crate::budgeted::{self, Exhausted, failure, kept};
+use crate::pattern::MatchingWork;
 use crate::report::selected::SelectedScope;
 use crate::sample::{SELECTOR_BYTES, ValueAllowance, description_root};
 use crate::{
@@ -295,7 +296,8 @@ impl Catalogue {
                 result.unselected += 1;
                 continue;
             }
-            if let Some(description) = settle(kind, pointer, json, &mut result) {
+            let patterns = &mut allowance.budget.patterns;
+            if let Some(description) = settle(kind, pointer, json, &mut result, patterns) {
                 result.descriptions.push(description);
             }
         }
@@ -417,11 +419,13 @@ fn pointer(prefix: &str, keyword: &str, name: &str) -> String {
 /// own, and each check spends one of its own, each the allowance one Sample-value checking
 /// request receives, so a heavy description or value leaves only itself unsettled. Each value
 /// is charged the report bytes it needs, so the values a request retains fit the report.
+/// Every allowance borrows the pattern worker that `patterns` holds for the request.
 fn settle(
     kind: SampleKind,
     pointer: String,
     json: Option<EffectiveJson<'_>>,
     result: &mut GenerationResult<'_>,
+    patterns: &mut MatchingWork,
 ) -> Option<Description> {
     let overhead = report::description_bytes(result.scope.document(), kind, &pointer);
     if overhead > result.room {
@@ -450,7 +454,9 @@ fn settle(
         size: &size,
         line: &line,
     };
+    patterns.lend_worker(&mut allowance.budget.patterns);
     let generated = targets::generate(json, VALUES, &mut allowance, room);
+    patterns.reclaim_worker(&mut allowance.budget.patterns);
     result.scope.interpretations |= generated.interpretations;
     result.scope.set_aside |= allowance.budget.set_aside;
     result.scope.set_aside |= generated.set_aside;

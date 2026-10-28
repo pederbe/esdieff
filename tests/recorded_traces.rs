@@ -16,6 +16,11 @@ fn target(value: &str, rest: &str) -> String {
     format!("{{\"kind\":\"property\",\"pointer\":\"{TARGET}\",\"value\":{value}{rest}}}\n")
 }
 
+/// A Trace entry line for the string property `/sdfProperty/code`.
+fn code(value: &str) -> String {
+    format!("{{\"kind\":\"property\",\"pointer\":\"/sdfProperty/code\",\"value\":\"{value}\"}}\n")
+}
+
 fn check<'a>(catalogue: &'a Catalogue, trace: &str) -> TraceResult<'a> {
     let document = catalogue.source_id("model").unwrap();
     catalogue
@@ -552,6 +557,79 @@ fn a_description_that_cannot_be_established_leaves_its_entries_undetermined() {
             vec!["trace.unavailable".to_owned()]
         )]
     );
+}
+
+#[test]
+fn entries_that_share_the_pattern_engine_keep_their_own_polls() {
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied(
+            "model",
+            br#"{"sdfProperty":{"code":{"type":"string","pattern":"^(a+)+$"}}}"#,
+        )],
+        esdieff::Limits::default()
+            .pattern_interrupts(4)
+            .pattern_deadline(std::time::Duration::from_secs(1)),
+    )
+    .unwrap();
+    // Backtracking over the heavy value needs more than the 4 polls one Sample request
+    // receives, while each other entry needs two. Entries borrow one engine in turn, never
+    // one another's polls, and an interrupted match leaves nothing behind for the next.
+    let heavy = format!("{}b", "a".repeat(40));
+    let trace = [code(&heavy), code("aa"), code("b"), code(&heavy), code("a")].concat();
+    let result = check(&catalogue, &trace);
+    assert_eq!(result.count(TraceOutcome::Passed), 2);
+    assert_eq!(
+        listed(&result),
+        [
+            (
+                1,
+                TraceOutcome::Undetermined,
+                Some(Admission::Undetermined),
+                vec!["operation.limit".to_owned()]
+            ),
+            (
+                3,
+                TraceOutcome::Failed,
+                Some(Admission::Rejected),
+                vec!["sample.pattern".to_owned()]
+            ),
+            (
+                4,
+                TraceOutcome::Undetermined,
+                Some(Admission::Undetermined),
+                vec!["operation.limit".to_owned()]
+            ),
+        ]
+    );
+}
+
+#[test]
+fn an_entry_undetermined_alone_stays_undetermined_after_other_entries() {
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied(
+            "model",
+            br#"{"sdfProperty":{"code":{"type":"string","pattern":"^a*a*c"}}}"#,
+        )],
+        esdieff::Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
+    )
+    .unwrap();
+    // Backtracking over 992 letters needs just more than one Sample request's 100 polls, so
+    // the value is undetermined when checked alone. In a trace it must stay undetermined
+    // wherever it appears, before or after another entry and after an exhausted one.
+    let edge = "a".repeat(992);
+    let alone = check(&catalogue, &code(&edge));
+    assert_eq!(alone.count(TraceOutcome::Undetermined), 1);
+    let trace = [
+        code("ac"),
+        code(&edge),
+        code(&edge),
+        code(&"a".repeat(1200)),
+        code(&edge),
+    ]
+    .concat();
+    let result = check(&catalogue, &trace);
+    assert_eq!(result.count(TraceOutcome::Passed), 1);
+    assert_eq!(result.count(TraceOutcome::Undetermined), 4);
 }
 
 #[test]

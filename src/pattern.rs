@@ -1,5 +1,6 @@
-//! Follows ADR0014: Bounded partial ECMAScript pattern capability, and
-//! ADR0028: Bounded effective model pattern syntax.
+//! Follows ADR0014: Bounded partial ECMAScript pattern capability,
+//! ADR0028: Bounded effective model pattern syntax, and ADR0045: One pattern
+//! engine per trace or generation request.
 use crate::AssessmentStatus;
 
 pub(crate) const AREA: &str = "pattern-syntax/1";
@@ -76,6 +77,8 @@ pub(crate) enum Verdict {
 pub(crate) struct MatchingWork {
     stack_charged: bool,
     heap_charged: bool,
+    /// Whether this allowance has spent the poll a new engine makes on its first call.
+    first_poll_charged: bool,
     worker: Option<MatchWorker>,
     remaining_interrupts: Option<usize>,
     remaining_time: Option<std::time::Duration>,
@@ -124,6 +127,23 @@ impl MatchingWork {
         });
         Some(index)
     }
+    /// Lend this allowance's worker, with its engine, to `borrower`, a fresh allowance for
+    /// an independent check, so successive checks start one engine between them. Only the
+    /// worker moves. Each allowance keeps its own counters and pays its own worker stack
+    /// and engine heap.
+    pub(crate) fn lend_worker(&mut self, borrower: &mut Self) {
+        if self.worker.as_ref().is_some_and(MatchWorker::running) {
+            borrower.worker = self.worker.take();
+        }
+    }
+    /// Take back the worker lent to `borrower`, or the one it started. A stopped worker is
+    /// never lent, so the next check starts its own.
+    pub(crate) fn reclaim_worker(&mut self, borrower: &mut Self) {
+        let returned = borrower.worker.take().filter(MatchWorker::running);
+        if self.worker.is_none() {
+            self.worker = returned;
+        }
+    }
 }
 pub(crate) enum MatchVerdict {
     Matched,
@@ -170,6 +190,7 @@ fn run(
     budget.patterns = matching;
     result
 }
+#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn match_inner(
     pattern: &str,
     subject: Option<&str>,
@@ -202,7 +223,7 @@ fn match_inner(
     if matching.worker.is_none() {
         matching.worker = MatchWorker::new();
     }
-    let Some(worker) = matching.worker.as_ref() else {
+    let Some(worker) = matching.worker.as_mut() else {
         return MatchVerdict::Limit;
     };
     let request = MatchRequest {
@@ -218,17 +239,16 @@ fn match_inner(
             .unwrap_or(limits.pattern_interrupts),
         duration: matching.remaining_time.unwrap_or(limits.pattern_deadline),
         heap_charged: matching.heap_charged,
+        first_poll_charged: matching.first_poll_charged,
     };
-    if worker
+    let reply = worker
         .requests
         .as_ref()
-        .expect("live worker")
-        .send(request)
-        .is_err()
-    {
-        return MatchVerdict::Limit;
-    }
-    let Ok((result, request)) = worker.results.recv() else {
+        .and_then(|requests| requests.send(request).ok())
+        .and_then(|()| worker.results.recv().ok());
+    let Some((result, request)) = reply else {
+        // Keep the stopped worker, so this allowance's later matches also reach a limit.
+        worker.requests = None;
         return MatchVerdict::Limit;
     };
     budget.work = request.work;
@@ -236,6 +256,7 @@ fn match_inner(
     matching.remaining_interrupts = Some(request.polls);
     matching.remaining_time = Some(request.duration);
     matching.heap_charged = request.heap_charged;
+    matching.first_poll_charged = request.first_poll_charged;
     result
 }
 
@@ -250,6 +271,7 @@ struct MatchRequest {
     polls: usize,
     duration: std::time::Duration,
     heap_charged: bool,
+    first_poll_charged: bool,
 }
 struct MatchWorker {
     requests: Option<std::sync::mpsc::SyncSender<MatchRequest>>,
@@ -257,6 +279,10 @@ struct MatchWorker {
     thread: Option<std::thread::JoinHandle<()>>,
 }
 impl MatchWorker {
+    /// Whether the worker still takes requests. A stopped one stays with its allowance.
+    fn running(&self) -> bool {
+        self.requests.is_some()
+    }
     fn new() -> Option<Self> {
         let (requests, incoming) = std::sync::mpsc::sync_channel::<MatchRequest>(0);
         let (outgoing, results) = std::sync::mpsc::sync_channel(0);
@@ -344,10 +370,14 @@ impl MatchRequest {
                 Ok(created) => *engine = Some(created),
                 Err(verdict) => return verdict,
             }
+            // The new engine makes this allowance's first poll on its own first call.
+            request.first_poll_charged = true;
         }
+        let first_poll = !std::mem::replace(&mut request.first_poll_charged, true);
         engine.as_ref().expect("initialized engine").matches(
             &request.pattern,
             request.subject.as_deref(),
+            first_poll,
             polls,
             duration,
         )
@@ -360,6 +390,7 @@ struct Engine {
     runtime: rquickjs::Runtime,
 }
 impl Engine {
+    #[cfg_attr(feature = "hotpath", hotpath::measure(impl_type = "Engine"))]
     fn new(limits: &crate::Limits) -> Result<Self, MatchVerdict> {
         use rquickjs::{Context, Runtime};
         // The probe also protects embeddings that unify allocator features.
@@ -385,6 +416,7 @@ impl Engine {
         &self,
         pattern: &str,
         subject: Option<&str>,
+        first_poll: bool,
         polls: &mut usize,
         duration: &mut std::time::Duration,
     ) -> MatchVerdict {
@@ -398,22 +430,32 @@ impl Engine {
         // the original operation allowance.
         *polls -= 1;
         let remaining = Arc::new(AtomicUsize::new(*polls));
-        let callback_remaining = Arc::clone(&remaining);
         let started = std::time::Instant::now();
         let allowed = *duration;
-        self.runtime.set_interrupt_handler(Some(Box::new(move || {
-            started.elapsed() >= allowed
-                || callback_remaining
-                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
-                        value.checked_sub(1)
-                    })
-                    .is_err()
-        })));
+        let interrupt = {
+            let remaining = Arc::clone(&remaining);
+            move || {
+                started.elapsed() >= allowed
+                    || remaining
+                        .try_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
+                            value.checked_sub(1)
+                        })
+                        .is_err()
+            }
+        };
+        self.runtime
+            .set_interrupt_handler(Some(Box::new(interrupt.clone())));
         let result = self.context.with(|ctx| {
             let constructor: Function = match ctx.eval("pattern => new RegExp(pattern, 'u')") {
                 Ok(function) => function,
                 Err(_) => return MatchVerdict::Limit,
             };
+            // A new context polls on its first call, once that helper is compiled. A lent
+            // engine made that poll for the allowance that started it, so a borrowing
+            // allowance's first match makes it here instead, never earlier.
+            if first_poll && interrupt() {
+                return MatchVerdict::Limit;
+            }
             let regexp: rquickjs::Object = match constructor.call((pattern,)) {
                 Ok(regexp) => regexp,
                 Err(error) => {

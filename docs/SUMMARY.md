@@ -90,3 +90,4 @@
   - [0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md)
   - [0043: SARIF and Markdown report projections](adr/0043-sarif-and-markdown-report-projections.md)
   - [0044: Versions of breaking revisions](adr/0044-versions-of-breaking-revisions.md)
+  - [0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md)

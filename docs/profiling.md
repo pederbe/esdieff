@@ -1,6 +1,6 @@
 # Profiling
 
-Esdieff can be profiled with [hotpath-rs](https://hotpath.rs/) 0.28.6 to see
+Esdieff can be profiled with [hotpath-rs](https://hotpath.rs/) 0.29.2 to see
 where time and allocations go. Profiling is off by default. Ordinary
 builds, tests and the published library neither depend on hotpath nor compile
 any instrumentation. The `hotpath` feature turns on timing, and
@@ -38,13 +38,22 @@ every Model checking, Sample-value checking and Revision comparison case. The
 rich door lock plan's one comparison acquires the minimal and rich models
 apart from the plan's sources, as
 `diff --old examples/door-lock-check/minimal.sdf.json --new examples/door-lock-check/rich.sdf.json`
-would. Each round then checks a Recorded trace of 1,000 thermostat readings
-against the rich thermostat model, as
+would.
+
+Each round then checks a Recorded trace of 1,000 thermostat readings against
+the rich thermostat model, as
 `trace --document examples/thermostat-check/rich.sdf.json` would. Every
-hundredth reading is too hot, so 10 entries fail. One round covers 138
-sources, 23 effective views, 40 model checks, 116 sample checks, one
-comparison and 1,000 trace entries. Report rendering is not part of the
-workload.
+hundredth reading is too hot, so 10 entries fail. A second Recorded trace of
+1,000 door lock credentials goes through the credential's length and pattern
+checks, as `trace --document examples/door-lock-check/rich.sdf.json` would.
+Every hundredth credential holds a space, which the pattern rejects, so 10
+more entries fail. Finally the round generates values for every definition of
+the rich door lock model, as
+`generate --document examples/door-lock-check/rich.sdf.json` would.
+
+One round covers 138 sources, 23 effective views, 40 model checks, 116 sample
+checks, one comparison, 2,000 trace entries and 83 generated values. Report
+rendering is not part of the workload.
 
 ## Instrumented operations
 
@@ -57,13 +66,20 @@ workload.
 | `report::check_sample` | Sample-value checking |
 | `comparison::compare` | Revision comparison |
 | `trace::check_trace` | Recorded trace checking |
+| `generation::generate` | Generation of test values |
+| `pattern::match_inner` | One pattern syntax, compilation or matching request to the pattern worker |
+| `Engine::new` | Start of a pattern engine |
 
 Times include nested calls. Model checking, Sample-value checking, Revision
 comparison and Recorded trace checking each compose the documents they need,
 so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
-once, however many entries it holds, so the trace adds one
-`effective::compose_mode` call per round. Allocation figures count each
+once, however many entries it holds, so each trace adds one
+`effective::compose_mode` call per round. A Recorded trace or generation
+request shares one pattern engine among all the values it matches, following
+[ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md).
+Each other operation that matches a pattern starts its own, so `Engine::new`
+counts 34 starts per round. Allocation figures count each
 operation's own allocations, so composition allocations appear only under
 `effective::compose_mode`. Other programs built with the feature record
 nothing, because only the workload starts the profiler.
@@ -71,7 +87,7 @@ nothing, because only the workload starts the profiler.
 ## Live view and JSON reports
 
 The hotpath CLI shows the same measurements live. Install the matching version
-with `cargo install hotpath --version 0.28.6 --features tui`. Start
+with `cargo install hotpath --version 0.29.2 --features tui`. Start
 `hotpath console` in one terminal, then run the workload with the `hotpath`
 feature and enough rounds to watch, such as `-- 20000`, in another.
 

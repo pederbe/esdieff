@@ -4,13 +4,16 @@
 //! acquisition and parsing of the plan's sources, an effective view of each model document,
 //! then the plan's Model checking, Sample-value checking and Revision comparison cases. The
 //! rich door lock plan's comparison of the minimal and rich models is the round's only one.
-//! Each round ends with a Recorded trace of thermostat readings checked against the rich
-//! thermostat model. Build with the `hotpath` feature for a profile, or without it for a plain
-//! timing. See docs/profiling.md.
+//! Each round ends with two Recorded traces and one generation request: thermostat readings
+//! checked against the rich thermostat model, door lock credentials checked against the rich
+//! door lock model's length and pattern constraints, and generated values for every definition
+//! of the rich door lock model. Build with the `hotpath` feature for a profile, or without it
+//! for a plain timing. See docs/profiling.md.
 
 use esdieff::{
-    Assessment, Catalogue, CheckRequest, ComparisonRequest, DifferenceAcknowledgements,
-    EffectiveRequest, SampleKind, SampleRequest, SourceInput, TraceOutcome, TraceRequest,
+    Admission, Assessment, Catalogue, CheckRequest, ComparisonRequest, DifferenceAcknowledgements,
+    EffectiveRequest, GenerationRequest, SampleKind, SampleRequest, SourceInput, TraceOutcome,
+    TraceRequest,
 };
 use serde_json::Value;
 use std::{
@@ -28,7 +31,7 @@ const FAMILIES: [&str; 6] = [
     "coffee-machine-check",
 ];
 const DEFAULT_ROUNDS: u32 = 200;
-/// The Trace entries in each round's Recorded trace.
+/// The Trace entries in each of the round's Recorded traces.
 const TRACE_ENTRIES: u32 = 1000;
 
 struct Source {
@@ -74,6 +77,8 @@ struct Tally {
     differences: usize,
     trace_entries: usize,
     failed_entries: usize,
+    generated: usize,
+    rejected_values: usize,
 }
 
 fn text<'a>(row: &'a Value, member: &str) -> &'a str {
@@ -277,6 +282,13 @@ fn compare(
     tally.differences += comparison.differences().len();
 }
 
+/// One Trace entry line for the property at `pointer`, with the JSON `value`.
+fn entry(pointer: &str, value: &str, index: u32) -> String {
+    format!(
+        "{{\"kind\":\"property\",\"pointer\":\"{pointer}\",\"value\":{value},\"label\":\"reading {index}\"}}\n"
+    )
+}
+
 /// A Recorded trace of thermostat readings: target temperatures from 5 to 30 in half steps,
 /// with every hundredth reading at 35, which the thermostat model rejects.
 fn readings() -> String {
@@ -290,14 +302,54 @@ fn readings() -> String {
         } else {
             format!("{}.5", 5 + steps / 2)
         };
-        trace.push_str(&format!(
-            "{{\"kind\":\"property\",\"pointer\":\"/sdfObject/Thermostat/sdfProperty/targetTemperature\",\"value\":{value},\"label\":\"reading {index}\"}}\n"
+        trace.push_str(&entry(
+            "/sdfObject/Thermostat/sdfProperty/targetTemperature",
+            &value,
+            index,
         ));
     }
     trace
 }
 
-/// Acquire the rich thermostat model and check the Recorded trace against it.
+/// Door lock credential readings against the credential's length and pattern constraints.
+/// Every hundredth reading holds a space, which the pattern rejects.
+fn credentials() -> String {
+    let mut trace = String::new();
+    for index in 0..TRACE_ENTRIES {
+        let value = if index % 100 == 99 {
+            format!("\"k {index:04}\"")
+        } else {
+            format!("\"k{index:05}\"")
+        };
+        trace.push_str(&entry(
+            "/sdfObject/Lock/sdfProperty/credential",
+            &value,
+            index,
+        ));
+    }
+    trace
+}
+
+/// Generate values for every definition of the rich door lock model, as
+/// `generate --document` would.
+fn run_generation(model: &Path, tally: &mut Tally) {
+    let catalogue = Catalogue::take_inputs(vec![SourceInput::file("model", model)])
+        .expect("admitted Catalogue");
+    let document = catalogue.source_id("model").expect("model source");
+    let result = catalogue
+        .generate(GenerationRequest::new(document))
+        .expect("generation");
+    for admission in [
+        Admission::Admitted,
+        Admission::Rejected,
+        Admission::Undetermined,
+    ] {
+        tally.generated += result.count(admission) as usize;
+    }
+    tally.rejected_values += result.count(Admission::Rejected) as usize;
+}
+
+/// Acquire `model` and check the Recorded trace against it.
 fn run_trace(model: &Path, trace: &str, tally: &mut Tally) {
     let catalogue = Catalogue::take_inputs(vec![SourceInput::file("model", model)])
         .expect("admitted Catalogue");
@@ -325,6 +377,8 @@ fn main() {
     let plans = plans(&examples);
     let thermostat = examples.join("thermostat-check/rich.sdf.json");
     let trace = readings();
+    let door_lock = examples.join("door-lock-check/rich.sdf.json");
+    let credential_trace = credentials();
     let mut tally = Tally::default();
     let start = Instant::now();
     for _ in 0..rounds {
@@ -332,13 +386,15 @@ fn main() {
             run_plan(plan, &mut tally);
         }
         run_trace(&thermostat, &trace, &mut tally);
+        run_trace(&door_lock, &credential_trace, &mut tally);
+        run_generation(&door_lock, &mut tally);
     }
     let elapsed = start.elapsed();
     let per_round = |total: usize| total / rounds as usize;
     println!(
         "{} plans per round: {} sources, {} effective views, {} model checks, {} sample checks, \
          {} request errors, {} error findings, {} incomplete results, {} comparison differences, \
-         {} trace entries, {} failed entries",
+         {} trace entries, {} failed entries, {} generated values, {} rejected values",
         plans.len(),
         per_round(tally.sources),
         per_round(tally.effective_views),
@@ -350,6 +406,8 @@ fn main() {
         per_round(tally.differences),
         per_round(tally.trace_entries),
         per_round(tally.failed_entries),
+        per_round(tally.generated),
+        per_round(tally.rejected_values),
     );
     println!(
         "{rounds} rounds in {:.1} ms, {:.3} ms per round",
