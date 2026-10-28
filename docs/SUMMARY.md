@@ -94,3 +94,4 @@
   - [0044: Versions of breaking revisions](adr/0044-versions-of-breaking-revisions.md)
   - [0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md)
   - [0046: Inline Context draft support](adr/0046-inline-context-draft-support.md)
+- [0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md)

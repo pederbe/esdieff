@@ -1,0 +1,23 @@
+{
+  "info": { "title": "Installed sensor", "version": "2026-10-28" },
+  "namespace": { "shared": "https://example.com/context", "device": "https://example.com/installed" },
+  "defaultNamespace": "device",
+  "sdfThing": {
+    "Installation": {
+      "sdfRef": "shared:#/sdfThing/Site",
+      "sdfContext": { "siteName": { "const": "Office" } },
+      "sdfObject": {
+        "sensor": {
+          "sdfRef": "shared:#/sdfObject/Sensor",
+          "sdfData": { "Offset": { "maximum": 5 } },
+          "sdfContext": {
+            "location": { "properties": { "floor": { "minimum": 2 } } },
+            "calibration": { "description": null },
+            "retired": null,
+            "assetTag": { "sdfRef": "shared:#/sdfData/AssetTag", "const": "A-17" }
+          }
+        }
+      }
+    }
+  }
+}
