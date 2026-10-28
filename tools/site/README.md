@@ -101,6 +101,10 @@ changes. Source-only changes and repository overview edits do not publish the si
 Merged revisions queue without replacing pending runs, so a later source-only
 merge cannot cancel an earlier website deployment.
 
+Automatic builds and deployments appear as `website / build` and
+`website / deploy` jobs in the CI run for the merge. Manual runs appear under
+the Website workflow.
+
 The `WEBSITE_ENABLED` repository variable must be `true`. Deployment uses the
 existing `website` environment and its Cloudflare credentials.
 
