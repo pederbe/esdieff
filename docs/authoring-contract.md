@@ -129,6 +129,8 @@ Destination identity uses retained filesystem handles, including parent handles 
 
 ## Refinements and explanations
 
+Reusable Objects retain their Context definitions under the [Context draft policy](context-contract.md). Refinements can override, add or delete Context content without turning it into affordances. Supported Context content participates in established authoring fidelity, while unsupported nested vocabulary and unavailable references retain scoped limitations. Requested checking applies the recorded draft policy to the generated model. The [Context example](../examples/context-authoring/README.md) demonstrates authoring, refinement and editing of an authored Context definition.
+
 Refinements are owned JSON maps. `JsonBuilder` retains exact accepted number lexemes; a null in an actual Composition patch deletes an inherited quality:
 
 ```rust

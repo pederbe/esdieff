@@ -1,0 +1,25 @@
+{
+  "key": "installation-recipe",
+  "generated_key": "installation",
+  "thing_name": "Installation",
+  "namespace": {
+    "reuse": "https://example.com/context-authoring/base",
+    "product": "https://example.com/context-authoring/product"
+  },
+  "default_namespace": "product",
+  "objects": [
+    {
+      "name": "sensor",
+      "source": "base",
+      "pointer": "/sdfObject/Sensor",
+      "prefix": "reuse",
+      "refinement": {
+        "sdfContext": {
+          "calibration": { "maximum": 2.50, "description": null },
+          "retired": null
+        }
+      },
+      "required": true
+    }
+  ]
+}

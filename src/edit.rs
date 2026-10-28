@@ -607,14 +607,9 @@ fn establish(
     }
     let Position::Vocabulary(Role::Definition(class)) = position else {
         return Err(Establishment::Request(
-            "edit owner must be an authored base named definition",
+            "edit owner must be an authored named definition",
         ));
     };
-    if class == crate::Class::Context {
-        return Err(Establishment::Request(
-            "Context editing is not yet supported",
-        ));
-    }
     if current.kind() != JsonKind::Map {
         return Err(Establishment::Request(
             "edit owner must be a present definition map",
@@ -629,30 +624,32 @@ fn establish(
         ));
     }
     let common = matches!(edit.quality.as_str(), "label" | "description" | "$comment");
-    let data = matches!(class, crate::Class::Property | crate::Class::Data)
-        && matches!(
-            edit.quality.as_str(),
-            "type"
-                | "sdfType"
-                | "const"
-                | "default"
-                | "enum"
-                | "minimum"
-                | "maximum"
-                | "exclusiveMinimum"
-                | "exclusiveMaximum"
-                | "multipleOf"
-                | "minLength"
-                | "maxLength"
-                | "pattern"
-                | "format"
-                | "minItems"
-                | "maxItems"
-                | "uniqueItems"
-                | "nullable"
-                | "contentFormat"
-                | "unit"
-        );
+    let data = matches!(
+        class,
+        crate::Class::Property | crate::Class::Data | crate::Class::Context
+    ) && matches!(
+        edit.quality.as_str(),
+        "type"
+            | "sdfType"
+            | "const"
+            | "default"
+            | "enum"
+            | "minimum"
+            | "maximum"
+            | "exclusiveMinimum"
+            | "exclusiveMaximum"
+            | "multipleOf"
+            | "minLength"
+            | "maxLength"
+            | "pattern"
+            | "format"
+            | "minItems"
+            | "maxItems"
+            | "uniqueItems"
+            | "nullable"
+            | "contentFormat"
+            | "unit"
+    );
     if !common && !data {
         return Err(Establishment::Request(
             "unsupported editing Quality Name for owner role",

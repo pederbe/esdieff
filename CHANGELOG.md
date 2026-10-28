@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Author Things from Objects containing Context metadata, refine their Context
+  descriptions and edit supported qualities on authored Context definitions.
+
 - Check recorded traces about 6 times faster and generate test values
   about twice as fast when values must match a `pattern`. Rarely, a value
   with no pattern polls to spare is now undetermined in a trace or generation
