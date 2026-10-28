@@ -1,0 +1,27 @@
+{
+  "sdfThing": {
+    "deviceMetadata": {
+      "sdfContext": {
+        "identity": {
+          "type": "object",
+          "properties": {
+            "manufacturer": { "type": "string" },
+            "model": { "type": "string" },
+            "firmwareVersion": { "type": "string" }
+          }
+        },
+        "certifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scheme": { "type": "string" },
+              "certId": { "type": "string" },
+              "region": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "sdfObject": {
+    "deviceWithLinks": {
+      "description": "Device with references to external resources",
+      "sdfContext": {
+        "datasheetLink": {
+          "type": "object",
+          "sdfType": "link",
+          "description": "Link to the manufacturer's datasheet",
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
+        },
+        "certificationLink": {
+          "type": "object",
+          "sdfType": "link",
+          "description": "Link to the product safety certification",
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
+        },
+        "digitalTwinLink": {
+          "type": "object",
+          "sdfType": "link",
+          "description": "Link to an external digital twin",
+          "properties": {
+            "href": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

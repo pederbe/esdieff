@@ -1,0 +1,49 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {"key": "device", "path": "device-with-context.sdf.json", "role": "model"},
+    {"key": "asset", "path": "asset-container.sdf.json", "role": "model"},
+    {"key": "environment", "path": "environmental-sensor.sdf.json", "role": "model"},
+    {"key": "metadata", "path": "device-metadata.sdf.json", "role": "model"},
+    {"key": "links", "path": "device-with-links.sdf.json", "role": "model"}
+  ],
+  "cases": [
+    {
+      "name": "Figure 2: device with Context",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["device"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Figure 3: asset container",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["asset"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Figure 4: environmental sensor",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["environment"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Figure 5: device metadata",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["metadata"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Figure 6: device with links",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["links"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Derived calibration limit revision",
+      "operation": "diff",
+      "earlier": {"document": "device-with-context.sdf.json"},
+      "later": {"document": "device-with-context-revised.sdf.json"}
+    }
+  ]
+}

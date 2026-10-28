@@ -1,0 +1,24 @@
+{
+  "sdfObject": {
+    "envSensor": {
+      "description": "Environmental sensor unit",
+      "sdfContext": {
+        "installationInfo": {
+          "type": "object",
+          "properties": {
+            "floor": { "type": "integer" },
+            "mountType": {
+              "type": "string",
+              "enum": ["wall", "ceiling", "window"]
+            },
+            "indoorOutdoor": {
+              "type": "string",
+              "enum": ["indoor", "outdoor"]
+            }
+          },
+          "required": ["floor", "mountType"]
+        }
+      }
+    }
+  }
+}
