@@ -22,7 +22,7 @@ assert_eq!(result.count(TraceOutcome::Passed), 1);
 # Ok::<(), &'static str>(())
 ```
 
-The trace contract identity is `esdieff.trace/1`. It binds the Trace entry format and the rules that settle each entry's outcome, so a release that changes either gets a new identity. A Recorded trace adds no sequence meaning, timing or protocol binding. Line order is presentation only, and the checks add nothing to any Model requirement inventory.
+The trace contract identity is `esdieff.trace/1`. It binds the Trace entry member structure and the rules that settle each entry's outcome. Changing either requires a new identity. Adding a supported Sample selector kind is a compatible extension when existing kinds retain their meaning, following [ADR 0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md). An older implementation can refuse a kind it does not support. The identity does not freeze the value checker's supported model meanings. A Recorded trace adds no sequence meaning, timing or protocol binding. Line order is presentation only, and the checks add nothing to any Model requirement inventory.
 
 ## Command line
 
