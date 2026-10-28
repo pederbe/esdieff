@@ -301,6 +301,26 @@ pub(super) fn unavailable_reason(json: EffectiveJson<'_>) -> UndeterminedReason 
     }
 }
 
+/// A node's unavailable value, including decoded scalars whose enclosing
+/// maps can differ structurally before equality reaches that scalar.
+pub(super) fn unavailable_value(json: EffectiveJson<'_>) -> Option<UndeterminedReason> {
+    if failure(json).is_some() {
+        return Some(unavailable_reason(json));
+    }
+    let (code, message) = match json.kind() {
+        JsonKind::String => match json.text() {
+            Field::Unavailable(message) => ("input.unicode_unavailable", message),
+            _ => return None,
+        },
+        JsonKind::Number => match json.number() {
+            Field::Unavailable(message) => ("data.number_unavailable", message),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    Some(UndeterminedReason::Unavailable { code, message })
+}
+
 pub(super) fn identity_unavailable() -> UndeterminedReason {
     UndeterminedReason::Unavailable {
         code: "interpretation.unresolved",

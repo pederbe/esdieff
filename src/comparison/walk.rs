@@ -891,11 +891,17 @@ impl<'c, 'a> Walk<'c, 'a> {
         }
         while let Some(json) = pending.pop() {
             self.charge(1)?;
-            if failure(json).is_some() {
-                self.unavailable_record(subject, 0, unavailable_reason(json), sides);
+            if let Some(reason) = read::unavailable_value(json) {
+                self.unavailable_record(subject, 0, reason, sides);
                 return Ok(());
             }
             for child in json.children() {
+                self.charge(1)?;
+                if json.kind() == JsonKind::Map && !matches!(child.member_name(), Field::Present(_))
+                {
+                    self.unavailable_record(subject, 0, identity_unavailable(), sides);
+                    return Ok(());
+                }
                 keep(&mut pending, child, self.allowance)?;
             }
         }

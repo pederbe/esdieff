@@ -301,6 +301,39 @@ fn exact_metadata_values_and_map_order_do_not_create_differences() {
 }
 
 #[test]
+fn unavailable_metadata_scalars_cannot_be_hidden_by_another_difference() {
+    for value in ["1e1000001", r#""\ud800""#, r#"{"\ud800":1}"#] {
+        let before = [
+            r#"{"sdfObject":{"Device":{"sdfContext":{"value":{"const":"#,
+            value,
+            "}}}}}",
+        ]
+        .concat();
+        let after = before.replace("\"const\":", "\"description\":\"Updated\",\"const\":");
+        let empty = r#"{"sdfObject":{"Device":{}}}"#;
+        for (earlier, later) in [
+            (before.as_str(), after.as_str()),
+            (empty, before.as_str()),
+            (before.as_str(), empty),
+        ] {
+            let earlier = catalogue(&[("model", earlier)]);
+            let later = catalogue(&[("model", later)]);
+            let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
+            assert_eq!(
+                comparison.outcome(),
+                Classification::Undetermined,
+                "{value}: {}",
+                comparison.to_json()
+            );
+            let difference = at(&comparison, "/sdfContext/value");
+            assert_eq!(difference.kind(), DifferenceKind::Unavailable);
+            assert_eq!(difference.classification(), Classification::Undetermined);
+            assert!(difference.reason().is_some());
+        }
+    }
+}
+
+#[test]
 fn limits_keep_unfinished_context_and_completed_interaction_results_visible() {
     let property = r#"{"sdfObject":{"Device":{"sdfProperty":{"removed":{"type":"boolean"}}}}}"#;
     let empty = r#"{"sdfObject":{"Device":{}}}"#;

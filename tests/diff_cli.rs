@@ -19,6 +19,40 @@ const LOCK: &str = include_str!("../examples/door-lock-check/rich.sdf.json");
 const THERMOSTAT: &str = include_str!("../examples/thermostat-check/rich.sdf.json");
 
 #[test]
+fn unavailable_context_scalars_preserve_independent_breaking_changes() {
+    let before = r#"{"sdfObject":{"Device":{
+        "sdfContext":{"metadata":{"const":1e1000001}},
+        "sdfProperty":{"reading":{"type":"integer","maximum":10}}
+    }}}"#;
+    let after = before
+        .replace("\"const\":", "\"description\":\"Updated\",\"const\":")
+        .replace("\"maximum\":10", "\"maximum\":20");
+    let tree = Tree::new();
+    let old = tree.write("old.json", before);
+    let new = tree.write("new.json", &after);
+    let wire = report(
+        &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+        1,
+    );
+    assert_eq!(wire["outcome"]["complete"], false);
+    assert_eq!(wire["result"]["summary"]["breaking"], 1);
+    assert_eq!(wire["result"]["summary"]["undetermined"], 1);
+    let context = wire["result"]["differences"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|difference| difference["subject"] == "sdfContext")
+        .unwrap();
+    assert_eq!(context["kind"], "unavailable");
+    assert_eq!(context["reason"]["code"], "data.number_unavailable");
+    let human = diff(old.as_os_str(), new.as_os_str(), &[]);
+    assert_eq!(human.status.code(), Some(1));
+    let human = String::from_utf8(human.stdout).unwrap();
+    assert!(human.contains(context["reason"]["message"].as_str().unwrap()));
+    assert!(human.contains("Breaking differences:"));
+}
+
+#[test]
 fn context_differences_use_existing_reports_and_check_plans() {
     let before = r##"{"info":{"version":"1"},
         "sdfData":{"Value":{"type":"integer","maximum":10,"nullable":false}},
