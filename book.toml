@@ -17,7 +17,7 @@ edit-url-template = "https://github.com/pederbe/esdieff/edit/main/{path}"
 default-theme = "navy"
 preferred-dark-theme = "navy"
 additional-css = ["docs/theme/esdieff.css"]
-additional-js = ["docs/theme/navigation.js", "docs/theme/footer.js"]
+additional-js = ["docs/theme/navigation.js", "docs/theme/footer.js", "docs/theme/process-map.js"]
 no-section-label = true
 
 [output.html.redirect]

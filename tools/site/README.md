@@ -66,6 +66,14 @@ redirect and error pages stay out of the sitemap and receive `noindex`.
 
 ## Combined build and preview
 
+The [How Esdieff works](../../docs/guides/how-esdieff-works.md) chapter has an
+interactive process map in `docs/theme/process-map.js`. It uses native selectors
+and the existing docs theme, with no extra runtime dependencies. Workflow and
+example selections are URL parameters. The script leaves other chapters alone.
+Keep `docs/images/process-overview.svg` consistent with the overview when changing
+the map. That image and the chapter's explanations remain available on GitHub
+and without JavaScript.
+
 ```sh
 scripts/build-site.sh          # builds target/site and checks internal links
 scripts/build-site.sh --serve  # also serves it locally with wrangler on port 8787

@@ -56,6 +56,8 @@ walks through the results.
 
 ## Learn more
 
+- [How Esdieff works](docs/guides/how-esdieff-works.md) shows the flow from supplied
+  files to model checks, comparisons and test values.
 - [User guides](docs/guides/inspect-and-check.md) for inspecting models, testing
   values, comparing revisions and automating checks.
 - [Rust library](docs/source-workflow.md) for using Esdieff in another application.

@@ -4,6 +4,7 @@
 
 ## Start here
 
+- [How Esdieff works](guides/how-esdieff-works.md) Follow the process map from supplied files to model checks, revision comparisons and test values.
 - [Install and try a model](getting-started/README.md) Install Esdieff, run the supplied thermostat model and read your first generated values.
 - [Inspect and check a model](guides/inspect-and-check.md) Supply model files and shared definitions, run the checks and follow each finding back to its source.
 - [Compare two revisions](guides/revision-comparison.md) See which changes between two revisions break the apps that use a device, and acknowledge the ones you intend.
