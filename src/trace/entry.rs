@@ -281,8 +281,33 @@ impl<'s, 'm> Selectors<'s, 'm> {
                 None,
             );
         }
+        // Keep an explanation of unfinished checking within the condition limit, even
+        // beside model errors. Some incomplete evaluations have no detailed finding.
+        if outcome == TraceOutcome::Undetermined {
+            for finding in settled.findings.iter().filter(|f| f.basis.incomplete()) {
+                conditions.push(finding_condition(model, source, conditions.offset, finding));
+            }
+            if !conditions
+                .kept
+                .iter()
+                .any(|condition| condition.severity == Severity::Incomplete)
+            {
+                conditions.incomplete(
+                    "sample.coverage_unavailable",
+                    "Sample admission requires checks that could not be completed",
+                    "sample-establishment",
+                    JsonView {
+                        source,
+                        node: value,
+                    },
+                    None,
+                );
+            }
+        }
         for finding in &settled.findings {
-            conditions.push(finding_condition(model, source, conditions.offset, finding));
+            if outcome != TraceOutcome::Undetermined || !finding.basis.incomplete() {
+                conditions.push(finding_condition(model, source, conditions.offset, finding));
+            }
         }
         outcome
     }

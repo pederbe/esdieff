@@ -133,11 +133,54 @@ fn an_undetermined_admission_stays_undetermined_whatever_was_expected() {
     for entry in result.entries() {
         assert_eq!(entry.outcome(), TraceOutcome::Undetermined);
         assert_eq!(entry.admission(), Some(Admission::Undetermined));
+        assert!(
+            entry
+                .conditions()
+                .any(|condition| condition.severity() == esdieff::Severity::Incomplete)
+        );
     }
     // A failed entry decides the disposition over undetermined ones.
     let level = "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/level\",\"value\":11}\n";
     let result = check(&catalogue, &format!("{trace}{level}"));
     assert_eq!(result.disposition(), Disposition::Failed);
+}
+
+#[test]
+fn opaque_direct_item_patterns_leave_an_explained_undetermined_entry() {
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied(
+        "model",
+        br#"{"sdfProperty":{"readings":{"type":"array","items":{
+            "type":"string","pattern":"^a$"}},
+            "choices":{"type":"array","items":{"sdfChoice":{
+                "text":{"type":"string","pattern":"^a$"}}}}}}"#,
+    )])
+    .unwrap();
+    let trace = concat!(
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/readings\",\"value\":[]}\r\n",
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/readings\",\"value\":[\"a\"]}\r\n",
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/readings\",\"value\":[\"b\"]}\n",
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/choices\",\"value\":[\"a\"]}\n",
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/choices\",\"value\":[\"b\"]}\n",
+    );
+    let result = check(&catalogue, trace);
+    assert_eq!(result.count(TraceOutcome::Passed), 2);
+    assert_eq!(result.count(TraceOutcome::Undetermined), 2);
+    assert_eq!(result.count(TraceOutcome::Failed), 1);
+    for entry in result.entries() {
+        if entry.outcome() == TraceOutcome::Failed {
+            assert_eq!(entry.admission(), Some(Admission::Rejected));
+            assert_eq!(entry.conditions().next().unwrap().code(), "sample.pattern");
+            continue;
+        }
+        assert_eq!(entry.admission(), Some(Admission::Undetermined));
+        let condition = entry
+            .conditions()
+            .find(|condition| condition.severity() == esdieff::Severity::Incomplete)
+            .expect("an undetermined entry must explain the unfinished checks");
+        assert_eq!(condition.pointer(), Some("/value"));
+        let bytes = &trace[condition.span().unwrap()];
+        assert!(matches!(bytes, r#"["a"]"# | r#"["b"]"#));
+    }
 }
 
 #[test]

@@ -156,10 +156,14 @@ fn future_formats_and_nullable_rules_keep_model_units_independent() {
         let model = format!(
             r#"{{"info":{{}},"sdfProperty":{{"p":{{{qualities},"unit":"urn:ietf:params:unit:Cel"}}}}}}"#
         );
-        let catalogue = Catalogue::from_inputs(&[
-            SourceInput::supplied("m", model.as_bytes()),
-            SourceInput::supplied("s", bytes).sample(),
-        ])
+        // This checks independent findings, not the wall-clock pattern limit.
+        let catalogue = Catalogue::with_limits(
+            &[
+                SourceInput::supplied("m", model.as_bytes()),
+                SourceInput::supplied("s", bytes).sample(),
+            ],
+            Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
+        )
         .unwrap();
         let checked = catalogue
             .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
@@ -176,7 +180,12 @@ fn future_formats_and_nullable_rules_keep_model_units_independent() {
             expected,
             "{qualities}"
         );
-        assert_eq!(report.outcome().complete(), complete, "{qualities}");
+        assert_eq!(
+            report.outcome().complete(),
+            complete,
+            "{qualities}: {}",
+            report.to_json()
+        );
         assert!(
             !report
                 .diagnostics()
