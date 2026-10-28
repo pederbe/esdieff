@@ -44,6 +44,26 @@ sed -n 's#.*<script id="entrance-bootstrap">\(.*\)</script>.*#\1#p' site/index.h
 
 Use the output after `sha256-`. Keep the stylesheet external and minified.
 
+## Link previews and search metadata
+
+The homepage and docs share the 1200 × 630 social image at `site/og.png`.
+Its editable source is `tools/site/social-card.svg`, using the landing page's
+Fiery Ocean palette and the thermostat example. With Noto Sans and librsvg
+installed, regenerate it from the repository root:
+
+```sh
+rsvg-convert tools/site/social-card.svg -o site/og.png
+```
+
+Commit both files after editing the card. Normal site builds copy the PNG
+without needing fonts or an image renderer. Image dimensions, descriptions
+and Twitter card metadata live in `site/index.html` and `docs/theme/head.hbs`.
+`book.toml` selects that theme directory so mdBook includes the custom head.
+The build stages the homepage favicon there for mdBook to fingerprint.
+The build adds a canonical URL and matching Open Graph URL to each docs
+chapter using the same clean routes as the sitemap. Generated print, navigation,
+redirect and error pages stay out of the sitemap and receive `noindex`.
+
 ## Combined build and preview
 
 ```sh

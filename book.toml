@@ -10,6 +10,7 @@ build-dir = "target/book"
 create-missing = false
 
 [output.html]
+theme = "docs/theme"
 site-url = "/docs/"
 git-repository-url = "https://github.com/pederbe/esdieff"
 edit-url-template = "https://github.com/pederbe/esdieff/edit/main/{path}"

@@ -31,16 +31,31 @@ find "$STAGE/docs" -name '*.md' -print0 | xargs -0 sed -i \
   -e "s#](\.\./src/#]($GITHUB/src/#g"
 # The domain language file links to docs/ from the repository root.
 sed -i -e 's#](docs/#](#g' "$STAGE/docs/domain-language.md"
+# Let mdBook fingerprint the same favicon used by the homepage.
+cp site/favicon.svg "$STAGE/docs/theme/favicon.svg"
 
 "$MDBOOK" build "$STAGE" --dest-dir "$PWD/$NEW/docs"
 cp -r site/. "$NEW/"
 
-# Search engines get one sitemap for the landing page and every docs chapter.
+# Use the same clean URLs for chapter metadata and the sitemap as the host does.
 {
   printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>%s/</loc></url>\n' "$SITE"
-  find "$NEW/docs" -name '*.html' -not -name '404.html' -not -name 'print.html' -not -name 'toc.html' -not -name 'README.html' \
-    | sed -e "s#^$NEW##" -e 's#/index\.html$#/#' -e 's#\.html$##' | sort \
-    | while IFS= read -r path; do printf '  <url><loc>%s%s</loc></url>\n' "$SITE" "$path"; done
+  while IFS= read -r -d '' file; do
+    case "${file##*/}" in
+      print.html|toc.html) continue ;;
+      404.html|README.html)
+        sed -i '/<\/head>/i\<meta name="robots" content="noindex">' "$file"
+        continue
+        ;;
+    esac
+    url="$SITE${file#"$NEW"}"
+    case "$url" in
+      */index.html) url=${url%index.html} ;;
+      *) url=${url%.html} ;;
+    esac
+    sed -i "/<\/head>/i\\<link rel=\"canonical\" href=\"$url\">\n<meta property=\"og:url\" content=\"$url\">" "$file"
+    printf '  <url><loc>%s</loc></url>\n' "$url"
+  done < <(find "$NEW/docs" -name '*.html' -print0 | sort -z)
   printf '</urlset>\n'
 } > "$NEW/sitemap.xml"
 

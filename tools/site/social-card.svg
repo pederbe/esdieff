@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Esdieff: Put device models to work</title>
+  <desc id="desc">A thermostat model allows 5 to 30 degrees Celsius in half-degree steps. It accepts 5 and 30 and rejects 31 and 5.25.</desc>
+  <defs>
+    <radialGradient id="glow">
+      <stop stop-color="#c1121f" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#c1121f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#003049"/>
+  <ellipse cx="925" cy="335" rx="450" ry="390" fill="url(#glow)"/>
+  <g fill="none" stroke="#669bbc">
+    <circle cx="940" cy="340" r="285" opacity=".18"/>
+    <circle cx="940" cy="340" r="252" opacity=".12" stroke-dasharray="5 10"/>
+  </g>
+  <path d="M64 120h1072" stroke="#669bbc" stroke-opacity=".35"/>
+  <g transform="translate(62 48) scale(1.4)" fill="none" stroke="#c1121f" stroke-width="3" stroke-linecap="round">
+    <path d="M21 16a8 8 0 1 0-2.2 5.5M5 16h19.5"/>
+    <circle cx="26.5" cy="16" r="2.6" fill="#c1121f" stroke="none"/>
+  </g>
+  <g font-family="Noto Sans, sans-serif" fill="#fdf0d5">
+    <text x="120" y="82" font-size="34" font-weight="700" letter-spacing="-1">Esdieff</text>
+    <text x="1136" y="80" font-size="23" fill="#a4c3d7" text-anchor="end">esdieff.com</text>
+    <text x="64" y="178" font-size="20" fill="#a4c3d7" letter-spacing="2">A TOOLKIT FOR SDF DEVICE MODELS</text>
+    <g font-size="78" font-weight="800" letter-spacing="-3">
+      <text x="60" y="280">Put device</text>
+      <text x="60" y="368">models to</text>
+      <text x="60" y="456">work.</text>
+    </g>
+    <path d="M64 479h210" stroke="#c1121f" stroke-width="8" stroke-linecap="round"/>
+    <text x="64" y="540" font-size="26">Explore interfaces. Catch mistakes.</text>
+    <text x="64" y="578" font-size="26">Turn model constraints into useful tests.</text>
+  </g>
+  <rect x="700" y="202" width="436" height="302" rx="18" fill="#001c2b" stroke="#669bbc" stroke-opacity=".6"/>
+  <g font-family="Noto Sans, sans-serif">
+    <text x="728" y="247" font-size="23" font-weight="700" fill="#fdf0d5">targetTemperature</text>
+    <text x="728" y="278" font-size="19" fill="#a4c3d7">5–30 °C · steps of 0.5</text>
+    <path d="M744 331h344" stroke="#669bbc" stroke-opacity=".4" stroke-width="3"/>
+    <path d="M756 331h308" stroke="#669bbc" stroke-width="8" stroke-linecap="round"/>
+    <g fill="#85afc9">
+      <circle cx="756" cy="331" r="13"/>
+      <circle cx="1064" cy="331" r="13"/>
+    </g>
+    <path d="m750 331 4 4 7-8m297 4 4 4 7-8" fill="none" stroke="#00131d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g font-size="21" fill="#fdf0d5" text-anchor="middle">
+      <text x="756" y="309">5</text>
+      <text x="1064" y="309">30</text>
+    </g>
+    <g font-size="18" fill="#85afc9" text-anchor="middle">
+      <text x="756" y="369">accepted</text>
+      <text x="1064" y="369">accepted</text>
+    </g>
+    <path d="M728 393h380" stroke="#669bbc" stroke-opacity=".25"/>
+    <g font-size="20" fill="#ff6464">
+      <text x="728" y="432">31</text>
+      <text x="810" y="432">above maximum</text>
+      <text x="728" y="473">5.25</text>
+      <text x="810" y="473">between steps</text>
+    </g>
+    <path d="m1084 418 12 12m0-12-12 12m0 29 12 12m0-12-12 12" stroke="#ff6464" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>
