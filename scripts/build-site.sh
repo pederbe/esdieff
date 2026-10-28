@@ -21,10 +21,10 @@ cp book.toml "$STAGE/"
 cp -r docs "$STAGE/docs"
 rm -rf "$STAGE/docs/agents" "$STAGE/docs/communications" "$STAGE/docs/presentations" \
        "$STAGE/docs/profiling" "$STAGE/docs/profiling.md"
-cp CONTEXT.md "$STAGE/docs/domain-language.md"
+cp GLOSSARY.md "$STAGE/docs/domain-language.md"
 find "$STAGE/docs" -name '*.md' -print0 | xargs -0 sed -i \
-  -e 's#](\.\./\.\./CONTEXT\.md#](../domain-language.md#g' \
-  -e 's#](\.\./CONTEXT\.md#](domain-language.md#g' \
+  -e 's#](\.\./\.\./GLOSSARY\.md#](../domain-language.md#g' \
+  -e 's#](\.\./GLOSSARY\.md#](domain-language.md#g' \
   -e "s#](\.\./\.\./examples/#]($GITHUB/examples/#g" \
   -e "s#](\.\./examples/#]($GITHUB/examples/#g" \
   -e "s#](\.\./\.\./src/#]($GITHUB/src/#g" \

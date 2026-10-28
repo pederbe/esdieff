@@ -1,6 +1,6 @@
 # Composed sdfThing authoring contract
 
-This contract specializes [ADR 0013: Shared workflow and report guarantees](adr/0013-shared-workflow-and-report-guarantees.md) for Model authoring under [ADR 0017: Reference-preserving sdfThing authoring](adr/0017-reference-preserving-composed-thing-authoring.md). Domain terms come from [the domain language](../CONTEXT.md). SDF composition follows [RFC 9880 Sections 4.4 and 6](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4); namespace identity follows [Sections 3.2 and 4.2](https://www.rfc-editor.org/rfc/rfc9880.html#section-3.2). Patch deletion follows [RFC 7396 Section 2](https://www.rfc-editor.org/rfc/rfc7396.html#section-2). Resource, output and API limits below are toolkit capabilities.
+This contract specializes [ADR 0013: Shared workflow and report guarantees](adr/0013-shared-workflow-and-report-guarantees.md) for Model authoring under [ADR 0017: Reference-preserving sdfThing authoring](adr/0017-reference-preserving-composed-thing-authoring.md). Domain terms come from [the domain language](../GLOSSARY.md). SDF composition follows [RFC 9880 Sections 4.4 and 6](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4); namespace identity follows [Sections 3.2 and 4.2](https://www.rfc-editor.org/rfc/rfc9880.html#section-3.2). Patch deletion follows [RFC 7396 Section 2](https://www.rfc-editor.org/rfc/rfc7396.html#section-2). Resource, output and API limits below are toolkit capabilities.
 
 ## Request and library ownership
 

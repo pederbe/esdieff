@@ -9,7 +9,7 @@ dropped.
 [ADR 0041: Generated values settled by Sample-value checking](0041-generated-values-settled-by-sample-value-checking.md)
 and
 [ADR 0042: Recorded traces with independent entries](0042-recorded-traces-with-independent-entries.md)
-give every [Generated value and Trace entry](../../CONTEXT.md#model-work) the
+give every [Generated value and Trace entry](../../GLOSSARY.md#model-work) the
 allowance of one Sample-value checking request. Each checked value against a
 `pattern` therefore started and stopped a worker and engine of its own. That
 took about 75 µs, against about 9 µs for the match itself. A Recorded trace of

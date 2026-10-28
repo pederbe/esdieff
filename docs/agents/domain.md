@@ -1,10 +1,10 @@
 # Domain docs
 
-Use a single context for Esdieff: `CONTEXT.md` at the repository root and architecture decision records in `docs/adr/`.
+Use a single context for Esdieff: `GLOSSARY.md` at the repository root and architecture decision records in `docs/adr/`.
 
 ## Before exploring
 
-Read `CONTEXT.md` and the ADRs relevant to the area being explored.
+Read `GLOSSARY.md` and the ADRs relevant to the area being explored.
 
 Add or update terms when a change needs new domain language. Record a design
 decision when its rationale and consequences will help future contributors.

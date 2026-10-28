@@ -1,6 +1,6 @@
 # Initial contradiction advice
 
-Esdieff explains four kinds of [constraint contradiction](../CONTEXT.md) in established effective Full Data Descriptions. Each proven contradiction produces warning advice with a stable `proof.*` code and `assessment_unit:"advisory-four/1"`. This follows [ADR 0003: Check findings and completeness](adr/0003-check-findings-and-completeness.md), [ADR 0009: Bounded processing and reporting](adr/0009-bounded-processing-and-reporting.md), and [ADR 0013: Shared workflow and report guarantees](adr/0013-shared-workflow-and-report-guarantees.md).
+Esdieff explains four kinds of [constraint contradiction](../GLOSSARY.md) in established effective Full Data Descriptions. Each proven contradiction produces warning advice with a stable `proof.*` code and `assessment_unit:"advisory-four/1"`. This follows [ADR 0003: Check findings and completeness](adr/0003-check-findings-and-completeness.md), [ADR 0009: Bounded processing and reporting](adr/0009-bounded-processing-and-reporting.md), and [ADR 0013: Shared workflow and report guarantees](adr/0013-shared-workflow-and-report-guarantees.md).
 
 For example, `type:"number", nullable:false, minimum:2, exclusiveMaximum:2` admits no numeric value. The warning explains the conflicting effective bounds, their nearest source contributors and the importing reference when present. Composition repairs and deletions are applied before proofs; the original source bytes remain available.
 
