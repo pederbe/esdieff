@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Generate deterministic test values for selected Context metadata and replay
+  Context vectors against the same or a changed model.
+
 - Author Things from Objects containing Context metadata, refine their Context
   descriptions and edit supported qualities on authored Context definitions.
 

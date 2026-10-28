@@ -2,7 +2,7 @@
 
 Context definitions describe non-interactive metadata, such as serial numbers, installation locations and calibration offsets. They live under `sdfContext` inside an Object or Thing. A temperature reading that a client reads or observes remains a Property.
 
-Esdieff supports checking, composition, inspection and selected-value checking from [draft-ietf-asdf-sdf-nonaffordance-06](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt), dated 27 October 2026. This is draft extension support alongside RFC 9880. Reports record the selected revision and its digest, following [ADR 0046: Inline Context draft support](adr/0046-inline-context-draft-support.md) and [ADR 0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md).
+Esdieff supports checking, composition, inspection, selected-value checking, generation and trace replay from [draft-ietf-asdf-sdf-nonaffordance-06](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt), dated 27 October 2026. This is draft extension support alongside RFC 9880. Reports record the selected revision and its digest, following [ADR 0046: Inline Context draft support](adr/0046-inline-context-draft-support.md) and [ADR 0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md).
 
 ## Check and inspect
 
@@ -56,6 +56,21 @@ Rust callers use `SampleKind::Context` with `SampleRequest::new`. An effective C
 
 This checks the value you supply. It does not establish that Context is present on every Thing, expose a readable, writable or observable endpoint, insert documentary defaults or change the model. Instance-information messages remain outside this operation.
 
+## Generate and replay Context vectors
+
+Select a Context explicitly to generate deterministic test values from its final constraints. Without a selector, generation continues to cover affordances only. From the repository root, generate calibration vectors from the reuse example and replay them offline:
+
+```sh
+esdieff generate --document examples/context-reuse/device.sdf.json --kind context --pointer /sdfThing/Installation/sdfObject/sensor/sdfContext/calibration --format jsonl examples/context-reuse/base.sdf.json examples/context-reuse/device.sdf.json > context-vectors.jsonl
+esdieff trace --document examples/context-reuse/device.sdf.json --trace context-vectors.jsonl examples/context-reuse/base.sdf.json examples/context-reuse/device.sdf.json
+```
+
+The vectors identify `kind: "context"` and the selected pointer. Their targets include the inherited minimum of -10, the refined maximum of 5 and values just outside those bounds. Every vector passes replay against the same model because `expected` records its checked admission. Changing an admitted value to 6 fails replay. Removing the selected Context fails with `trace.unselectable`. To generate compound values with required entries and nested constraints, select the neighboring `location` Context instead.
+
+Use `--format human` or `--format json` on generation to inspect targets, admissions and omissions. Generation exits 3 when values remain undetermined or limits omit work. JSON Lines includes only settled values, so successful replay of that file does not establish that generation completed. Absent `nullable` can leave a generated null undetermined, and general link meaning remains unsupported. An authored trace entry requiring either meaning stays undetermined even with an expected admission.
+
+Rust callers use `GenerationRequest::new(document).select(SampleKind::Context, pointer)`, then pass the result of `to_json_lines()` to `TraceRequest::new(document, vectors.as_bytes())` and `Catalogue::check_trace`. These reuse the [generation](generation-contract.md) and [trace](trace-contract.md) contracts and limits. This round trip checks values against definitions without device access or a runtime metadata protocol.
+
 ## Author and edit
 
 The existing Thing-authoring workflow preserves Context groups in selected reusable Objects. Recipe refinements can override, add or delete Context content through the same composition patches used for other supported definitions. Supported Context content participates in authoring fidelity. Unsupported nested vocabulary and unavailable references still leave affected fidelity undetermined. Source and request origins identify inherited content, refinements and deletions.
@@ -74,4 +89,4 @@ Context does not acquire readable, writable or observable Property characteristi
 
 Context-to-Context reuse preserves the same defaults boundary, including nested descriptions. Inherited explicit `nullable` values work normally. Deleting `nullable` restores the unresolved default. Reusing a Context description in a non-Context role remains unavailable, so it cannot silently acquire a withheld default. Factor descriptions intended for sharing across roles or models into `sdfData`, as the draft recommends.
 
-Generated vectors, traces and revision differences retain their separate support boundaries. Runtime metadata messages and transport bindings are outside this workflow.
+Context revision comparison retains its separate support boundary. Runtime metadata messages and transport bindings are outside these workflows.

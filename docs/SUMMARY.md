@@ -95,3 +95,4 @@
   - [0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md)
   - [0046: Inline Context draft support](adr/0046-inline-context-draft-support.md)
 - [0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md)
+- [0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md)

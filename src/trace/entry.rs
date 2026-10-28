@@ -426,9 +426,7 @@ fn members<'s>(root: JsonView<'s>, conditions: &mut Conditions) -> Option<Member
         let invalid = match member.member_name().present() {
             Some("kind") => {
                 seen[0] = true;
-                members.kind = text
-                    .and_then(SampleKind::from_name)
-                    .filter(|kind| *kind != SampleKind::Context);
+                members.kind = text.and_then(SampleKind::from_name);
                 members.kind.is_none().then_some("kind")
             }
             Some("pointer") => {

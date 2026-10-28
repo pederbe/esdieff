@@ -22,7 +22,7 @@ assert_eq!(result.count(TraceOutcome::Passed), 1);
 # Ok::<(), &'static str>(())
 ```
 
-The trace contract identity is `esdieff.trace/1`. It binds the Trace entry format and the rules that settle each entry's outcome, so a release that changes either gets a new identity. A Recorded trace adds no sequence meaning, timing or protocol binding. Line order is presentation only, and the checks add nothing to any Model requirement inventory.
+The trace contract identity is `esdieff.trace/1`. It binds the Trace entry member structure and the rules that settle each entry's outcome. Changing either requires a new identity. Adding a supported Sample selector kind is a compatible extension when existing kinds retain their meaning, following [ADR 0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md). An older implementation can refuse a kind it does not support. The identity does not freeze the value checker's supported model meanings. A Recorded trace adds no sequence meaning, timing or protocol binding. Line order is presentation only, and the checks add nothing to any Model requirement inventory.
 
 ## Command line
 
@@ -50,13 +50,15 @@ Each entry is one JSON map with these members:
 
 | Member | Required | Value |
 | --- | --- | --- |
-| `kind` | yes | `property`, `data`, `action_input`, `action_output` or `event_output`, as for `esdieff sample` |
+| `kind` | yes | `property`, `data`, `action_input`, `action_output`, `event_output` or `context`, as for `esdieff sample` |
 | `pointer` | yes | the effective definition pointer of the Sample selector, as for `esdieff sample` |
 | `value` | yes | any JSON value, checked as a Sample value for the selected description |
 | `expected` | no | the Expected admission, `admitted` or `rejected` |
 | `label` | no | a string of at most 256 bytes that names the entry in the report |
 
 Each line is decoded on its own under the ordinary JSON input policies of [ADR 0012: Exact numbers and JSON input policies](adr/0012-exact-numbers-and-json-input-policies.md). Numbers keep their exact values, so `9007199254740993` stays distinct from `9007199254740992`, and a repeated member name anywhere in the line is refused, including inside the value. Each line has the decoding allowances one Sample source would have in the same Catalogue, so its depth, node count and number sizes have the shared limits.
+
+A `context` entry selects non-interactive metadata under an Object or Thing, including inherited and referenced descriptions, under the [Context draft policy](context-contract.md). A same-name Property has a different kind and pointer. Replay checks each supplied value without assuming metadata presence, Property characteristics or runtime instance-information messages. An unresolved nullable default, unavailable reference, applicable unsupported link meaning or exhausted allowance leaves the affected entry undetermined even when it expects rejection.
 
 ## Entry outcomes
 
@@ -97,7 +99,7 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"trace"`, 
 | TraceEntry | line:Count; label:string|null; selector:SampleSelector|null; expected:`"admitted"|"rejected"`|null; admission:`"admitted"|"rejected"|"undetermined"`|null; outcome:`"failed"|"undetermined"`; conditions:Condition[]; conditions_omitted:Count | selector is present when the entry names a valid kind and a pointer string of at most 8192 bytes, whether or not that selects anything, and null otherwise. admission is null when the value was not checked. |
 | Condition for trace | Shared Condition fields plus domain:`"sample"|"operation"` | primary is a SampleLocation of the trace source whose pointer is within the entry's JSON map, such as `/value`, and whose span is the byte range in the trace file, so it selects the right bytes even with CR LF line endings. A decoding issue has a null pointer. A condition from Sample-value checking relates the constraint's effective location and its nearest source location, and names the constraint in `arguments.constraint`. Member conditions name a missing or invalid member in `arguments.member`, and `trace.unavailable` gives its reason in `arguments.reason`. Conditions the trace contract establishes have basis kind `operational` with id `esdieff.trace/1`. |
 
-`baseline.interpretations` names the value interpretations that the checks relied on, as model reports name them. Every source stays in `sources`. `diagnostics.items` is empty, since every condition belongs to an entry. The human report shows the disposition, the entry and admission counts, then each listed entry with its line, selector and outcome, its label, its admission and Expected admission, and one line per condition with its severity, code, pointer and byte range. It gives the JSON report instead if it would not fit the report byte limit.
+`baseline.interpretations` names the value interpretations that the checks relied on, as model reports name them. A trace containing a Context selector also records the supported draft and its limitations in `baseline.extensions`, including when that entry passes or its details are omitted. Every source stays in `sources`. `diagnostics.items` is empty, since every condition belongs to an entry. The human report shows the disposition, the entry and admission counts, then each listed entry with its line, selector and outcome, its label, its admission and Expected admission, and one line per condition with its severity, code, pointer and byte range. It gives the JSON report instead if it would not fit the report byte limit.
 
 ## Replaying Generated values
 

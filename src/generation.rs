@@ -44,6 +44,8 @@ impl<'a> GenerationRequest<'a> {
         }
     }
     /// Only the description that `kind` and `pointer` select, as `esdieff sample` selects it.
+    /// Context metadata requires this explicit selection and is excluded from the default
+    /// affordance traversal.
     pub fn select(mut self, kind: SampleKind, pointer: &'a str) -> Self {
         self.selector = Some((kind, pointer));
         self
@@ -230,10 +232,7 @@ impl Catalogue {
         if !source.role().is_model() {
             return Err("sample source cannot be a model root");
         }
-        if let Some((kind, pointer)) = request.selector {
-            if kind == SampleKind::Context {
-                return Err("Context value generation is not supported");
-            }
+        if let Some((_, pointer)) = request.selector {
             if pointer.len() > SELECTOR_BYTES {
                 return Err("invalid or oversized JSON pointer selector");
             }
@@ -276,6 +275,7 @@ impl Catalogue {
         let mut selected = Vec::new();
         match request.selector {
             Some((kind, pointer)) => {
+                result.scope.context = kind == SampleKind::Context;
                 let json = model.json().present();
                 if let Some(json) = json
                     && description_root(json)?.0 != kind
