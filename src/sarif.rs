@@ -172,7 +172,7 @@ pub(crate) fn diff(comparison: &RevisionComparison<'_>, directory: &Path) -> Str
             ),
             Classification::Compatible => (
                 "comparison.compatible",
-                "A compatible difference between two Model revisions, which Esdieff established cannot break Clients of the earlier revision.".to_owned(),
+                format!("A compatible difference between two Model revisions, which Esdieff established cannot break client interactions of the earlier revision. {}", crate::comparison::SCOPE_NOTICE),
                 "note",
                 "Compatible",
             ),

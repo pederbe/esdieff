@@ -33,7 +33,10 @@ pub use witness::Witness;
 
 /// The identity of the comparison rules, which binds the classified differences. A
 /// release that classifies more differences gets a new identity.
-pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/2";
+pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/3";
+
+pub(crate) const SCOPE_NOTICE: &str =
+    "Client interactions only. Context metadata compatibility is not assessed.";
 
 /// One of the two Model revisions under comparison.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -63,7 +66,8 @@ impl Revision {
     }
 }
 
-/// How a difference, or the comparison as a whole, affects Clients.
+/// How a difference, or the comparison as a whole, affects Client interactions.
+/// Compatibility for consumers of Context metadata is not assessed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Classification {
@@ -151,7 +155,7 @@ impl DifferenceKind {
 pub enum DifferenceSubject<'a> {
     /// A whole document.
     Document,
-    /// A grouping or affordance of this class.
+    /// A grouping, affordance or Context of this class.
     Definition(Class),
     /// A named entry of map data's `properties`.
     Entry,

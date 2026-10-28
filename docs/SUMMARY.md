@@ -96,3 +96,4 @@
   - [0046: Inline Context draft support](adr/0046-inline-context-draft-support.md)
 - [0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md)
 - [0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md)
+- [0049: Context revision comparison](adr/0049-context-revision-comparison.md)

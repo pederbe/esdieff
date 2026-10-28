@@ -18,6 +18,162 @@ use std::{
 const LOCK: &str = include_str!("../examples/door-lock-check/rich.sdf.json");
 const THERMOSTAT: &str = include_str!("../examples/thermostat-check/rich.sdf.json");
 
+#[test]
+fn unavailable_context_scalars_preserve_independent_breaking_changes() {
+    let before = r#"{"sdfObject":{"Device":{
+        "sdfContext":{"metadata":{"const":1e1000001}},
+        "sdfProperty":{"reading":{"type":"integer","maximum":10}}
+    }}}"#;
+    let after = before
+        .replace("\"const\":", "\"description\":\"Updated\",\"const\":")
+        .replace("\"maximum\":10", "\"maximum\":20");
+    let tree = Tree::new();
+    let old = tree.write("old.json", before);
+    let new = tree.write("new.json", &after);
+    let wire = report(
+        &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+        1,
+    );
+    assert_eq!(wire["outcome"]["complete"], false);
+    assert_eq!(wire["result"]["summary"]["breaking"], 1);
+    assert_eq!(wire["result"]["summary"]["undetermined"], 1);
+    let context = wire["result"]["differences"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|difference| difference["subject"] == "sdfContext")
+        .unwrap();
+    assert_eq!(context["kind"], "unavailable");
+    assert_eq!(context["reason"]["code"], "data.number_unavailable");
+    let human = diff(old.as_os_str(), new.as_os_str(), &[]);
+    assert_eq!(human.status.code(), Some(1));
+    let human = String::from_utf8(human.stdout).unwrap();
+    assert!(human.contains(context["reason"]["message"].as_str().unwrap()));
+    assert!(human.contains("Breaking differences:"));
+}
+
+#[test]
+fn context_differences_use_existing_reports_and_check_plans() {
+    let before = r##"{"info":{"version":"1"},
+        "sdfData":{"Value":{"type":"integer","maximum":10,"nullable":false}},
+        "sdfObject":{"Device":{
+            "sdfContext":{"value":{"sdfRef":"#/sdfData/Value"},"retired":{"type":"boolean"}},
+            "sdfProperty":{"value":{"sdfRef":"#/sdfData/Value","writable":false}}
+        }}
+    }"##;
+    let cases = [
+        (
+            "metadata change",
+            "/sdfObject/Device/sdfContext/value/maximum",
+            json!(5),
+            0,
+            1,
+        ),
+        (
+            "addition",
+            "/sdfObject/Device/sdfContext/added",
+            json!({"type":"string"}),
+            0,
+            1,
+        ),
+        (
+            "same-name Property",
+            "/sdfObject/Device/sdfProperty/value/maximum",
+            json!(20),
+            1,
+            0,
+        ),
+        ("shared data", "/sdfData/Value/maximum", json!(20), 1, 1),
+    ];
+    for (name, pointer, value, exit, compatible) in cases {
+        let tree = Tree::new();
+        let old = tree.write("old.json", before);
+        let after = revised(before, |document| {
+            // The addition is the only path whose last token does not exist yet.
+            let (owner, key) = pointer.rsplit_once('/').unwrap();
+            document.pointer_mut(owner).unwrap()[key] = value;
+        });
+        let new = tree.write("new.json", &after);
+        let wire = report(
+            &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+            exit,
+        );
+        assert_eq!(
+            wire["result"]["summary"]["compatible"], compatible,
+            "{name}"
+        );
+        assert_eq!(wire["result"]["summary"]["breaking"], exit, "{name}");
+        assert_eq!(wire["policy"]["compatibility_scope"], "client_interactions");
+        assert_eq!(wire["outcome"]["warnings"], exit);
+        let human = diff(old.as_os_str(), new.as_os_str(), &[]);
+        assert_eq!(human.status.code(), Some(exit));
+        let human = String::from_utf8(human.stdout).unwrap();
+        assert!(
+            human.contains(
+                "Client interactions only. Context metadata compatibility is not assessed."
+            )
+        );
+        if compatible > 0 {
+            assert!(human.contains("changed sdfContext") || human.contains("added sdfContext"));
+            assert!(
+                wire["result"]["differences"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|difference| difference["subject"] == "sdfContext"
+                        && difference["directions"] == json!([]))
+            );
+        }
+        let plan = tree.write(
+            "plan.json",
+            &json!({
+                "schema":"esdieff.check-plan","version":"1",
+                "sources":[{"key":"current","path":"new.json","role":"model"}],
+                "cases":[{"name":name,"operation":"diff",
+                    "earlier":{"document":"old.json"},"later":{"document":"new.json"}}]
+            })
+            .to_string(),
+        );
+        let saved = report(
+            &run(&[
+                OsStr::new("check"),
+                OsStr::new("--plan"),
+                plan.as_os_str(),
+                OsStr::new("--format"),
+                OsStr::new("json"),
+            ]),
+            exit,
+        );
+        assert_eq!(saved["cases"][0]["report"], wire, "{name}");
+    }
+    for remove in ["sdfContext", "sdfProperty"] {
+        let tree = Tree::new();
+        let old = tree.write("old.json", before);
+        let after = revised(before, |document| {
+            document["sdfObject"]["Device"]
+                .as_object_mut()
+                .unwrap()
+                .remove(remove);
+        });
+        let new = tree.write("new.json", &after);
+        let exit = i32::from(remove == "sdfProperty");
+        let wire = report(
+            &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+            exit,
+        );
+        assert_eq!(wire["result"]["summary"]["breaking"], exit);
+        assert!(
+            wire["result"]["differences"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(
+                    |difference| difference["kind"] == "removed" && difference["subject"] == remove
+                )
+        );
+    }
+}
+
 struct Tree(PathBuf);
 impl Tree {
     fn new() -> Self {
@@ -527,7 +683,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
         ),
         0,
     );
-    assert_eq!(wire["version"], "1.5");
+    assert_eq!(wire["version"], "1.6");
     assert_eq!(wire["result"]["outcome"], "breaking");
     assert_eq!(wire["outcome"]["disposition"], "passed");
     assert_eq!(wire["outcome"]["errors"], 0);
@@ -537,7 +693,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/2: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/3: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -723,7 +879,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/2: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/3: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -1133,7 +1289,7 @@ fn a_breaking_revision_that_keeps_its_version_warns_in_every_format() {
     let later = switch("2019-11-14", &["on", "off"]);
     new.write("switch.sdf.json", &later);
     let wire = report(&diff(old.path(), new.path(), &["--format", "json"]), 1);
-    assert_eq!(wire["version"], "1.5");
+    assert_eq!(wire["version"], "1.6");
     assert_eq!(wire["result"]["summary"]["breaking"], 1);
     assert_eq!(wire["outcome"]["warnings"], 1);
     let condition = &wire["diagnostics"]["items"][0];

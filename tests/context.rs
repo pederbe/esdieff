@@ -551,7 +551,7 @@ fn cli_context_placement_errors_keep_their_location_and_draft_basis() {
 }
 
 #[test]
-fn context_changes_stay_unclassified_until_context_comparison_is_supported() {
+fn removing_context_preserves_client_interactions() {
     let old = TempFile::new(br#"{"sdfObject":{"O":{"sdfContext":{"c":{"type":"number"}}}}}"#);
     let new = TempFile::new(br#"{"sdfObject":{"O":{"sdfContext":{}}}}"#);
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_esdieff"))
@@ -568,9 +568,16 @@ fn context_changes_stay_unclassified_until_context_comparison_is_supported() {
         .unwrap();
     assert_eq!(
         output.status.code(),
-        Some(3),
+        Some(0),
         "{}",
         String::from_utf8_lossy(&output.stdout)
+    );
+    let wire: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(wire["result"]["differences"][0]["subject"], "sdfContext");
+    assert_eq!(wire["result"]["differences"][0]["kind"], "removed");
+    assert_eq!(
+        wire["result"]["differences"][0]["classification"],
+        "compatible"
     );
 }
 
