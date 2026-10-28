@@ -90,4 +90,26 @@ fine for output without colour.
 The build needs mdBook 0.5 (`MDBOOK` can select an installed binary). It stages
 `docs/` so that links to the repository root (the domain language and the
 examples) resolve on the site, and it never deploys. `wrangler.jsonc` describes
-the Cloudflare Workers static-assets deployment. The site deploys to esdieff.com at launch.
+the Cloudflare Workers static-assets deployment.
+
+## Deployment
+
+Website and documentation changes merged into `main` deploy automatically to
+esdieff.com after the required CI checks pass. CI calls the existing Website
+workflow to build and deploy that revision. Pull requests only validate the
+changes. Source-only changes and repository overview edits do not publish the site.
+Merged revisions queue without replacing pending runs, so a later source-only
+merge cannot cancel an earlier website deployment.
+
+The `WEBSITE_ENABLED` repository variable must be `true`. Deployment uses the
+existing `website` environment and its Cloudflare credentials.
+
+You can still start a deployment manually:
+
+```sh
+gh workflow run website.yml --ref main -F deploy=true
+```
+
+The workflow uses the latest published release. To require a particular release,
+add `-f tag=vX.Y.Z`. An explicit tag must match the latest release. Omitting
+`deploy=true` builds the website without publishing it.
