@@ -1,0 +1,12 @@
+{
+  "info": { "title": "Unavailable Context dependency", "version": "2026-10-28" },
+  "namespace": { "missing": "https://example.invalid/unavailable" },
+  "sdfObject": {
+    "Device": {
+      "sdfContext": {
+        "location": { "sdfRef": "missing:#/sdfData/Location" },
+        "assetTag": { "type": "string", "const": "A-17", "nullable": false }
+      }
+    }
+  }
+}

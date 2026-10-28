@@ -1833,10 +1833,10 @@ impl Report<'_> {
         if value["baseline"]["extensions"].is_array() {
             output.heading("Draft support:");
             output.push_str(&format!(
-                " {} (inline Context checking and inspection)\n",
+                " {} (Context checking, composition and inspection)\n",
                 crate::context::DRAFT
             ));
-            output.push_str("Context limits: absent nullable defaults unresolved; sdfRequired meaning undefined; general link meaning unavailable\n");
+            output.push_str("Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined, reuse outside Context unavailable and general link meaning unavailable\n");
         }
         if value["baseline"]["temporal_knowledge"].is_object() {
             output.heading("Temporal knowledge:");
@@ -2717,8 +2717,8 @@ impl Report<'_> {
             baseline["extensions"] = json!([{
                 "id":crate::context::DRAFT,
                 "sha256":crate::context::SHA256,
-                "scope":"inline Context checking and inspection",
-                "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "general link meaning unavailable"]
+                "scope":"Context checking, composition and inspection",
+                "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "reference reuse outside Context unavailable", "general link meaning unavailable"]
             }]);
         }
         let temporal_use = self.structure.temporal_use

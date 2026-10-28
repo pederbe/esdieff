@@ -929,7 +929,12 @@ impl<'a> Resolver<'a> {
                                     "direct-item reference import meaning unresolved",
                                 ));
                             } else {
-                                match self.expand(job.node, job.active) {
+                                let context_data = EffectiveJson {
+                                    model: &self.model,
+                                    node: job.node,
+                                }
+                                .context_data();
+                                match self.expand(job.node, job.active, context_data) {
                                     Ok(active) => job.active = active,
                                     Err(reason) => self.expansion_failed(job.node, reason)?,
                                 }
@@ -2375,7 +2380,10 @@ impl<'a> Resolver<'a> {
                             "direct-item reference import meaning unresolved",
                         ));
                     }
-                    composed = Some(self.compose_path(origin)?);
+                    composed = Some(self.compose_path(
+                        origin,
+                        context_data || matches!(role, Role::Definition(Class::Context)),
+                    )?);
                 }
             }
             if let Position::Vocabulary(Role::Definition(class)) = position {
@@ -2545,7 +2553,7 @@ impl<'a> Resolver<'a> {
     /// detached copy with its own expansion chain. Reaching it again while it
     /// composes is a cycle. Nested path compositions recurse, so their nesting
     /// has a fixed stack bound.
-    fn compose_path(&mut self, origin: Element<'a>) -> Result<usize, Failure> {
+    fn compose_path(&mut self, origin: Element<'a>, context_data: bool) -> Result<usize, Failure> {
         for path in &self.paths {
             if !charge(&mut self.work, 1) {
                 return Err(Failure::limit("path composition work limit"));
@@ -2592,7 +2600,7 @@ impl<'a> Resolver<'a> {
             &mut self.allocation,
         )?;
         self.path_depth += 1;
-        let result = self.expand(node, None);
+        let result = self.expand(node, None, context_data);
         self.path_depth -= 1;
         match result {
             Ok(_) => {
@@ -2867,7 +2875,12 @@ impl<'a> Resolver<'a> {
         )?;
         Ok(())
     }
-    fn expand(&mut self, node: usize, active: Option<usize>) -> Result<Option<usize>, Failure> {
+    fn expand(
+        &mut self,
+        node: usize,
+        active: Option<usize>,
+        context_data: bool,
+    ) -> Result<Option<usize>, Failure> {
         let source = self.model.nodes[node].source;
         // The `sdfRef` member's own context decides whether it is copied, so a patch
         // that touches only sibling qualities leaves it copied, following ADR 0036:
@@ -2901,9 +2914,12 @@ impl<'a> Resolver<'a> {
             }
             let selected = self.pointer_source(reference, copied_through.is_some())?;
             let (selected, _) = self.relocate(selected, copied_through)?;
-            if selected.context_data {
+            // Context-to-Context reuse keeps the same absent-default boundary.
+            // Exporting that content into a base-SDF role still needs a policy
+            // for defaults, so retain its scoped limitation under ADR 0047.
+            if selected.context_data && !context_data {
                 return Err(Failure::capability(
-                    "reference reuse of Context data descriptions is not yet supported",
+                    "reference reuse of Context data outside Context is not yet supported",
                 ));
             }
             if !matches!(
@@ -3014,6 +3030,7 @@ impl<'a> Resolver<'a> {
         }
         let mut active = job.active;
         if let Position::Vocabulary(role) = job.position {
+            self.model.nodes[job.node].role = Some(role);
             if job.active.is_none() {
                 self.model.nodes[job.node].original_role = Some(role);
             }
@@ -3029,7 +3046,12 @@ impl<'a> Resolver<'a> {
                     ));
                     return Ok(());
                 }
-                match self.expand(job.node, active) {
+                let context_data = EffectiveJson {
+                    model: &self.model,
+                    node: job.node,
+                }
+                .context_data();
+                match self.expand(job.node, active, context_data) {
                     Ok(next) => active = next,
                     Err(reason) => return self.expansion_failed(job.node, reason),
                 }
@@ -3112,7 +3134,12 @@ impl<'a> Resolver<'a> {
                         ));
                         return Ok((Some(node), position, active));
                     }
-                    match self.expand(node, active) {
+                    let context_data = EffectiveJson {
+                        model: &self.model,
+                        node,
+                    }
+                    .context_data();
+                    match self.expand(node, active, context_data) {
                         Ok(next) => active = next,
                         Err(reason) => {
                             self.expansion_failed(node, reason)?;

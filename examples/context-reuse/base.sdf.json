@@ -1,0 +1,33 @@
+{
+  "info": { "title": "Reusable installation metadata", "version": "2026-10-28" },
+  "namespace": { "base": "https://example.com/context", "missing": "https://example.invalid/unavailable" },
+  "defaultNamespace": "base",
+  "sdfData": {
+    "AssetTag": { "type": "string", "minLength": 1, "nullable": false },
+    "Location": {
+      "type": "object",
+      "nullable": false,
+      "properties": {
+        "room": { "type": "string", "minLength": 1, "nullable": false },
+        "floor": { "type": "integer", "minimum": 0, "nullable": false }
+      },
+      "required": ["room"]
+    }
+  },
+  "sdfObject": {
+    "Sensor": {
+      "sdfData": {
+        "Offset": { "type": "number", "unit": "Cel", "minimum": -10, "maximum": 10, "nullable": false }
+      },
+      "sdfContext": {
+        "location": { "sdfRef": "#/sdfData/Location" },
+        "calibration": { "sdfRef": "#/sdfObject/Sensor/sdfData/Offset", "description": "Factory calibration" },
+        "retired": { "sdfRef": "missing:#/sdfData/Retired" }
+      },
+      "sdfProperty": { "temperature": { "type": "number", "unit": "Cel" } }
+    }
+  },
+  "sdfThing": {
+    "Site": { "sdfContext": { "siteName": { "type": "string", "nullable": false } } }
+  }
+}
