@@ -1,6 +1,6 @@
 # 0004: Supplied catalogues and checking scope
 
-Esdieff initially works with explicitly supplied SDF documents. A [catalogue check](../../CONTEXT.md#model-work) covers every supplied document, including unused definitions; a selected-model check starts from chosen root documents and covers the dependencies needed for its checks. Reports identify their scope so that success for one model cannot be mistaken for success across a catalogue.
+Esdieff initially works with explicitly supplied SDF documents. A [catalogue check](../../GLOSSARY.md#model-work) covers every supplied document, including unused definitions; a selected-model check starts from chosen root documents and covers the dependencies needed for its checks. Reports identify their scope so that success for one model cannot be mistaken for success across a catalogue.
 
 Catalogue checking is the default. Selected-model checking requires explicit supplied root documents; other supplied documents remain available for dependency lookup. The CLI accepts explicit file paths, one standard-input document and explicitly supplied local directories, while library callers supply document content and source identities directly. Input order does not assign a document's role, and acquisition failures remain visible.
 

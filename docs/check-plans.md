@@ -1,6 +1,6 @@
 # Repeatable catalogue checks
 
-A [Check plan](../CONTEXT.md#model-work) saves supplied files and named model
+A [Check plan](../GLOSSARY.md#model-work) saves supplied files and named model
 checks, sample checks and revision comparisons. Run the included model-only
 example from the repository root.
 

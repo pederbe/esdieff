@@ -1,6 +1,6 @@
 # Esdieff domain language
 
-The vocabulary of SDF connected-device models, grounded in [RFC 9880](https://www.rfc-editor.org/rfc/rfc9880.html). Terms describe the modeling domain rather than software structure.
+The vocabulary of SDF connected-device models, grounded in [RFC 9880](https://www.rfc-editor.org/rfc/rfc9880.html). Esdieff's analysis terms and recorded interpretations are identified separately from base SDF and draft extension vocabulary.
 
 ## Documents and models
 
@@ -40,7 +40,7 @@ A collection of named definitions identified by a class name keyword.
 The category of model information identified by a Class Name Keyword.
 
 **Class name keyword**:
-One of `sdfThing`, `sdfObject`, `sdfProperty`, `sdfAction`, `sdfEvent`, and `sdfData`.
+In base SDF, one of `sdfThing`, `sdfObject`, `sdfProperty`, `sdfAction`, `sdfEvent` and `sdfData`.
 
 **Information block**:
 Document metadata under `info`, describing the document and its included definitions.
@@ -146,6 +146,9 @@ The namespace selected by `defaultNamespace` to receive a document's contributed
 A definition's namespace URI followed by its JSON Pointer fragment identifier.
 _Avoid_: File path.
 
+**Name reference**:
+A same-document or CURIE reference selecting an element of an SDF model.
+
 **Same-document reference**:
 A name reference consisting of `#` and a JSON Pointer fragment that selects an element in the current document.
 
@@ -153,7 +156,7 @@ A name reference consisting of `#` and a JSON Pointer fragment that selects an e
 A name reference abbreviated using a namespace prefix from the document's namespace mappings.
 
 **Referenceable name**:
-An unprefixed affordance or grouping name used by `sdfRequired` to select directly contained declarations by name. It can select declarations of different classes carrying the same Given Name.
+An `sdfRequired` abbreviation for directly contained affordance or grouping declarations, containing neither `:` nor `#`. It selects all eligible classes carrying the same Given Name.
 
 **Quality Name Prefix**:
 A registered prefix used to construct qualified Quality Names for extension vocabulary.
@@ -164,44 +167,22 @@ _Avoid_: CURIE reference, which selects a model definition using namespace mappi
 
 ## Composition
 
-Terminology sources: [RFC 9880, Section 4.4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4), [Section 4.4.1](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4.1), and [Section 6](https://www.rfc-editor.org/rfc/rfc9880.html#section-6).
+### Base SDF composition
+
+Terminology sources: [RFC 9880, Section 4.4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4), [Section 4.4.1](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4.1), [Section 4.5](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.5) and [Section 6](https://www.rfc-editor.org/rfc/rfc9880.html#section-6).
 
 **Composition**:
 The combination and refinement of definitions through references and containment to describe reusable capabilities and products.
-_Avoid_: File concatenation, arbitrary JSON merging.
+_Avoid_: File concatenation, arbitrary JSON merging, device instantiation.
 
 **sdfRef**:
-A quality that reuses a referenced definition, with additions and overrides from the referencing definition applied through JSON Merge Patch.
+A quality that forms a definition by reusing the referenced definition's qualities and enclosed definitions, then applying the referencing definition's JSON Merge Patch.
 
 **Composition patch**:
 The referencing definition's map with its `sdfRef` entry removed, applied to a copy of the referenced definition through JSON Merge Patch.
 
 **Copied definition**:
-The referenced definition as copied by `sdfRef`, before the composition patch applies.
-
-**Copied reference**:
-A name reference that reaches an effective definition from a copied definition rather than from the composition patch.
-_Avoid_: Inherited reference.
-
-**Internal copied reference**:
-A copied reference whose target is the copied definition or lies within it.
-
-**Reference relocation**:
-The replacement of an internal copied reference's target by the corresponding position in the importing definition.
-_Avoid_: Rebinding, rebasing.
-
-**Effective definition**:
-A definition after the applicable reference composition and overrides have been processed.
-_Avoid_: Source patch, valid definition.
-
-**Content origin**:
-The nearest source contribution establishing an effective quality, or removing it through a composition patch.
-
-**Importing consumer**:
-The source `sdfRef` that establishes the composition boundary containing an effective quality. It is distinct from the quality's content origin.
-
-**Default origin**:
-An established implicit semantic value when a quality is absent, without an authored source contribution or inserted JSON member.
+Explanatory shorthand for the referenced definition as copied by `sdfRef`, before the composition patch applies. It is not a separate SDF class.
 
 **Restrictive refinement**:
 The convention that an override narrows the possibilities described by a reused definition. RFC 9880 does not provide a general procedure for checking that convention.
@@ -213,6 +194,34 @@ _Avoid_: Valid model, since resolution alone does not establish validity.
 **sdfRequired**:
 A quality identifying declarations whose corresponding data must be represented in the modeled grouping.
 _Avoid_: `required`, which constrains entries within map data.
+
+### Esdieff composition vocabulary
+
+These terms describe Esdieff's effective views and recorded interpretations. Reference relocation follows [ADR 0036: Copied reference relocation](docs/adr/0036-copied-reference-relocation.md). Content and default origins follow [ADR 0020: Owned effective views and nearest origins](docs/adr/0020-owned-effective-views-and-nearest-origins.md).
+
+**Copied reference**:
+An Esdieff term for a name reference contributed by a reused definition rather than authored in the importing definition's composition patch.
+_Avoid_: Inherited reference.
+
+**Internal copied reference**:
+An Esdieff term for a copied reference whose target, read in its authoring document's context, is the reused definition or one of its descendants.
+
+**Reference relocation**:
+Esdieff's interpretation that an internal copied reference selects the corresponding position in the importing definition. This interpretation is recorded in ADR 0036 and is not an explicit rule of RFC 9880.
+_Avoid_: Rebinding, rebasing.
+
+**Effective definition**:
+An Esdieff term for a definition after applicable reference composition and overrides have been processed.
+_Avoid_: Source patch, valid definition.
+
+**Content origin**:
+The nearest source contribution establishing an effective quality, or removing it through a composition patch.
+
+**Importing consumer**:
+The source `sdfRef` that establishes the composition boundary containing an effective quality. It is distinct from the quality's content origin.
+
+**Default origin**:
+An established implicit semantic value when a quality is absent, without an authored source contribution or inserted JSON member.
 
 **Required declaration relationship**:
 An `sdfRequired` occurrence's relationship to the affordance or grouping declarations it selects, including all directly contained classes sharing a Given Name. An array entry `true` identifies its carrying affordance or grouping.
@@ -227,6 +236,8 @@ Establishment of the selected declaration identities and their relevant context.
 
 Terminology sources: [RFC 9880, Section 4.7](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.7), [Section 5](https://www.rfc-editor.org/rfc/rfc9880.html#section-5), and [Appendix C](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-C).
 
+The source references describe base SDF qualities. Terms for effective views, selected representations and assessment concepts describe Esdieff's interpretations and analysis, with their own linked contracts and ADRs.
+
 **Data description**:
 Qualities describing the meaning and permitted values of interaction data at the information model level.
 _Avoid_: Wire format, protocol payload schema.
@@ -235,10 +246,10 @@ _Avoid_: Wire format, protocol payload schema.
 A quality that describes data semantics or constrains data values.
 
 **Full data description**:
-A Data description using the full data-quality vocabulary, including Property and sdfData definitions, Action input/output, Event output, properties entries and Choice alternatives. Nested descriptions retain their own vocabulary role, as described in [RFC 9880, Appendix A](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-A) and [ADR 0020: Owned effective views and nearest origins](docs/adr/0020-owned-effective-views-and-nearest-origins.md).
+Esdieff's term for a data description using the full data-quality vocabulary, including Property and sdfData definitions, Action input/output, Event output, properties entries and Choice alternatives. Vocabulary roles follow [RFC 9880, Appendix A](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-A) and [ADR 0020: Owned effective views and nearest origins](docs/adr/0020-owned-effective-views-and-nearest-origins.md).
 
 **Direct items description**:
-The restricted description directly under `items`. Its established base vocabulary includes scalar bounds and lengths, `format`, `enum` and `sdfChoice`; explicit map data also permits `required` and `properties`. Those properties entries and Choice alternatives are Full data descriptions. Wider admitted content remains inspectable without gaining full data-quality meaning from its spelling.
+Esdieff's term for the restricted data description directly under `items`. Its vocabulary role differs from that of nested properties entries and Choice alternatives, as described in [the model coverage boundaries](docs/model-coverage-boundaries.md).
 _Avoid_: Full data description, blanket prohibition of nested array data.
 
 **Data type**:
@@ -278,7 +289,7 @@ A choice between named data alternatives, with shared data qualities except wher
 A named set of data qualities within `sdfChoice`. Its Given Name identifies the alternative without automatically constraining a data value to that name.
 
 **Effective alternative**:
-A Full data description established after reference composition, shared-quality inheritance and whole-quality overrides. A named Choice alternative retains its Given Name; an Enum alternative retains its occurrence index and original text value as `const`. Its semantic coordinates can differ from authored source locations. Inherited qualities retain their donor's established meaning and uncertainty, following [ADR 0024: Effective alternatives and nullable characteristics](docs/adr/0024-effective-alternatives-and-nullable-characteristics.md).
+Esdieff's term for a Full data description after reference composition and inheritance of shared data qualities. Its relationship to authored alternatives follows [ADR 0024: Effective alternatives and nullable characteristics](docs/adr/0024-effective-alternatives-and-nullable-characteristics.md).
 
 **enum**:
 A nonempty list of string values abbreviating `sdfChoice` alternatives with corresponding `const` values. A definition uses either `enum` or `sdfChoice`.
@@ -293,7 +304,7 @@ Documentary data that may be used when interaction data is absent. Base SDF defi
 Advice about whether a stated const or documentary default is excluded by its final effective data description. It reuses selected-value checking without inserting defaults, changing source roles or proving general satisfiability, following [ADR 0031: Bounded declared-value consistency](docs/adr/0031-bounded-declared-value-consistency.md).
 
 **Consistency candidate**:
-One surviving effective const or default checked in its owning description. Final alternative constants and distinct importing consumers remain distinct candidates. An owner default requests one complete existential alternative witness; introduced or overridden branch defaults are separate candidates. One definite exclusion produces one advisory warning regardless of rejected leaf count.
+One surviving effective const or default considered for Declared-value consistency in its owning description.
 
 **contentFormat**:
 A data quality naming the content format of a data value, using a string-form CoAP Content-Format identifier or a media type with parameters and content codings, as defined by [RFC 9193, Section 3](https://www.rfc-editor.org/rfc/rfc9193.html#section-3).
@@ -392,8 +403,6 @@ _Avoid_: UTF-8 byte count, displayed-character count.
 
 **pattern**:
 An ECMA-262 regular expression in Unicode mode constraining text strings. Matching is unanchored unless the expression supplies anchors.
-Supported syntax and matching capabilities are distinct; unavailable capability leaves affected conclusions incomplete, following [ADR 0014: Bounded partial ECMAScript pattern capability](docs/adr/0014-bounded-pattern-capability.md).
-The explicit expanded pattern-syntax assessment checks surviving effective Full string patterns; Direct donor meaning remains unavailable until an establishing Full override. Full baseline assessment binds this rule to its model requirement and pattern/format area, following [ADR 0028: Bounded effective model pattern syntax](docs/adr/0028-bounded-model-pattern-syntax.md).
 _Avoid_: The I-Regexp conventions used for name patterns in the RFC text.
 
 **format**:
@@ -430,7 +439,7 @@ Comparison of data values in an applicable effective context, returning equal, d
 
 ## Model work
 
-These terms distinguish the work performed on SDF specifications from the network interactions they describe.
+These Esdieff terms distinguish work performed on SDF specifications from the network interactions they describe. Operational rules belong in the linked contracts and ADRs.
 
 **Pinned document acquisition**:
 Explicit retrieval of one selected source document at a complete revision identity, retaining its unchanged bytes only when their digest matches a separately supplied expectation.
@@ -465,7 +474,7 @@ The selected original document and explicit authored owner, Quality Name and rep
 A generated revision expressing an Editing request. Candidate availability does not establish Editing fidelity or Model checking.
 
 **Editing fidelity**:
-Established application of every requested Authored-quality edit and preservation of every other authored JSON value, Given Name, definition position, namespace mapping and reference spelling under `esdieff.authored-quality-edit/1`. It establishes source preservation, not before-and-after model equivalence or unknown extension meaning.
+Established application of the requested Authored-quality edits while preserving the rest of the authored document. It establishes source preservation, not before-and-after model equivalence or unknown extension meaning, as defined in [the editing contract](docs/editing-contract.md).
 
 **Source substitution**:
 Replacement of exactly one original contributor by its Edited SDF document in the active result Catalogue. The original remains immutable Source evidence and cannot resolve names as a fallback.
@@ -494,7 +503,7 @@ Saved model and sample source identities and ordered named checking and Revision
 _Avoid_: SDF document or Assessment profile.
 
 **Check case**:
-One named Model checking, Sample-value checking or Revision comparison request within a Check plan, retaining its own scope, selector or revisions and policy, and either its actual result or a request error. A Revision comparison names its own revisions' documents, apart from the plan's sources. Sample admission and a comparison's classification remain separate from disposition and completeness.
+One named Model checking, Sample-value checking or Revision comparison request within a Check plan, together with its scope and outcome.
 _Avoid_: SDF definition, Assessment area or expected-result assertion.
 
 **Check coverage**:
@@ -511,7 +520,7 @@ _Avoid_: Implemented checks when referring to the profile's promised scope.
 A named group of requirements in a requested assessment, counted once across its model scope.
 
 **Model requirement inventory**:
-The immutable, cited model obligations selected by a requested assessment, independently of current implementation. `rfc9880.model/1` contains 54 exclusive obligations from the normative body and Appendices A/C. The Full area inventory `esdieff.full-model/1` groups them into 12 model areas plus the existing advisory area, following [ADR 0011: Machine-readable report contracts](docs/adr/0011-machine-readable-report-contracts.md). Initial retains its narrower eight areas. Sample, device, protocol, registry and operator duties have separate roles.
+The cited model obligations selected by a requested assessment, independently of current implementation. The obligations and their assessment areas are defined in [the model assessment inventory](docs/model-assessment-inventory.md).
 _Avoid_: Implemented checks or user stories as a complete standards inventory.
 
 **Coverage owner**:
@@ -519,8 +528,6 @@ The requested Full area owning an actual recorded requirement. A condition retai
 
 **Assessment status**:
 Whether a requested area is assessed, established not applicable, unassessed or undetermined because needed facts or capability are unavailable. Assessed includes established findings, rather than asserting that the model satisfies the area.
-
-The same four states describe fine-grained model obligations. Repeated observations join undetermined before unassessed, assessed, then not applicable, so one completed occurrence cannot hide an unfinished sibling. Areas join their owned requirements once. Completion, error counts and optional presentation are independent.
 
 **Incomplete check**:
 A check whose requested assessment could not be completed, for example because a needed definition or critical feature was unavailable.
@@ -542,7 +549,6 @@ _Avoid_: Original sample bytes when referring to generated text.
 
 **Sample-value checking**:
 Assessment of one sample value against a selected effective data description, returning admitted, rejected, or undetermined. Admission is separate from model findings and requested-work completeness, following [ADR 0016: Selected samples with explicit admission and coverage](docs/adr/0016-selected-sample-contract.md).
-Ordinary map entries and array elements conjoin with their containing value's constraints. Array counts are inclusive and exact. An empty array requests no item value and establishes no meaning for a deferred item subtree. Repeated elements share descriptions while accumulating actual present interests; completed model conditions are observed once per final description.
 _Avoid_: Model checking when assessing example interaction data.
 
 **Generated value**:
@@ -574,14 +580,14 @@ _Avoid_: Generation target, which names the edge a Generated value probes.
 
 ## Revision comparison
 
-These terms describe how a later revision of a model affects the clients of the Things it describes.
+These Esdieff terms describe how a later revision of a model affects the clients of the Things it describes. The comparison policy is defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 
 **Model revision**:
 The documents of an SDF model at one point in their evolution, supplied together as one Catalogue.
 _Avoid_: version, which is an authored document quality with no mandatory format.
 
 **Corresponding definition**:
-A grouping or affordance in a later Model revision with the same Given Name position, in the corresponding document, as one in the earlier revision. Documents correspond by the key the caller gives each one, which `esdieff diff` takes from the document's location within its revision. A moved or renamed definition has no correspondent, so it reads as a removal and an addition.
+A grouping or affordance in a later Model revision with the same Given Name position, in the corresponding document, as one in the earlier revision. Correspondence rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 _Avoid_: Global name, which many device documents lack.
 
 **Revision comparison**:
@@ -602,7 +608,7 @@ Interaction data a Thing sends to a Client: read or observed Property values, Ac
 Whether data is Client-supplied or Thing-supplied. A Property's effective characteristics decide which directions its data carries.
 
 **Breaking change**:
-A difference between two Model revisions after which an interaction the earlier revision described can fail for a Client, or yield data the Client was not described to receive. Narrowed Client-supplied data, widened Thing-supplied data, a removed grouping or affordance, a Property characteristic that becomes false, input data added to or removed from an Action, output data removed from an Action or Event, a declaration that stops being mandatory, a widened grouping instance count and a change between two established meanings of a unit, Content-Format or `sdfType` are breaking. A difference that only obliges Things to accept or provide more is not, and neither is describing what no Client of the earlier revision uses, such as a map entry it neither describes nor requires or output data an affordance did not have.
+A difference between two Model revisions after which an interaction the earlier revision described can fail for a Client, or yield data the Client was not described to receive. Esdieff's classification rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 _Avoid_: Any difference; Restrictive refinement, which concerns overrides within one model.
 
 **Meaning quality**:
@@ -612,7 +618,7 @@ A data quality that tells a Client how to read a value: `unit`, `contentFormat` 
 A value that one revision's effective data description admits and the other's rejects, in the direction that makes the difference breaking, as established by Sample-value checking against both revisions. A change to the values a data description admits is breaking only with a witness, compatible only with a proof that no witness exists, and otherwise undetermined.
 
 **Representative value**:
-A simple value that an effective data description may admit, generated from its constant, enum values or documentary default, as one value of each type it admits or of each Effective alternative of its choice, or as `null` when it is Nullable. Revision comparison tries it as a candidate Breaking witness from the revision that must admit it, and value generation offers it as a Generated value. Sample-value checking settles each one, so a representative value its own description rejects establishes nothing.
+A candidate value drawn from a data description for use in value generation or as a possible Breaking witness. Its admission is established by Sample-value checking, not by its selection as a representative.
 _Avoid_: Sample value, which a caller supplies.
 
 **Monotone rule**:
@@ -630,7 +636,7 @@ _Avoid_: Acceptance, which names an Acceptance restriction, and baseline, which 
 A breaking or undetermined difference that matches a Difference acknowledgement. It keeps its classification but no longer decides the comparison's disposition.
 
 **Version warning**:
-Advice that a changed document with a Breaking change has a later `info` `version` that is absent or does not compare higher, although RFC 9880 recommends a version that compares higher in every later revision, following [ADR 0044: Versions of breaking revisions](docs/adr/0044-versions-of-breaking-revisions.md). It never decides the comparison's disposition.
+Esdieff advice that a changed document with a Breaking change has a later `info` `version` that is absent or does not compare higher. Its scope follows [ADR 0044: Versions of breaking revisions](docs/adr/0044-versions-of-breaking-revisions.md).
 _Avoid_: Version check, which suggests a required format.
 
 ## Base SDF and extensions
@@ -661,19 +667,39 @@ _Avoid_: Registered prefix, which identifies only the defining organization.
 The normative SDF grammar with liberal extension points, defined in RFC 9880 Appendix A.
 
 **Formal admission**:
-Membership of a supplied value in the applicable normative grammar alternative. A value admitted through a framework extension alternative can have unavailable extension meaning. Formal admission is separate from exact mathematical meaning and actual sample admission, following [ADR 0032: Formal model admission](docs/adr/0032-formal-model-admission.md).
+Esdieff's term for membership of a supplied value in the applicable normative grammar alternative. It is separate from established extension meaning and sample admission, following [ADR 0032: Formal model admission](docs/adr/0032-formal-model-admission.md).
 
 **Validation syntax**:
 The stricter grammar derived by removing the framework syntax's extension points to help detect vocabulary mistakes.
 _Avoid_: Complete semantic checking, which also requires prose requirements and composition processing.
 
 **Augmentation mechanism**:
-Companion information that supplements an SDF model for an ecosystem or another specific use.
+A companion document for an SDF model that supplies additional information for an ecosystem or another specific use.
 
 **Protocol binding**:
-An augmentation mechanism that maps abstract model concepts to a particular ecosystem's network protocols.
+A companion document describing how abstract SDF concepts map to network interactions in a particular ecosystem.
+
+## Draft extension vocabulary
+
+These terms come from the named Internet-Drafts. Their inclusion does not imply implemented Esdieff support. See [the model coverage boundaries](docs/model-coverage-boundaries.md).
+
+**Context**:
+A definition of non-affordance information associated with an Object or Thing, introduced by `sdfContext` in [Non-Affordance Information, revision 06, Section 4](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt).
+_Avoid_: Property affordance, processing context.
+
+**Supplement**:
+A companion document supplying amendments to an SDF model, proposed in the expired [SDF Supplements draft, revision 01](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-mapping-01.html#section-4).
+
+**Augmented model**:
+The abstract model resulting from applying a Supplement to a copy of an SDF model. The Supplements draft distinguishes this operation from `sdfRef` resolution and instantiation.
+
+**Link value**:
+A runtime data value representing a Web Link under the proposed `sdfType: "link"` in [Link sdfType, revision 02](https://www.ietf.org/archive/id/draft-ietf-asdf-sdftype-link-02.html#section-3).
+_Avoid_: `sdfRef`, which reuses a definition during model composition.
 
 ## Conformance
+
+These terms describe Esdieff's standards basis and assessment policies.
 
 **Standards baseline**:
 The RFC, explicitly adopted verified corrections, and recorded external knowledge against which SDF requirements are assessed.
@@ -682,7 +708,7 @@ The RFC, explicitly adopted verified corrections, and recorded external knowledg
 Recorded facts about dated UTC leap adjustments and the interval in which adjustment or nonadjustment is established.
 
 **RFC interpretation**:
-An agreed reading used to resolve an ambiguity or inconsistency in the RFC without intentionally departing from the standard.
+An explicitly recorded Esdieff reading of an ambiguity or inconsistency in the RFC. It is distinct from a verified erratum, an adopted extension and a deliberately accepted departure.
 
 **Agreed deviation**:
 An explicitly accepted departure from an RFC requirement.
@@ -705,8 +731,4 @@ Actual comparison against a recorded registry table, independent of whether a ma
 The common raw registry source from which the unit sections were extracted. Its use identifies at least one consulted section, while each section retains its own extracted identity.
 
 **Consulted format fact**:
-A static specification record actually consumed while a selected Sample request
-assesses a URI, URI-reference or UUID. Its immutable identity, RFC, sections and
-scope describe the consulted rule. Observations survive discarded alternatives
-and late limits; an unavailable initial owner differs from an established empty
-set. See ADR 0019: URI, URI-reference and UUID sample conventions.
+A specification fact consulted while assessing a selected URI, URI-reference or UUID value. Its evidence is described in [the URI and UUID sample contract](docs/uri-uuid-sample-contract.md).

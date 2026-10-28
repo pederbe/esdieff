@@ -5,10 +5,10 @@
 A manufacturer that changes a shared definition needs to know which device
 interfaces now break their clients. RFC 9880 gives `version` no mandatory format
 and defines no compatibility rules, and the
-[Restrictive refinement](../../CONTEXT.md#composition) convention has no general
+[Restrictive refinement](../../GLOSSARY.md#composition) convention has no general
 checking procedure. Esdieff already establishes effective groupings with their
 content origins, exact numbers and Sample-value checking, so a
-[Revision comparison](../../CONTEXT.md#revision-comparison) can reuse them. The
+[Revision comparison](../../GLOSSARY.md#revision-comparison) can reuse them. The
 rules below are Esdieff's own.
 
 ## Decision

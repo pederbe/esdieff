@@ -1,6 +1,6 @@
 # Profiling
 
-Esdieff can be profiled with [hotpath-rs](https://hotpath.rs/) 0.29.2 to see
+Esdieff can be profiled with [hotpath-rs](https://hotpath.rs/) to see
 where time and allocations go. Profiling is off by default. Ordinary
 builds, tests and the published library neither depend on hotpath nor compile
 any instrumentation. The `hotpath` feature turns on timing, and

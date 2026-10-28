@@ -7,7 +7,7 @@ misses a breaking revision that keeps or lowers its version.
 [RFC 9880 Section 3.1](https://www.rfc-editor.org/rfc/rfc9880.html#section-3.1)
 gives `version` no mandatory format but RECOMMENDS one that is lexicographically
 increasing over a model's life, so a newer model's version compares higher than
-every earlier one. A [Revision comparison](../../CONTEXT.md#revision-comparison)
+every earlier one. A [Revision comparison](../../GLOSSARY.md#revision-comparison)
 already finds the Breaking changes of each document pair, following
 [ADR 0039: Client-side revision comparison](0039-client-side-revision-comparison.md).
 In the OneDM playground and exploratory histories, 14 of the 25 first-parent
@@ -21,7 +21,7 @@ document's bytes changed, at least one Breaking change was found in that pair,
 acknowledged or not, and the earlier revision's `info` `version` is text while
 the later revision's is absent or is text that does not compare higher by
 Unicode code point order. The warning is a
-[Version warning](../../CONTEXT.md#revision-comparison) with code
+[Version warning](../../GLOSSARY.md#revision-comparison) with code
 `comparison.version_not_increased`, located at the later version, or at the
 nearest member that would hold an absent one, with the earlier version as
 related evidence. It carries both versions and the pair's breaking count.

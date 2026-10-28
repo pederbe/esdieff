@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["sdf", "iot", "validation", "device-models", "cli"]
 categories = ["command-line-utilities", "development-tools", "parser-implementations"]
 rust-version = "1.99.1"
-include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "CHANGELOG.md", "LICENSE-MIT", "LICENSE-APACHE", "docs/**", "CONTEXT.md"]
+include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "README.md", "CHANGELOG.md", "LICENSE-MIT", "LICENSE-APACHE", "docs/**", "GLOSSARY.md"]
 
 [dependencies]
 cap-std = "=4.0.3"
