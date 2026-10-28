@@ -155,6 +155,7 @@ jobs:
   website:
     needs: [changes, ci]
     if: >-
+      !cancelled() && needs.ci.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.changes.outputs.website == 'true' && vars.WEBSITE_ENABLED == 'true'
     uses: ./.github/workflows/website.yml
