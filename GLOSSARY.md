@@ -544,7 +544,7 @@ Applicable effective data constraints that together admit no values.
 _Avoid_: Definite RFC violation unless a violated requirement is established independently.
 
 **Sample value**:
-Example interaction data whose meaning and constraints are described by an SDF data description.
+Example data for an interaction, reusable data definition or Context, whose meaning and constraints are described by an SDF data description.
 _Avoid_: Protocol payload without an applicable protocol binding.
 
 **Sample projection**:
@@ -553,7 +553,7 @@ _Avoid_: Original sample bytes when referring to generated text.
 
 **Sample-value checking**:
 Assessment of one sample value against a selected effective data description, returning admitted, rejected, or undetermined. Admission is separate from model findings and requested-work completeness, following [ADR 0016: Selected samples with explicit admission and coverage](docs/adr/0016-selected-sample-contract.md).
-_Avoid_: Model checking when assessing example interaction data.
+_Avoid_: Model checking when assessing supplied example data.
 
 **Generated value**:
 A value Esdieff constructs for a selected effective data description, aimed at one Generation target and settled by Sample-value checking. Its admission, not its target, says whether the description admits it, following [ADR 0041: Generated values settled by Sample-value checking](docs/adr/0041-generated-values-settled-by-sample-value-checking.md).

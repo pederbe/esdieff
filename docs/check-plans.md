@@ -127,8 +127,9 @@ uses the native profile defaults.
 
 Each sample case requires a unique `name`, `operation: "sample"`, `document`,
 `kind`, `pointer` and `sample`. `document` names a model key and `sample` names a
-sample key. `kind` is `property`, `data`, `action_input`, `action_output` or
-`event_output`. `pointer` is the effective-definition JSON Pointer, at most
+sample key. `kind` is `property`, `data`, `action_input`, `action_output`,
+`event_output` or `context`. Context selects a definition under an Object or
+Thing. `pointer` is the effective-definition JSON Pointer, at most
 8192 UTF-8 bytes, with ordinary `~0` and `~1` escapes. Action and Event pointers
 select the declaration, and `kind` selects its input or output data description.
 `strict_warnings` defaults to false. Sample cases use the existing Sample

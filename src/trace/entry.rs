@@ -67,7 +67,7 @@ enum Resolution {
 pub(super) struct Selectors<'s, 'm> {
     model: &'s EffectiveModel<'m>,
     /// The resolution of each pointer for each kind, in `SampleKind::ALL` order.
-    resolved: HashMap<String, [Option<Resolution>; 5]>,
+    resolved: HashMap<String, [Option<Resolution>; SampleKind::ALL.len()]>,
 }
 
 impl<'s, 'm> Selectors<'s, 'm> {
@@ -92,7 +92,9 @@ impl<'s, 'm> Selectors<'s, 'm> {
             return resolution;
         }
         let resolution = self.locate(kind, pointer);
-        self.resolved.entry(pointer.to_owned()).or_insert([None; 5])[slot] = Some(resolution);
+        self.resolved
+            .entry(pointer.to_owned())
+            .or_insert([None; SampleKind::ALL.len()])[slot] = Some(resolution);
         resolution
     }
 
@@ -424,7 +426,9 @@ fn members<'s>(root: JsonView<'s>, conditions: &mut Conditions) -> Option<Member
         let invalid = match member.member_name().present() {
             Some("kind") => {
                 seen[0] = true;
-                members.kind = text.and_then(SampleKind::from_name);
+                members.kind = text
+                    .and_then(SampleKind::from_name)
+                    .filter(|kind| *kind != SampleKind::Context);
                 members.kind.is_none().then_some("kind")
             }
             Some("pointer") => {

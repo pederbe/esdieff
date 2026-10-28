@@ -2,7 +2,7 @@
 
 Context definitions describe non-interactive metadata, such as serial numbers, installation locations and calibration offsets. They live under `sdfContext` inside an Object or Thing. A temperature reading that a client reads or observes remains a Property.
 
-Esdieff supports checking, composition and inspection from [draft-ietf-asdf-sdf-nonaffordance-06](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt), dated 27 October 2026. This is draft extension support alongside RFC 9880. Reports record the selected revision and its digest, following [ADR 0046: Inline Context draft support](adr/0046-inline-context-draft-support.md) and [ADR 0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md).
+Esdieff supports checking, composition, inspection and selected-value checking from [draft-ietf-asdf-sdf-nonaffordance-06](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt), dated 27 October 2026. This is draft extension support alongside RFC 9880. Reports record the selected revision and its digest, following [ADR 0046: Inline Context draft support](adr/0046-inline-context-draft-support.md) and [ADR 0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md).
 
 ## Check and inspect
 
@@ -38,6 +38,24 @@ Effective explanations identify inherited, overridden and deleted qualities, the
 
 Missing or ambiguous targets, cycles, exhausted processing budgets and unsupported critical features leave dependent conclusions incomplete. Independent supported checks and subviews remain available. Namespace references use only supplied documents and never fetch a model from the network. A selected-model check excludes an inherited reference deleted by its patch, while a Catalogue check still checks that reference in the supplied donor.
 
+## Check Context values
+
+Use `esdieff sample --kind context` to check one supplied JSON value against a Context definition. The pointer selects its final effective description, including inherited constraints and refinements. A same-name Property uses `--kind property` and its own `sdfProperty` pointer.
+
+The [sample files and Check plan](../examples/context-samples/README.md) use the reuse example above. From the repository root, check a simple asset tag, then a compound location with a required room and an integer floor:
+
+```sh
+esdieff sample --document examples/context-reuse/device.sdf.json --kind context --pointer /sdfThing/Installation/sdfObject/sensor/sdfContext/assetTag --sample examples/context-samples/asset-tag.json examples/context-reuse/base.sdf.json examples/context-reuse/device.sdf.json
+esdieff sample --document examples/context-reuse/device.sdf.json --kind context --pointer /sdfThing/Installation/sdfObject/sensor/sdfContext/location --sample examples/context-samples/location.json examples/context-reuse/base.sdf.json examples/context-reuse/device.sdf.json
+esdieff check --plan examples/context-samples/check-plan.json
+```
+
+Both values are admitted. Replacing the tag with `"A-18"` rejects it against the constant. A location with no `room` is rejected, as is a floor below the refined minimum of 2. Reports retain separate sample and model locations, the Context selector and the existing admission and coverage results. Add `--format json` for the structured report. An unavailable reference, applicable unsupported link meaning or exhausted limit leaves affected work incomplete. A null value with absent `nullable` remains undetermined under the draft policy below.
+
+Rust callers use `SampleKind::Context` with `SampleRequest::new`. An effective Context's `data_description()` also supports `SampleRequest::from_description`, without rebuilding a pointer or interpreting constraints. These follow the [selected-sample contract](sample-contract.md).
+
+This checks the value you supply. It does not establish that Context is present on every Thing, expose a readable, writable or observable endpoint, insert documentary defaults or change the model. Instance-information messages remain outside this operation.
+
 ## Author and edit
 
 The existing Thing-authoring workflow preserves Context groups in selected reusable Objects. Recipe refinements can override, add or delete Context content through the same composition patches used for other supported definitions. Supported Context content participates in authoring fidelity. Unsupported nested vocabulary and unavailable references still leave affected fidelity undetermined. Source and request origins identify inherited content, refinements and deletions.
@@ -56,4 +74,4 @@ Context does not acquire readable, writable or observable Property characteristi
 
 Context-to-Context reuse preserves the same defaults boundary, including nested descriptions. Inherited explicit `nullable` values work normally. Deleting `nullable` restores the unresolved default. Reusing a Context description in a non-Context role remains unavailable, so it cannot silently acquire a withheld default. Factor descriptions intended for sharing across roles or models into `sdfData`, as the draft recommends.
 
-Supplied-value selection, generated vectors, traces and revision differences retain their separate support boundaries. Runtime metadata messages and transport bindings are outside this workflow.
+Generated vectors, traces and revision differences retain their separate support boundaries. Runtime metadata messages and transport bindings are outside this workflow.

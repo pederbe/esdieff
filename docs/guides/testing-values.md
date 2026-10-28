@@ -33,7 +33,7 @@ source 2 ""
 ...
 </code></pre>
 
-The reports are trimmed to the lines about the sample. A rejected sample is a failed check with exit status 1, and the finding names the rule it broke and where that rule is defined. The other kinds are `data` for an `sdfData` definition, `action_input`, `action_output` and `event_output`, which select the data an action or event carries. Numbers compare exactly, so `30.0` and `30` are the same value and `0.1` is never rounded.
+The reports are trimmed to the lines about the sample. A rejected sample is a failed check with exit status 1, and the finding names the rule it broke and where that rule is defined. The other kinds are `data` for an `sdfData` definition, `action_input`, `action_output` and `event_output`, which select the data an action or event carries, and `context` for non-interactive metadata under an Object or Thing. Follow the [Context value example](../context-contract.md#check-context-values) to check a simple asset tag and compound location data. Numbers compare exactly, so `30.0` and `30` are the same value and `0.1` is never rounded.
 
 ## Generate values for every rule
 

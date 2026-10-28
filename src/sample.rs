@@ -118,15 +118,18 @@ pub enum SampleKind {
     ActionInput,
     ActionOutput,
     EventOutput,
+    /// Non-interactive metadata declared under an Object or Thing.
+    Context,
 }
 impl SampleKind {
     /// Every kind, in the order the selector contract lists them.
-    pub(crate) const ALL: [Self; 5] = [
+    pub(crate) const ALL: [Self; 6] = [
         Self::Property,
         Self::Data,
         Self::ActionInput,
         Self::ActionOutput,
         Self::EventOutput,
+        Self::Context,
     ];
     /// The kind whose name `as_str` gives, such as `action_input`.
     pub fn from_name(name: &str) -> Option<Self> {
@@ -139,6 +142,7 @@ impl SampleKind {
             Self::ActionInput => "action_input",
             Self::ActionOutput => "action_output",
             Self::EventOutput => "event_output",
+            Self::Context => "context",
         }
     }
     fn class(self) -> Class {
@@ -147,6 +151,7 @@ impl SampleKind {
             Self::Data => Class::Data,
             Self::ActionInput | Self::ActionOutput => Class::Action,
             Self::EventOutput => Class::Event,
+            Self::Context => Class::Context,
         }
     }
     pub(crate) fn suffix(self) -> &'static str {
@@ -255,6 +260,7 @@ pub(crate) fn description_root(
     match json.n().role {
         Some(Role::Definition(Class::Property)) => Ok((SampleKind::Property, json.node)),
         Some(Role::Definition(Class::Data)) => Ok((SampleKind::Data, json.node)),
+        Some(Role::Definition(Class::Context)) => Ok((SampleKind::Context, json.node)),
         Some(Role::Data) => {
             let parent = json
                 .n()
