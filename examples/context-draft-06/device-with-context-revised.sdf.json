@@ -1,0 +1,38 @@
+{
+  "info": {
+    "title": "Example document for sdfContext",
+    "version": "2026-10-28",
+    "copyright": "Copyright 2026 Example Corp. All rights reserved.",
+    "license": "https://example.com/license"
+  },
+  "namespace": {
+    "cap": "https://example.com/capability/cap"
+  },
+  "defaultNamespace": "cap",
+  "sdfObject": {
+    "deviceWithContext": {
+      "sdfProperty": {
+        "temperature": {
+          "type": "number",
+          "unit": "°C"
+        }
+      },
+      "sdfContext": {
+        "serialNumber": {
+          "type": "string",
+          "description": "Unique factory-assigned identifier"
+        },
+        "installationLocation": {
+          "type": "string",
+          "description": "Installation location in the building"
+        },
+        "calibrationOffset": {
+          "type": "number",
+          "maximum": 5,
+          "unit": "°C",
+          "description": "Offset applied to raw measurements"
+        }
+      }
+    }
+  }
+}

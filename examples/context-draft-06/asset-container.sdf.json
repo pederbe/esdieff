@@ -1,0 +1,27 @@
+{
+  "sdfObject": {
+    "assetContainer": {
+      "description": "Shipping container with embedded sensors",
+      "sdfContext": {
+        "physicalSpecs": {
+          "description": "Physical dimensions and capacity",
+          "type": "object",
+          "properties": {
+            "length": { "type": "number", "unit": "m" },
+            "width": { "type": "number", "unit": "m" },
+            "height": { "type": "number", "unit": "m" },
+            "maxLoadKg": { "type": "number", "unit": "kg" }
+          },
+          "required": ["length", "width", "height", "maxLoadKg"]
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lon": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}
