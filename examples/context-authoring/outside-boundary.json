@@ -1,0 +1,13 @@
+{
+  "key": "inherited-context-edit",
+  "source": "installation",
+  "generated_key": "refused",
+  "edits": [
+    {
+      "owner": "/sdfThing/Installation/sdfObject/sensor/sdfContext/calibration",
+      "quality": "maximum",
+      "operation": "replace",
+      "value": 1
+    }
+  ]
+}

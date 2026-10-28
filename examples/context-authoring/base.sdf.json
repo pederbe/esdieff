@@ -1,0 +1,24 @@
+{
+  "namespace": { "base": "https://example.com/context-authoring/base" },
+  "defaultNamespace": "base",
+  "sdfData": {
+    "Offset": { "type": "number", "unit": "Cel", "minimum": -10, "maximum": 10, "nullable": false }
+  },
+  "sdfObject": {
+    "Sensor": {
+      "sdfContext": {
+        "calibration": { "sdfRef": "#/sdfData/Offset", "description": "Factory calibration" },
+        "siteName": {
+          "type": "string",
+          "label": "Site name",
+          "description": "Installation name",
+          "minLength": 1,
+          "const": "Office",
+          "nullable": false
+        },
+        "retired": { "type": "string", "nullable": false }
+      },
+      "sdfProperty": { "temperature": { "type": "number", "unit": "Cel" } }
+    }
+  }
+}

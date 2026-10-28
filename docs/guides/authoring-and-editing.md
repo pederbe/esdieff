@@ -212,5 +212,7 @@ Lowering the maximum is breaking, because an app that used to write 30 would now
 
 ## Where to go next
 
+The [Context authoring example](../../examples/context-authoring/README.md) assembles a sensor with non-interactive calibration metadata, refines its limits and edits an authored site-name definition. Context uses the existing recipe and editing plans, with the same source-preservation guarantees and `sdfRef` ownership restrictions. See the [Context draft policy](../context-contract.md) for its defaults and requiredness boundaries.
+
 - [Inspect and check a model](inspect-and-check.md) checks the generated documents with their dependencies.
 - [Use the Rust library](../rust-library.md) builds the same requests from Rust with `AuthorRequest` and `EditRequest`.

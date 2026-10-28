@@ -1,0 +1,29 @@
+{
+  "key": "site-name-edits",
+  "source": "base",
+  "generated_key": "revised-base",
+  "edits": [
+    {
+      "owner": "/sdfObject/Sensor/sdfContext/siteName",
+      "quality": "description",
+      "operation": "replace",
+      "value": "Site name chosen during installation"
+    },
+    {
+      "owner": "/sdfObject/Sensor/sdfContext/siteName",
+      "quality": "label",
+      "operation": "remove"
+    },
+    {
+      "owner": "/sdfObject/Sensor/sdfContext/siteName",
+      "quality": "minLength",
+      "operation": "replace",
+      "value": 2
+    },
+    {
+      "owner": "/sdfObject/Sensor/sdfContext/siteName",
+      "quality": "const",
+      "operation": "remove"
+    }
+  ]
+}

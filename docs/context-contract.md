@@ -38,6 +38,14 @@ Effective explanations identify inherited, overridden and deleted qualities, the
 
 Missing or ambiguous targets, cycles, exhausted processing budgets and unsupported critical features leave dependent conclusions incomplete. Independent supported checks and subviews remain available. Namespace references use only supplied documents and never fetch a model from the network. A selected-model check excludes an inherited reference deleted by its patch, while a Catalogue check still checks that reference in the supplied donor.
 
+## Author and edit
+
+The existing Thing-authoring workflow preserves Context groups in selected reusable Objects. Recipe refinements can override, add or delete Context content through the same composition patches used for other supported definitions. Supported Context content participates in authoring fidelity. Unsupported nested vocabulary and unavailable references still leave affected fidelity undetermined. Source and request origins identify inherited content, refinements and deletions.
+
+The existing editing workflow can replace or remove present supported common and data qualities on authored Context definitions under an Object or Thing. It uses the same quality set as `sdfData`, listed in the [editing contract](editing-contract.md). Owners inside an authored `sdfRef` boundary, nested anonymous data descriptions and unsupported qualities remain request errors. Editing preserves unrelated content and exact number spellings under the existing source-preservation contract.
+
+Follow the [authoring and editing example](../examples/context-authoring/README.md) to assemble a sensor, refine its Context and edit an authored site-name definition. Both commands accept `--check full-baseline` to check the generated model under the recorded Context draft policy. Generation, fidelity and requested checking retain their independent outcomes. A failed or unfinished requested check prevents ordinary document delivery.
+
 ## Semantic boundaries
 
 The draft imports RFC data qualities but also says absent qualities have no assumed defaults. Effective Context descriptions, including nested descriptions and alternatives, therefore leave absent `nullable` meaning unavailable. Source views retain the authored absence. Explicit `nullable` values work normally, and independent checks continue. For example, checking a declared `const: null` may be undetermined when `nullable` is absent, while an independent numerical constraint can still be assessed. Base-SDF descriptions keep their established nullable default.
@@ -48,4 +56,4 @@ Context does not acquire readable, writable or observable Property characteristi
 
 Context-to-Context reuse preserves the same defaults boundary, including nested descriptions. Inherited explicit `nullable` values work normally. Deleting `nullable` restores the unresolved default. Reusing a Context description in a non-Context role remains unavailable, so it cannot silently acquire a withheld default. Factor descriptions intended for sharing across roles or models into `sdfData`, as the draft recommends.
 
-Authoring, editing, supplied-value selection, generated vectors, traces and revision differences retain their separate support boundaries. Runtime metadata messages and transport bindings are outside this workflow.
+Supplied-value selection, generated vectors, traces and revision differences retain their separate support boundaries. Runtime metadata messages and transport bindings are outside this workflow.

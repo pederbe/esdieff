@@ -575,7 +575,7 @@ fn context_changes_stay_unclassified_until_context_comparison_is_supported() {
 }
 
 #[test]
-fn context_authoring_fidelity_and_editing_keep_their_existing_support_boundary() {
+fn inline_context_authoring_and_editing_do_not_require_a_model_check() {
     let source = br#"{"namespace":{"own":"https://example.com/context"},"defaultNamespace":"own","sdfObject":{"O":{"sdfContext":{"c":{"type":"string","label":"serial"}}}}}"#;
     let inputs = catalogue(source);
     let id = inputs.source_id("model").unwrap();
@@ -592,15 +592,18 @@ fn context_authoring_fidelity_and_editing_keep_their_existing_support_boundary()
         .author()
         .unwrap();
     assert_eq!(result.generation(), esdieff::Generation::Complete);
-    assert_eq!(result.fidelity(), esdieff::Fidelity::Undetermined);
+    assert_eq!(result.fidelity(), esdieff::Fidelity::Established);
+    assert!(result.document_deliverable());
     let inputs = catalogue(source);
     let id = inputs.source_id("model").unwrap();
     let result = esdieff::EditRequest::new(inputs, "edit", id, "result")
         .unwrap()
         .with_edit(esdieff::Edit::remove("/sdfObject/O/sdfContext/c", "label").unwrap())
         .unwrap()
-        .edit();
-    assert!(result.err().unwrap().contains("Context editing"));
+        .edit()
+        .unwrap();
+    assert_eq!(result.fidelity(), esdieff::Fidelity::Established);
+    assert!(result.document_deliverable());
 }
 
 #[test]
