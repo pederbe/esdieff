@@ -112,6 +112,55 @@ fn passing_entries_exit_0_and_only_undetermined_entries_exit_3() {
 }
 
 #[test]
+fn unavailable_direct_item_meaning_is_explained_in_json_and_human_reports() {
+    let model = TempFile::new(
+        r#"{"sdfProperty":{"readings":{"type":"array","items":{"type":"string","pattern":"^a$"}}}}"#,
+    );
+    let file = TempFile::new(concat!(
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/readings\",\"value\":[\"a\"]}\n",
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/readings\",\"value\":[\"b\"]}\n",
+    ));
+    for format in ["json", "human"] {
+        let output = run(&[
+            "trace",
+            "--document",
+            model.path(),
+            "--trace",
+            file.path(),
+            "--format",
+            format,
+            "--color",
+            "never",
+            model.path(),
+        ]);
+        exits(&output, 3);
+        assert!(output.stderr.is_empty());
+        let text = String::from_utf8(output.stdout).unwrap();
+        if format == "json" {
+            let report: Value = serde_json::from_str(&text).unwrap();
+            assert_eq!(report["version"], "1.5");
+            assert_eq!(report["result"]["summary"]["undetermined"], 2);
+            for entry in report["result"]["entries"].as_array().unwrap() {
+                assert_eq!(entry["admission"], "undetermined");
+                let condition = &entry["conditions"][0];
+                assert_eq!(condition["code"], "sample.coverage_unavailable");
+                assert_eq!(condition["severity"], "incomplete");
+                assert_eq!(condition["primary"]["pointer"], "/value");
+                assert_eq!(condition["basis"]["id"], "sample-establishment");
+                assert_eq!(entry["conditions_omitted"], 0);
+            }
+        } else {
+            assert!(
+                text.contains("0 passed, 0 failed, 2 undetermined"),
+                "{text}"
+            );
+            assert_eq!(text.matches("sample.coverage_unavailable").count(), 2);
+            assert!(text.contains("Sample admission requires checks that could not be completed"));
+        }
+    }
+}
+
+#[test]
 fn the_trace_can_come_from_standard_input() {
     let model = TempFile::new(THERMOSTAT);
     let mut child = Command::new(env!("CARGO_BIN_EXE_esdieff"))
