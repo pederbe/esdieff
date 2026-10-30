@@ -138,6 +138,61 @@ fn unchanged_and_documentation_only_weeks_do_not_modify_metadata() {
 }
 
 #[test]
+fn dated_changelogs_prepare_against_legacy_and_dated_release_tags() {
+    for legacy in [true, false] {
+        let fixture = Fixture::new();
+        let (previous, next) = if legacy {
+            ("v0.1.0", "0.1.1")
+        } else {
+            fixture.write(
+                "CHANGELOG.md",
+                "# Changelog\n\n## [0.1.1] - 2026-10-30\n\nFirst fix.\n\n## [0.1.0] - 2026-10-27\n\nInitial release.\n",
+            );
+            fixture.commit("Release 0.1.1", "");
+            fixture.git(&["tag", "v0.1.1"]);
+            ("v0.1.1", "0.1.2")
+        };
+        let dated = fixture
+            .read("CHANGELOG.md")
+            .replace("## [Unreleased]\n\n", "");
+        fixture.write("CHANGELOG.md", &dated);
+        fixture.write("src/main.rs", "fn main() {}\n");
+        fixture.commit("fix: Handle the next change", "");
+        passed(fixture.prepare(previous, "auto", None));
+        let changelog = fixture.read("CHANGELOG.md");
+        assert!(changelog.starts_with(&format!("# Changelog\n\n## [{next}] - 2026-11-02\n")));
+        assert!(!changelog.contains("## [Unreleased]"));
+        assert_eq!(changelog.matches("Initial release.").count(), 1);
+        if !legacy {
+            assert_eq!(changelog.matches("First fix.").count(), 1);
+        }
+    }
+}
+
+#[test]
+fn malformed_changelogs_do_not_modify_release_metadata() {
+    for changelog in [
+        "# Changelog\n",
+        "# Changelog\n\n## [Unreleased]\n\n- A pending fix.\n",
+        "# Changelog\n\n## [Soon] - 2026-10-30\n\nA fix.\n",
+        "# Changelog\n\n## [0.1.0] - not-a-date\n\nA fix.\n",
+        "# Changelog\n\n## [0.1.0] - 2026-10-27\n\nInitial.\n\n## [Unreleased]\n",
+    ] {
+        let fixture = Fixture::new();
+        fixture.write("CHANGELOG.md", changelog);
+        fixture.write("src/main.rs", "fn main() {}\n");
+        fixture.commit("fix: Handle the next change", "");
+        let manifest = fixture.read("Cargo.toml");
+        let lock = fixture.read("Cargo.lock");
+        assert!(!fixture.prepare("v0.1.0", "auto", None).status.success());
+        assert_eq!(fixture.read("Cargo.toml"), manifest);
+        assert_eq!(fixture.read("Cargo.lock"), lock);
+        assert_eq!(fixture.read("CHANGELOG.md"), changelog);
+        assert!(!fixture.output.exists());
+    }
+}
+
+#[test]
 fn every_commit_enters_notes_and_root_versions_stay_consistent() {
     let fixture = Fixture::new();
     fixture.write("README.md", "New guide\n");
@@ -163,6 +218,8 @@ fn every_commit_enters_notes_and_root_versions_stay_consistent() {
     assert!(lock.contains("name = \"esdieff\"\nversion = \"0.1.1\""));
     assert!(lock.contains("name = \"dependency\"\nversion = \"0.1.0\""));
     let changelog = fixture.read("CHANGELOG.md");
+    assert!(changelog.starts_with("# Changelog\n\n## [0.1.1] - 2026-11-02\n"));
+    assert!(!changelog.contains("## [Unreleased]"));
     for text in [
         "Explain supplied models",
         "supplier workflow",
@@ -243,6 +300,8 @@ fn metadata_tags_do_not_loop_and_later_releases_keep_history_once() {
     fixture.commit("Handle a later change", "");
     passed(fixture.prepare("v0.2.0", "auto", None));
     let changelog = fixture.read("CHANGELOG.md");
+    assert!(changelog.starts_with("# Changelog\n\n## [0.2.1] - 2026-11-02\n"));
+    assert!(!changelog.contains("## [Unreleased]"));
     for text in [
         "## [0.2.1]",
         "## [0.2.0]",
