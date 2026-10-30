@@ -169,18 +169,27 @@ fn independent_text_rejection_preserves_unfinished_pattern_and_equality_obligati
         ),
     ] {
         let model = format!(r#"{{"sdfProperty":{{"p":{{"type":"string",{extra}}}}}}}"#);
-        let catalogue = Catalogue::from_inputs(&[
-            SourceInput::supplied("m", model.as_bytes()),
-            SourceInput::supplied("s", br#""on""#).sample(),
-        ])
+        let catalogue = Catalogue::with_limits(
+            &[
+                SourceInput::supplied("m", model.as_bytes()),
+                SourceInput::supplied("s", br#""on""#).sample(),
+            ],
+            Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
+        )
         .unwrap();
         let report = selected(&catalogue);
         assert_eq!(
             report.sample_result().unwrap().admission(),
             expected,
-            "{extra}"
+            "{extra}: {}",
+            report.to_json()
         );
-        assert_eq!(report.outcome().complete(), complete, "{extra}");
+        assert_eq!(
+            report.outcome().complete(),
+            complete,
+            "{extra}: {}",
+            report.to_json()
+        );
         assert_eq!(
             report
                 .sample_result()
@@ -189,7 +198,8 @@ fn independent_text_rejection_preserves_unfinished_pattern_and_equality_obligati
                 .require()
                 .unwrap(),
             text_status,
-            "{extra}"
+            "{extra}: {}",
+            report.to_json()
         );
         assert_eq!(
             report.outcome().errors(),
