@@ -148,14 +148,39 @@ fn bump(mut old: [u64; 3], breaking: bool) -> Result<[u64; 3]> {
     Ok(old)
 }
 
-fn unreleased(changelog: &str) -> Result<(&str, &str)> {
-    let (intro, rest) = changelog
-        .split_once("## [Unreleased]\n")
-        .ok_or("missing Unreleased changelog heading")?;
-    let (authored, _) = rest
-        .split_once("\n## [")
-        .ok_or("missing previous changelog section")?;
-    Ok((intro, authored))
+fn release_date(date: &str) -> bool {
+    date.len() == 10
+        && date.bytes().enumerate().all(|(index, byte)| {
+            if index == 4 || index == 7 {
+                byte == b'-'
+            } else {
+                byte.is_ascii_digit()
+            }
+        })
+}
+
+// Finalized changelogs need no placeholder for work that has not happened yet.
+// Older tags may still have one, so keep authored entries separate from history.
+fn changelog_sections(changelog: &str) -> Result<(&str, &str, &str)> {
+    let (intro, first) = changelog
+        .split_once("## [")
+        .ok_or("missing changelog release section")?;
+    let (authored, history) = if let Some(rest) = first.strip_prefix("Unreleased]\n") {
+        rest.split_once("\n## [")
+            .ok_or("missing previous changelog section")?
+    } else {
+        ("", first)
+    };
+    let (released, date) = history
+        .lines()
+        .next()
+        .and_then(|heading| heading.split_once("] - "))
+        .ok_or("missing dated changelog release section")?;
+    version(released)?;
+    if !release_date(date) || history.contains("\n## [Unreleased]") {
+        return Err("invalid changelog release history".into());
+    }
+    Ok((intro, authored, history))
 }
 
 // Keep authored bullets together with their continuation lines.
@@ -208,15 +233,7 @@ pub(crate) fn prepare(args: &[String]) -> Result<()> {
     }
     let root = std::env::current_dir()?;
     let old = version(previous)?;
-    if date.len() != 10
-        || !date.bytes().enumerate().all(|(index, byte)| {
-            if index == 4 || index == 7 {
-                byte == b'-'
-            } else {
-                byte.is_ascii_digit()
-            }
-        })
-    {
+    if !release_date(date) {
         return Err("expected release date YYYY-MM-DD".into());
     }
     if !["auto", "minor", "major"].contains(&mode.as_str()) {
@@ -307,19 +324,13 @@ pub(crate) fn prepare(args: &[String]) -> Result<()> {
     let manifest = replace_manifest_version(&manifest, &next)?;
     let lock = replace_lock_version(&read(root.join("Cargo.lock"))?, &next)?;
     let changelog = read(root.join("CHANGELOG.md"))?;
-    let (intro, authored) = unreleased(&changelog)?;
+    let (intro, authored, _) = changelog_sections(&changelog)?;
     let previous_changelog =
         git(&root, &["show", &format!("{previous}:CHANGELOG.md")])?.replace("\r\n", "\n");
-    let (_, prior_sections) = previous_changelog
-        .split_once("## [Unreleased]\n")
-        .ok_or("previous release lacks Unreleased heading")?;
-    let history = prior_sections
-        .split_once("\n## [")
-        .ok_or("previous release lacks version history")?
-        .1;
+    let (_, _, history) = changelog_sections(&previous_changelog)?;
     let prior_source =
         git(&root, &["show", &format!("{base}:CHANGELOG.md")])?.replace("\r\n", "\n");
-    let (_, prior_authored) = unreleased(&prior_source)?;
+    let (_, prior_authored, _) = changelog_sections(&prior_source)?;
     let mut notes = authored_delta(authored, prior_authored);
     notes.push_str("\n\n");
     for (heading, entries) in ["Breaking changes", "Added", "Fixed", "Other changes"]
@@ -334,7 +345,7 @@ pub(crate) fn prepare(args: &[String]) -> Result<()> {
         "[Full comparison]({REPOSITORY}/compare/{previous}...v{next})\n"
     ));
     let changelog = format!(
-        "{intro}## [Unreleased]\n\n## [{next}] - {date}\n\n{}\n\n## [{history}",
+        "{intro}## [{next}] - {date}\n\n{}\n\n## [{history}",
         notes.trim()
     );
     let changelog = changelog

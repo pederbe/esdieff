@@ -34,6 +34,7 @@ jobs:
       docs: ${{ steps.paths.outputs.docs }}
       styles: ${{ steps.paths.outputs.styles }}
       website: ${{ steps.paths.outputs.website }}
+      release_changelog: ${{ steps.paths.outputs.release_changelog }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,15 +51,20 @@ jobs:
           docs=false
           styles=false
           website=false
+          release_changelog=false
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             rust=true
             docs=true
             styles=true
             website=true
+            release_changelog=true
           else
             git diff --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
             while IFS= read -r -d '' path; do
               case "$path" in
+                tools/release-changelog/*|scripts/check-release-changelog.sh|scripts/record-release-changelog.sh|scripts/configure-release-changelog.sh|scripts/prepare-release.sh|.github/workflows/release-changelog.yml|.github/workflows/release-changelog-check.yml)
+                  release_changelog=true
+                  ;;
                 site/*|tools/site/*)
                   docs=true
                   styles=true
@@ -79,7 +85,7 @@ jobs:
               esac
             done < "$RUNNER_TEMP/changed-paths"
           fi
-          printf 'rust=%s\ndocs=%s\nstyles=%s\nwebsite=%s\n' "$rust" "$docs" "$styles" "$website" >> "$GITHUB_OUTPUT"
+          printf 'rust=%s\ndocs=%s\nstyles=%s\nwebsite=%s\nrelease_changelog=%s\n' "$rust" "$docs" "$styles" "$website" "$release_changelog" >> "$GITHUB_OUTPUT"
 
   checks:
     name: Checks (${{ matrix.os }})
@@ -109,6 +115,22 @@ jobs:
           key: checks-${{ matrix.os }}
       - name: Run maintained checks
         run: bash scripts/check.sh
+
+  release-changelog:
+    name: Release changelog tooling
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.release_changelog == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: '1.99.1'
+          components: rustfmt, clippy
+      - run: bash scripts/check-release-changelog.sh
 
   docs:
     name: Documentation
@@ -167,7 +189,7 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, checks, docs, artifacts]
+    needs: [changes, checks, release-changelog, docs, artifacts]
     if: always() && (github.repository == 'pederbe/esdieff' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -180,6 +202,8 @@ jobs:
           ARTIFACTS_RESULT: ${{ needs.artifacts.result }}
           RUST_SELECTED: ${{ needs.changes.outputs.rust }}
           DOCS_SELECTED: ${{ needs.changes.outputs.docs }}
+          RELEASE_CHANGELOG_SELECTED: ${{ needs.changes.outputs.release_changelog }}
+          RELEASE_CHANGELOG_RESULT: ${{ needs.release-changelog.result }}
         run: |
           set -euo pipefail
           test "$CHANGES_RESULT" = success
@@ -189,6 +213,11 @@ jobs:
           else
             test "$CHECKS_RESULT" = skipped
             test "$ARTIFACTS_RESULT" = skipped
+          fi
+          if [ "$RUST_SELECTED" = true ] || [ "$RELEASE_CHANGELOG_SELECTED" = true ]; then
+            test "$RELEASE_CHANGELOG_RESULT" = success
+          else
+            test "$RELEASE_CHANGELOG_RESULT" = skipped
           fi
           if [ "$DOCS_SELECTED" = true ]; then
             test "$DOCS_RESULT" = success

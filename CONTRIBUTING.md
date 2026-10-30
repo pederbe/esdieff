@@ -29,6 +29,13 @@ changes since the previous published release. Check feature coverage, fixes,
 support boundaries and upgrade instructions. The generated commit history
 supplements this user-facing summary and does not replace it.
 
+Release preparation automatically replaces Unreleased with the selected version
+and UTC date. The release tool accepts dated-only changelogs and omits empty
+pending headings. After publication, the Release changelog workflow records the
+dated notes on `main` through a checked pull request. It preserves entries added
+after the candidate was frozen. Its manual check-only mode and retry operate on
+the published tag without rebuilding or republishing it.
+
 For an incompatible command-line, report or file-format change, include a
 `BREAKING CHANGE:` explanation in the final squash commit. Automatic releases
 use this marker to select a major increment, or a minor increment before 1.0.
