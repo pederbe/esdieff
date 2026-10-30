@@ -876,38 +876,14 @@ impl<'c, 'a> Walk<'c, 'a> {
     }
 
     /// Context is compared as non-interactive metadata, without proving compatibility for
-    /// metadata consumers. Scan its whole effective content first: a definite structural
-    /// difference must not conceal an unresolved reference elsewhere in the same Context.
+    /// metadata consumers. The structural reader establishes availability before equality.
     fn context(&mut self, members: Members<'c>) -> Step<()> {
         let subject = DifferenceSubject::Definition(Class::Context);
         let sides = self.present_sides(members);
-        let mut pending = Vec::new();
-        for json in members.into_iter().flatten() {
-            if !available_map(json) {
-                self.unavailable_record(subject, 0, unavailable_reason(json), sides);
-                return Ok(());
-            }
-            keep(&mut pending, json, self.allowance)?;
-        }
-        while let Some(json) = pending.pop() {
-            self.charge(1)?;
-            if let Some(reason) = read::unavailable_value(json) {
-                self.unavailable_record(subject, 0, reason, sides);
-                return Ok(());
-            }
-            for child in json.children() {
-                self.charge(1)?;
-                if json.kind() == JsonKind::Map && !matches!(child.member_name(), Field::Present(_))
-                {
-                    self.unavailable_record(subject, 0, identity_unavailable(), sides);
-                    return Ok(());
-                }
-                keep(&mut pending, child, self.allowance)?;
-            }
-        }
-        let (kind, equality) = match members {
-            [Some(earlier), Some(later)] => (DifferenceKind::Changed, self.equal(earlier, later)?),
-            _ => (removal(members), Equality::Different),
+        let equality = read::context_equal(members, self.allowance)?;
+        let kind = match members {
+            [Some(_), Some(_)] => DifferenceKind::Changed,
+            _ => removal(members),
         };
         match equality {
             Equality::Equal => {}

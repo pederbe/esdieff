@@ -76,6 +76,39 @@ pub(super) enum Equality {
     Unavailable(UndeterminedReason),
 }
 
+/// Compare Context structure only after establishing that all present content is available,
+/// following ADR 0049. A definite difference must not hide unavailable content elsewhere.
+/// At least one revision supplies the Context; additions and removals need the same scan.
+pub(super) fn context_equal(
+    members: [Option<EffectiveJson<'_>>; 2],
+    allowance: &mut ValueAllowance,
+) -> Result<Equality, UndeterminedReason> {
+    let mut pending = Vec::new();
+    for json in members.into_iter().flatten() {
+        if failure(json).is_some() || json.kind() != JsonKind::Map {
+            return Ok(Equality::Unavailable(unavailable_reason(json)));
+        }
+        kept(&mut pending, json, &mut allowance.budget)?;
+    }
+    while let Some(json) = pending.pop() {
+        work(&mut allowance.budget, 1)?;
+        if let Some(reason) = unavailable_value(json) {
+            return Ok(Equality::Unavailable(reason));
+        }
+        for child in json.children() {
+            work(&mut allowance.budget, 1)?;
+            if json.kind() == JsonKind::Map && !matches!(child.member_name(), Field::Present(_)) {
+                return Ok(Equality::Unavailable(identity_unavailable()));
+            }
+            kept(&mut pending, child, &mut allowance.budget)?;
+        }
+    }
+    match members {
+        [Some(earlier), Some(later)] => equal(earlier, later, allowance),
+        _ => Ok(Equality::Different),
+    }
+}
+
 /// A structural comparison with exact numbers, decoded text, ordered arrays and unordered
 /// maps. Content it calls equal has equal values under ADR 0015: Bounded value equality in a
 /// resolved data context, but it reads no data context, so a difference may be one of
@@ -303,7 +336,7 @@ pub(super) fn unavailable_reason(json: EffectiveJson<'_>) -> UndeterminedReason 
 
 /// A node's unavailable value, including decoded scalars whose enclosing
 /// maps can differ structurally before equality reaches that scalar.
-pub(super) fn unavailable_value(json: EffectiveJson<'_>) -> Option<UndeterminedReason> {
+fn unavailable_value(json: EffectiveJson<'_>) -> Option<UndeterminedReason> {
     if failure(json).is_some() {
         return Some(unavailable_reason(json));
     }
