@@ -266,7 +266,6 @@ fn structural_changes_and_unavailable_values_do_not_gain_implementer_proofs() {
     let before = json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false}}}}});
     for after in [
         json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":true}}}}}),
-        json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false}},"sdfRequired":["#/sdfObject/Device/sdfProperty/value"]}}}),
         json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false,"sdfRef":"#/missing"}}}}}),
     ] {
         let earlier = catalogue(&[("model", &before.to_string())]);

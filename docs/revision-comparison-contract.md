@@ -13,10 +13,11 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/5`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/6`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/5` adds the implementer
-perspective to `/4`, which introduced pattern-aware representative candidates.
+This page describes the current checkout. Contract `/6` adds implementer
+declaration-requiredness classifications to `/5`, which introduced the
+implementer perspective.
 The serialized comparison envelope is version `1.7` independently of this
 classification-contract identity.
 
@@ -55,8 +56,14 @@ an optional input entry admits non-integer values, so an existing implementation
 can need change even though the entry remains optional. Adding that constraint
 to an output entry can likewise invalidate an implementation's existing output.
 
-The initial implementer perspective leaves endpoint additions and removals,
-declaration requiredness, grouping counts, Property capability changes and whole
+Implementer comparison also classifies [declaration requiredness](#requiredness)
+under [ADR 0054: Implementer declaration requiredness](adr/0054-implementer-declaration-requiredness.md).
+Making a corresponding declaration mandatory can require an existing
+implementation to change, so it is breaking. Releasing obligations alone is
+compatible. These are Esdieff compatibility rules, not rules supplied by RFC 9880.
+
+The implementer perspective leaves endpoint additions and removals,
+grouping counts, Property capability changes and whole
 Action/Event input or output additions and removals undetermined. These need
 separate obligation rules rather than reversal of the client rules. Documentary
 changes remain compatible. Context metadata compatibility remains outside scope
@@ -70,6 +77,12 @@ Markdown reports state the selected perspective. JSON records it in
 when there are no differences. Acknowledgements retain file format `1` and do
 not bind entries to a perspective. Export and review them using the perspective
 you intend to assess.
+
+Contract `/6` classifies requiredness changes that `/5` left undetermined for
+implementers. Review intended differences again. An old undetermined
+acknowledgement does not match a newly breaking or compatible classification,
+so acknowledgement files may need regeneration. Diff envelope `1.7` and
+acknowledgement format `1` are unchanged.
 
 ## Context metadata
 
@@ -399,11 +412,41 @@ is not classified.
 
 Each grouping's mandatory declarations come from its Required declaration relationships, following [ADR 0026: Required declaration relationships and source evidence](adr/0026-required-declaration-relationships-and-source-evidence.md). An `sdfRequired` entry of a grouping makes the declaration it selects mandatory in that grouping. An affordance's `sdfRequired` and a `true` carrier belong to the grouping that encloses the definition carrying them, so a carrier makes its own affordance or grouping mandatory there. A declaration required from an enclosing grouping is represented only inside the groupings between them, so those groupings are mandatory there too, and the declaration is mandatory in each of them. Requiredness then closes through mandatory groupings: whatever is mandatory in a mandatory grouping is also mandatory in the grouping that requires it.
 
-Corresponding groupings compare these closures at every depth, and declarations correspond by their position in the document. A declaration that both revisions have and that stops being mandatory in a grouping is breaking, because a Thing may now omit what a Client uses. A declaration that becomes mandatory only obliges Things to provide more, so it is compatible. A declaration that only one revision has is a removed or added definition of its own and does not count here. Each grouping whose mandatory declarations change has one changed `sdfRequired` quality, located at that grouping's `sdfRequired`, present or absent, and it affects no data direction. It is breaking when any declaration stops being mandatory there, even when others become mandatory.
+Corresponding groupings compare these closures at every depth. Declarations
+correspond by document, class and Given Name path after composition. Restrict
+each closure to declarations present at corresponding positions in both
+revisions, then compare the resulting mandatory sets.
 
-Since requiredness is compared after resolution, `"temp"`, `"#/sdfObject/Oven/sdfProperty/temp"` and a `true` carrier in `temp` spell one requirement, and replacing one with another is no change. A requirement that a Thing moves to a required Object inside it, which then requires the declaration itself, is no change either. An Object that keeps requiring `temp` while its enclosing Thing stops requiring it is breaking at the Thing, because the Object may now be absent.
+| Change to corresponding declarations | Client perspective | Implementer perspective |
+| --- | --- | --- |
+| Only new obligations | Compatible | Breaking |
+| Only released obligations | Breaking | Compatible |
+| Both new and released obligations | Breaking | Breaking |
+| Equal mandatory sets | No difference | No difference |
+| Affected change with partial or unavailable resolution | Undetermined with its existing reason | Undetermined with its existing reason |
 
-A revision's resolution is partial or unavailable when a name selects no declaration, a reference is ambiguous, unavailable or malformed, a target has no effective declaration, or the traversal could not see every definition. Then a grouping whose known mandatory declarations differ, or whose own `sdfRequired` or that of a corresponding direct affordance changed, is undetermined with the code `required.unavailable`, and an unchanged requirement stays no change. `sdfRequired` in data-only descriptions selects no declaration of a grouping, so it is compared as a data quality and stays not classified.
+An optional declaration becoming mandatory can require an existing
+implementation to change even though some implementations already provide it.
+The comparison has no inventory of a particular device's features. Releasing
+an obligation still permits that declaration to be represented, so releasing
+obligations alone does not invalidate an earlier implementation.
+
+A declaration present in only one revision has its own added or removed
+definition difference and does not count here. Such endpoint differences stay
+undetermined for implementers, including newly added mandatory declarations.
+An independent new obligation for a corresponding declaration still decides a
+breaking overall result beside those differences.
+
+Each grouping whose mandatory set changes has one changed `sdfRequired`
+quality at that grouping's present or absent effective location, retaining its
+nearest origins and chronological labels. A carrier-only change can have both
+grouping source members absent. Requiredness has no data direction or JSON
+value witness. Independent data changes keep their own classifications and
+validated witnesses.
+
+Since requiredness is compared after resolution, `"temp"`, `"#/sdfObject/Oven/sdfProperty/temp"` and a `true` carrier in `temp` spell one requirement, and replacing one with another is no change. Reordered or redundant references also leave equal closures unchanged. A requirement that a Thing moves to a required Object inside it, which then requires the declaration itself, is no change either. An Object that keeps requiring `temp` while its enclosing Thing stops requiring it is breaking at the Thing for clients and compatible there for implementers. The Object may now be absent, but still requires `temp` whenever represented. Making an existing child mandatory inside an optional nested grouping can break an implementation that previously represented that grouping without the child. This does not make the outer grouping mandatory.
+
+A revision's resolution is partial or unavailable when a name selects no declaration, a reference is ambiguous, unavailable or malformed, a target has no effective declaration, or the traversal could not see every definition. Then a grouping whose known mandatory declarations differ, or whose own `sdfRequired` or that of a corresponding direct affordance changed, is undetermined with the code `required.unavailable`, and an unchanged requirement stays no change. Existing processing limits retain `operation.limit` or their more specific cause. Incomplete sets never establish optionality or a compatibility proof in either perspective. Independent unavailable composition retains its own differences. `sdfRequired` in data-only descriptions selects no declaration of a grouping, so it is compared as a data quality and stays not classified. Context gains no declaration-requiredness rule, and standalone carrier markers gain no synthetic enclosing grouping. Map-data `required` and value optionality through `nullable` remain separate data rules. Copies, refinements and deletion/reinsertion keep the effective-coordinate rules of [ADR 0036: Copied reference relocation](adr/0036-copied-reference-relocation.md).
 
 ## Grouping instance counts
 
@@ -482,7 +525,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.7`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/5"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/6"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; policy.perspective:`"client"|"implementer"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |

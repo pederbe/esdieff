@@ -197,20 +197,29 @@ pub(super) fn unit(
 }
 
 /// The mandatory declarations of corresponding groupings, following the requiredness rule of
-/// ADR 0039: Client-side revision comparison, or `None` when they did not change. A declaration
-/// of both revisions that stops being mandatory (`dropped`) breaks Clients relying on it, and
-/// one that becomes mandatory (`entered`) only obliges Things to provide more. A partial or
+/// ADR 0039: Client-side revision comparison and ADR 0054: Implementer declaration
+/// requiredness, or `None` when they did not change. A declaration of both revisions that
+/// stops being mandatory (`dropped`) breaks Clients relying on it. One that becomes
+/// mandatory (`entered`) can require an existing implementation to change. A partial or
 /// unavailable `resolution` leaves such a change undetermined, and also a changed
 /// `sdfRequired` that `changed` reports, since what it resolves to is unknown.
 pub(super) fn requiredness<E>(
+    perspective: Perspective,
     dropped: bool,
     entered: bool,
     resolution: Result<(), UndeterminedReason>,
     changed: impl FnOnce() -> Result<bool, E>,
 ) -> Result<Option<Verdict>, E> {
     Ok(Some(match resolution {
-        Ok(()) if dropped => Verdict::Breaking,
-        Ok(()) if entered => Verdict::Compatible,
+        Ok(())
+            if match perspective {
+                Perspective::Client => dropped,
+                Perspective::Implementer => entered,
+            } =>
+        {
+            Verdict::Breaking
+        }
+        Ok(()) if dropped || entered => Verdict::Compatible,
         Ok(()) => return Ok(None),
         Err(reason) if dropped || entered || changed()? => Verdict::Undetermined(reason),
         Err(_) => return Ok(None),

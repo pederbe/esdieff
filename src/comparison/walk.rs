@@ -349,16 +349,16 @@ impl<'c, 'a> Walk<'c, 'a> {
             }
         }
         let resolution = earlier.resolution().and(later.resolution());
+        let perspective = self.outcome.perspective;
+        // The implementer walk reverses revisions for data proofs. Requiredness rules
+        // take chronological obligation changes instead.
+        let [dropped, entered] = perspective.ordered([dropped, entered]);
         let changed = || self.requirements_changed(pair);
-        let Some(mut verdict) = classify::requiredness(dropped, entered, resolution, changed)?
+        let Some(verdict) =
+            classify::requiredness(perspective, dropped, entered, resolution, changed)?
         else {
             return Ok(());
         };
-        if self.outcome.perspective == Perspective::Implementer
-            && !matches!(verdict, Verdict::Undetermined(_))
-        {
-            verdict = Verdict::NOT_CLASSIFIED;
-        }
         let members = [
             self.member(pair[0], "sdfRequired")?,
             self.member(pair[1], "sdfRequired")?,
