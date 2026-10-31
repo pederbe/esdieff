@@ -921,12 +921,87 @@ impl<'c, 'a> Walk<'c, 'a> {
         let kind = removal(members);
         let sides = self.present_sides(members);
         let verdict = if self.outcome.perspective == Perspective::Implementer {
-            Verdict::NOT_CLASSIFIED
+            match self.declaration_presence(members) {
+                Ok(verdict) => verdict,
+                Err(Stop(reason)) => Verdict::Undetermined(reason),
+            }
         } else {
             classify::definition(kind)
         };
         self.record(kind, subject, directions, verdict, sides);
         Ok(())
+    }
+
+    /// Classify a maximal declaration subtree under ADR 0055. Implementer walks reverse
+    /// revisions for data proofs, so their first revision is chronologically later.
+    fn declaration_presence(&mut self, members: Members<'c>) -> Step<Verdict> {
+        let revision = if members[0].is_some() {
+            Revision::Earlier
+        } else {
+            Revision::Later
+        };
+        let json = members[revision.index()].expect("one present definition");
+        // Only declarations inside corresponding groupings have this policy. Top-level
+        // groupings and unmatched documents keep their existing comparison boundaries.
+        let Some(owner) = json
+            .n()
+            .parent
+            .and_then(|group| json.model.nodes[group].parent)
+        else {
+            return Ok(Verdict::NOT_CLASSIFIED);
+        };
+        if !matches!(
+            json.model.nodes[owner].role,
+            Some(Role::Definition(Class::Thing | Class::Object))
+        ) || !self.corresponding_grouping(revision, owner)?
+        {
+            return Ok(Verdict::NOT_CLASSIFIED);
+        }
+        if !available_map(json) {
+            return Ok(Verdict::Undetermined(unavailable_reason(json)));
+        }
+        let required = &self.required[self.model(Revision::Earlier)];
+        if let Err(reason) = required.resolution() {
+            return Ok(Verdict::Undetermined(reason));
+        }
+        // A removal releases either optional or mandatory obligations. Obsolete payload
+        // constraints need not be evaluated to establish that release.
+        if revision == Revision::Later {
+            return Ok(Verdict::Compatible);
+        }
+        for &(grouping, declaration) in required.obligations() {
+            self.charge(1)?;
+            let mut current = declaration;
+            let contained = loop {
+                self.charge(1)?;
+                if current == json.node {
+                    break true;
+                }
+                let Some(parent) = json.model.nodes[current].parent else {
+                    break false;
+                };
+                current = parent;
+            };
+            if contained && self.corresponding_grouping(revision, grouping)? {
+                return Ok(Verdict::Breaking);
+            }
+        }
+        Ok(Verdict::Compatible)
+    }
+
+    fn corresponding_grouping(&mut self, revision: Revision, node: usize) -> Step<bool> {
+        let Some(other) = self.counterpart(revision, node)? else {
+            return Ok(false);
+        };
+        let model = &self.models[self.model(revision.other())];
+        let json = EffectiveJson { model, node: other };
+        if !available_map(json) {
+            return Err(Stop(unavailable_reason(json)));
+        }
+        Ok(matches!(
+            json.n().role,
+            Some(Role::Definition(Class::Thing | Class::Object))
+        ))
     }
     /// The side of each revision that has the member.
     fn present_sides(&self, members: Members<'c>) -> [Option<Side<'a>>; 2] {

@@ -13,10 +13,11 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/6`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/7`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/6` adds implementer
-declaration-requiredness classifications to `/5`, which introduced the
+This page describes the current checkout. Contract `/7` adds implementer
+declaration-presence classifications to `/6`, which classified changes to
+corresponding declarations' requiredness. Contract `/5` introduced the
 implementer perspective.
 The serialized comparison envelope is version `1.7` independently of this
 classification-contract identity.
@@ -62,7 +63,11 @@ Making a corresponding declaration mandatory can require an existing
 implementation to change, so it is breaking. Releasing obligations alone is
 compatible. These are Esdieff compatibility rules, not rules supplied by RFC 9880.
 
-The implementer perspective leaves endpoint additions and removals,
+Implementer comparison also classifies [declaration presence](#declaration-presence)
+inside corresponding groupings. A new mandatory obligation is breaking,
+optional additions and established removals are compatible.
+
+The implementer perspective leaves one-sided top-level groupings,
 grouping counts, Property capability changes and whole
 Action/Event input or output additions and removals undetermined. These need
 separate obligation rules rather than reversal of the client rules. Documentary
@@ -78,7 +83,7 @@ when there are no differences. Acknowledgements retain file format `1` and do
 not bind entries to a perspective. Export and review them using the perspective
 you intend to assess.
 
-Contract `/6` classifies requiredness changes that `/5` left undetermined for
+Contract `/7` classifies declaration presence that `/6` left undetermined for
 implementers. Review intended differences again. An old undetermined
 acknowledgement does not match a newly breaking or compatible classification,
 so acknowledgement files may need regeneration. Diff envelope `1.7` and
@@ -432,10 +437,9 @@ an obligation still permits that declaration to be represented, so releasing
 obligations alone does not invalidate an earlier implementation.
 
 A declaration present in only one revision has its own added or removed
-definition difference and does not count here. Such endpoint differences stay
-undetermined for implementers, including newly added mandatory declarations.
-An independent new obligation for a corresponding declaration still decides a
-breaking overall result beside those differences.
+definition difference and does not count here. Its implementer classification
+follows [declaration presence](#declaration-presence). An independent new
+obligation for a corresponding declaration retains its own requiredness row.
 
 Each grouping whose mandatory set changes has one changed `sdfRequired`
 quality at that grouping's present or absent effective location, retaining its
@@ -447,6 +451,55 @@ validated witnesses.
 Since requiredness is compared after resolution, `"temp"`, `"#/sdfObject/Oven/sdfProperty/temp"` and a `true` carrier in `temp` spell one requirement, and replacing one with another is no change. Reordered or redundant references also leave equal closures unchanged. A requirement that a Thing moves to a required Object inside it, which then requires the declaration itself, is no change either. An Object that keeps requiring `temp` while its enclosing Thing stops requiring it is breaking at the Thing for clients and compatible there for implementers. The Object may now be absent, but still requires `temp` whenever represented. Making an existing child mandatory inside an optional nested grouping can break an implementation that previously represented that grouping without the child. This does not make the outer grouping mandatory.
 
 A revision's resolution is partial or unavailable when a name selects no declaration, a reference is ambiguous, unavailable or malformed, a target has no effective declaration, or the traversal could not see every definition. Then a grouping whose known mandatory declarations differ, or whose own `sdfRequired` or that of a corresponding direct affordance changed, is undetermined with the code `required.unavailable`, and an unchanged requirement stays no change. Existing processing limits retain `operation.limit` or their more specific cause. Incomplete sets never establish optionality or a compatibility proof in either perspective. Independent unavailable composition retains its own differences. `sdfRequired` in data-only descriptions selects no declaration of a grouping, so it is compared as a data quality and stays not classified. Context gains no declaration-requiredness rule, and standalone carrier markers gain no synthetic enclosing grouping. Map-data `required` and value optionality through `nullable` remain separate data rules. Copies, refinements and deletion/reinsertion keep the effective-coordinate rules of [ADR 0036: Copied reference relocation](adr/0036-copied-reference-relocation.md).
+
+## Declaration presence
+
+Under [ADR 0055: Implementer declaration presence](adr/0055-implementer-declaration-presence.md),
+implementer comparison assesses added and removed Property, Action, Event,
+nested Object and nested Thing declarations inside corresponding groupings.
+It uses the existing maximal added or removed definition row. A new grouping
+and its whole declaration subtree have one row, without invented corresponding
+definitions or extra requiredness rows for one-sided declarations.
+
+| Change within a corresponding grouping | Implementer classification |
+| --- | --- |
+| Added subtree intersects the later mandatory closure of any corresponding grouping in that document | Breaking |
+| Added subtree has no such obligation, with complete later requiredness resolution | Compatible |
+| Removed declaration, optional or mandatory, with complete later requiredness resolution | Compatible |
+| Later requiredness resolution is incomplete | Undetermined with its existing cause |
+| Needed identity, presence or effective composition is unavailable | Undetermined with its existing cause |
+
+An existing optional grouping can be represented without its newly mandatory
+child in an earlier implementation, so adding that child is breaking. In
+contrast, adding an optional grouping with its own mandatory child is compatible
+when no corresponding grouping requires anything in that new subtree. The
+earlier implementation may omit the whole new grouping. A requirement from a
+corresponding grouping can select the new grouping or its descendant, including
+from another grouping in the same document. Upward and transitive closure use
+the same resolved relationships as corresponding-declaration requiredness.
+
+Both additions and removals require complete later resolution. A known member
+in a partial closure cannot prove a break. A declaration removed while its
+requirement remains is undetermined with `required.unavailable`, even if no
+separate requiredness row is needed. Removing it and its requirement together
+is compatible. Earlier unresolved relationships keep their own results and do
+not invalidate an established later presence classification.
+
+Removal releases modeled obligations and permits retaining the physical
+capability. This policy does not assess ecosystems that prohibit extra
+endpoints, protocol bindings, discovery inventories or actual feature selection.
+It does not automatically bind existing unmodeled capabilities to new names.
+No data-value witness, capability realization or grouping-count proof is needed.
+Presence rows have no data direction and retain chronological kinds, effective
+locations, nearest present-side origins and a null absent side. A rename or
+move remains a removal plus an addition, without guessed identity.
+
+Client additions remain compatible and removals breaking. One-sided top-level
+groupings, unmatched documents, top-level affordances and reusable `sdfData`
+keep their existing boundaries. Standalone definitions do not become mandatory
+declarations. Context retains its interaction-only classification. Changed
+Property capabilities, whole Action/Event input/output presence, map-data
+`required` and `nullable` retain their separate rules.
 
 ## Grouping instance counts
 
@@ -525,7 +578,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.7`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/6"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/7"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; policy.perspective:`"client"|"implementer"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |

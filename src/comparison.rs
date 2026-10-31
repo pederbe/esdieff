@@ -34,7 +34,7 @@ pub use witness::Witness;
 
 /// The identity of the comparison rules, which binds the classified differences. A
 /// release that classifies more differences gets a new identity.
-pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/6";
+pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/7";
 
 pub(crate) const SCOPE_NOTICE: &str =
     "Client interactions only. Context metadata compatibility is not assessed.";

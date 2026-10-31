@@ -2,11 +2,18 @@
 
 ## Unreleased
 
+- Classify added and removed declarations inside corresponding groupings with
+  `--perspective implementer`. Added mandatory obligations are breaking,
+  optional additions and established removals are compatible. Incomplete later
+  requiredness stays undetermined. Comparison contract `/7` replaces `/6`, with
+  diff envelope `1.7` and acknowledgement format `1` unchanged. Review intended
+  differences and regenerate old undetermined acknowledgements where needed.
+
 - Classify changes to declaration obligations with `--perspective implementer`.
   Making a corresponding declaration mandatory is breaking, releasing
   obligations alone is compatible, and equivalent resolved requirements produce
-  no difference. Added and removed endpoints remain undetermined. Comparison
-  contract `/6` replaces `/5`, with diff envelope `1.7` and acknowledgement
+  no difference. Declaration presence follows the rules above. Comparison
+  contract `/7` includes these rules, with diff envelope `1.7` and acknowledgement
   format `1` unchanged. Review intended differences and regenerate old
   undetermined acknowledgements where classifications have changed.
 
@@ -16,7 +23,7 @@
   Client comparison remains the default. Reports state the perspective.
   Other structural implementation obligations remain undetermined and Context
   metadata compatibility remains outside scope. Diff JSON readers must accept
-  envelope `1.7` with `policy.perspective` and comparison contract `/6`.
+  envelope `1.7` with `policy.perspective` and comparison contract `/7`.
 
 ### Fixed
 

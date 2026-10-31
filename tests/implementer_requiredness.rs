@@ -257,7 +257,10 @@ fn added_and_removed_endpoints_have_no_duplicate_requiredness_change() {
     let mut after: Value = serde_json::from_str(&before).unwrap();
     after["sdfObject"]["Oven"]["sdfProperty"]["door"] =
         json!({"type":"boolean","sdfRequired":[true]});
-    for (old, new) in [(&before, &after.to_string()), (&after.to_string(), &before)] {
+    for (old, new, expected) in [
+        (&before, &after.to_string(), Classification::Breaking),
+        (&after.to_string(), &before, Classification::Compatible),
+    ] {
         let earlier = catalogue(&[("model", old)]);
         let later = catalogue(&[("model", new)]);
         let comparison = ComparisonRequest::new(&earlier, &later)
@@ -265,11 +268,15 @@ fn added_and_removed_endpoints_have_no_duplicate_requiredness_change() {
             .compare()
             .unwrap();
         assert_eq!(comparison.differences().len(), 1);
+        assert_eq!(at(&comparison, "/door").classification(), expected);
         assert_eq!(
-            at(&comparison, "/door").classification(),
-            Classification::Undetermined
+            comparison.disposition().exit_code(),
+            if expected == Classification::Breaking {
+                1
+            } else {
+                0
+            }
         );
-        assert_eq!(comparison.disposition().exit_code(), 3);
     }
     after["sdfObject"]["Oven"]["sdfRequired"] = json!(["temp", "mode"]);
     let earlier = catalogue(&[("model", &before)]);
@@ -285,7 +292,7 @@ fn added_and_removed_endpoints_have_no_duplicate_requiredness_change() {
     );
     assert_eq!(
         at(&comparison, "/door").classification(),
-        Classification::Undetermined
+        Classification::Breaking
     );
     assert_eq!(comparison.disposition().exit_code(), 1);
 }

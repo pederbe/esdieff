@@ -293,7 +293,7 @@ fn even_empty_reports_state_the_default_perspective() {
 }
 
 #[test]
-fn structural_obligations_stay_undetermined_and_chronology_is_preserved() {
+fn optional_replacements_are_compatible_and_chronology_is_preserved() {
     let before = json!({"sdfObject":{"Device":{"sdfProperty":{"old":{"type":"boolean"}}}}});
     let after = json!({"sdfObject":{"Device":{"sdfProperty":{"new":{"type":"boolean"}}}}});
     let earlier = catalogue(&[("model", &before.to_string())]);
@@ -302,7 +302,7 @@ fn structural_obligations_stay_undetermined_and_chronology_is_preserved() {
         .perspective(Perspective::Implementer)
         .compare()
         .unwrap();
-    assert_eq!(comparison.outcome(), Classification::Undetermined);
+    assert_eq!(comparison.outcome(), Classification::Compatible);
     let removed = at(&comparison, "/old");
     assert_eq!(removed.kind(), DifferenceKind::Removed);
     assert!(removed.side(Revision::Later).is_none());
