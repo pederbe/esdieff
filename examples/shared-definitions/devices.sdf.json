@@ -1,0 +1,18 @@
+{
+  "namespace": { "shared": "https://example.test/shared" },
+  "sdfObject": {
+    "Normal": {
+      "sdfProperty": {
+        "temperature": { "sdfRef": "shared:#/sdfData/Temperature" }
+      }
+    },
+    "Cool": {
+      "sdfProperty": {
+        "temperature": {
+          "sdfRef": "shared:#/sdfData/Temperature",
+          "maximum": 40
+        }
+      }
+    }
+  }
+}

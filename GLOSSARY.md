@@ -738,6 +738,7 @@ The common raw registry source from which the unit sections were extracted. Its 
 A specification fact consulted while assessing a selected URI, URI-reference or UUID value. Its evidence is described in [the URI and UUID sample contract](docs/uri-uuid-sample-contract.md).
 
 **Model reference**:
-Esdieff documentation of a selected effective grouping, its surviving contents,
-illustrative admitted values and source origins. Documentation completion is
+Esdieff documentation of a selected effective definition, its surviving contents,
+illustrative admitted values and source origins. It can include uses of an
+authored definition across supplied documents. Documentation completion is
 separate from model assessment.

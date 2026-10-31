@@ -4,6 +4,12 @@
 
 ### Added
 
+- Explore a shared definition with `esdieff reference --uses` or
+  `ReferenceRequest::with_uses()`. The Markdown reference lists effective
+  consumers across supplied models, inherited and overridden scalar values,
+  and links to current, previous and importing sources. Use navigation accepts
+  named definitions including `sdfData`. Ordinary selection and report formats
+  are unchanged.
 - Export selected effective payload constraints as JSON Schema Draft 2020-12
   through `esdieff schema` and `Catalogue::export_schema`. The separate
   `esdieff.schema/1` report states fidelity and withholds schemas containing

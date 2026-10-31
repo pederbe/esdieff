@@ -9,6 +9,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
     let mut pointer = None;
     let mut inputs = Vec::new();
     let mut help = false;
+    let mut uses = false;
     let mut literal = false;
     let mut metadata = 0usize;
     let mut index = 1;
@@ -23,6 +24,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         }
         match if literal { None } else { value.to_str() } {
             Some("--help" | "-h") => help = true,
+            Some("--uses") if !uses => uses = true,
             Some(flag @ ("--document" | "--pointer")) => {
                 let value = args
                     .get(index)
@@ -83,9 +85,9 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         .nth(selected)
         .expect("registered document")
         .id();
-    let result = catalogue
-        .reference(ReferenceRequest::new(id, pointer))
-        .map_err(usage)?;
+    let request = ReferenceRequest::new(id, pointer);
+    let request = if uses { request.with_uses() } else { request };
+    let result = catalogue.reference(request).map_err(usage)?;
     crate::emit_report(result.to_markdown().trim_end_matches('\n'))?;
     Ok(result.disposition().exit_code())
 }
