@@ -137,7 +137,11 @@ inventory. There is no model assessment selector or expected-result field.
 JSON null remains a supplied sample, and no default or sample value is inserted.
 
 Each diff case requires a unique `name`, `operation: "diff"`, `earlier` and
-`later`, and accepts an optional `acknowledged` path. Each side is an object of
+`later`, and accepts an optional `acknowledged` path and a `perspective` of
+`"client"` or `"implementer"`. Client is the default. Implementer comparison
+assesses whether an existing implementation still satisfies the later model,
+within the [comparison contract's supported rules](revision-comparison-contract.md#comparison-perspective).
+Each side is an object of
 1 through 256 members whose names are source keys of 1 through 256
 UTF-8 bytes and whose values are nonempty paths. Duplicate decoded keys are
 refused. `scope`, `assessment` and `strict_warnings` do not apply. The
@@ -188,7 +192,7 @@ order, with `name`, `operation`, `request`, `state: "report"`, native `outcome`,
 `undetermined`, which acknowledgements leave unchanged while the disposition in
 `outcome` follows them. That `outcome` also counts the comparison's Version
 warnings, which never change the case's disposition, and the native diff report
-keeps its own version `1.6`. `request` is the native requested scope,
+keeps its own version `1.7`. `request` is the native requested scope,
 selector and assessment/inventory record, or for a diff case the comparison
 identity and both revisions' scopes. A whole native `report` is optional. A diff
 case's report is the native diff report with both revisions' sources. When it cannot

@@ -97,7 +97,7 @@ fn changelogs_list_differences_by_classification() {
 
 Disposition: failed, with 2 breaking, 1 undetermined and 2 compatible differences. 1 breaking and 0 undetermined differences are acknowledged.
 
-Client interactions only. Context metadata compatibility is not assessed.
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Breaking differences
 
@@ -132,7 +132,7 @@ fn changelogs_leave_out_empty_sections() {
 
 Disposition: passed, with 0 breaking, 0 undetermined and 1 compatible differences.
 
-Client interactions only. Context metadata compatibility is not assessed.
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Compatible differences
 

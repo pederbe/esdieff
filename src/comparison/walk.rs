@@ -12,8 +12,8 @@ use super::read::{self, Equality, identity_unavailable, unavailable_reason};
 use super::requiredness::Requiredness;
 use super::witness::{self, Batch, Change};
 use super::{
-    CLIENT, Classification, DifferenceKind, DifferenceSubject, Presence, Record, Revision, Side,
-    THING, UndeterminedReason, Verdict, failure,
+    CLIENT, Classification, DifferenceKind, DifferenceSubject, Perspective, Presence, Record,
+    Revision, Side, THING, UndeterminedReason, Verdict, failure,
 };
 use crate::allowance::push;
 use crate::role::{Role, SetAside};
@@ -29,6 +29,7 @@ pub(super) struct Root {
 
 /// What the walks of earlier documents found, carried into the walk of the next.
 pub(super) struct Outcome<'a> {
+    pub(super) perspective: Perspective,
     pub(super) records: Vec<Record<'a>>,
     pub(super) counts: [u32; 3],
     pub(super) unretained: u32,
@@ -39,8 +40,9 @@ pub(super) struct Outcome<'a> {
     pub(super) interpretations: ValueInterpretations,
 }
 impl Outcome<'_> {
-    pub(super) fn new(policy: crate::RecordedRegistryPolicy) -> Self {
+    pub(super) fn new(policy: crate::RecordedRegistryPolicy, perspective: Perspective) -> Self {
         Self {
+            perspective,
             records: Vec::new(),
             counts: [0; 3],
             unretained: 0,
@@ -348,9 +350,15 @@ impl<'c, 'a> Walk<'c, 'a> {
         }
         let resolution = earlier.resolution().and(later.resolution());
         let changed = || self.requirements_changed(pair);
-        let Some(verdict) = classify::requiredness(dropped, entered, resolution, changed)? else {
+        let Some(mut verdict) = classify::requiredness(dropped, entered, resolution, changed)?
+        else {
             return Ok(());
         };
+        if self.outcome.perspective == Perspective::Implementer
+            && !matches!(verdict, Verdict::Undetermined(_))
+        {
+            verdict = Verdict::NOT_CLASSIFIED;
+        }
         let members = [
             self.member(pair[0], "sdfRequired")?,
             self.member(pair[1], "sdfRequired")?,
@@ -586,7 +594,14 @@ impl<'c, 'a> Walk<'c, 'a> {
         let mut change = Change::new(subject, data.directions, Verdict::NOT_CLASSIFIED, sides);
         change.kind = kind;
         let name = self.key(members);
-        match classify::entry(owner, name, kind, data, self.allowance) {
+        match classify::entry(
+            owner,
+            name,
+            kind,
+            data,
+            self.outcome.perspective,
+            self.allowance,
+        ) {
             Some(rule) => change = change.ruled(rule),
             None => change.verdict = Verdict::Compatible,
         }
@@ -905,7 +920,12 @@ impl<'c, 'a> Walk<'c, 'a> {
         }
         let kind = removal(members);
         let sides = self.present_sides(members);
-        self.record(kind, subject, directions, classify::definition(kind), sides);
+        let verdict = if self.outcome.perspective == Perspective::Implementer {
+            Verdict::NOT_CLASSIFIED
+        } else {
+            classify::definition(kind)
+        };
+        self.record(kind, subject, directions, verdict, sides);
         Ok(())
     }
     /// The side of each revision that has the member.
@@ -1078,6 +1098,18 @@ impl<'c, 'a> Walk<'c, 'a> {
         sides: [Option<Side<'a>>; 2],
     ) -> Step<()> {
         if !matches!(context, Context::Data(_)) {
+            // Endpoint and capability obligations need their own implementer rules.
+            // Documentary changes retain their existing perspective-independent meaning.
+            let verdict = if self.outcome.perspective == Perspective::Implementer
+                && !matches!(verdict, Verdict::Undetermined(_))
+                && !matches!(
+                    subject,
+                    DifferenceSubject::Quality("description" | "label" | "$comment" | "default")
+                ) {
+                Verdict::NOT_CLASSIFIED
+            } else {
+                verdict
+            };
             self.record(DifferenceKind::Changed, subject, directions, verdict, sides);
             return Ok(());
         }

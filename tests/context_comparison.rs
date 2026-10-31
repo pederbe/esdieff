@@ -132,10 +132,10 @@ fn reports_limit_compatibility_to_client_interactions() {
     let later = catalogue(&[("model", &later)]);
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
     let wire: serde_json::Value = serde_json::from_str(&comparison.to_json()).unwrap();
-    assert_eq!(wire["version"], "1.6");
+    assert_eq!(wire["version"], "1.7");
     assert_eq!(
         wire["request"]["comparison"],
-        "esdieff.revision-comparison/4"
+        "esdieff.revision-comparison/5"
     );
     assert_eq!(wire["policy"]["compatibility_scope"], "client_interactions");
     assert_eq!(

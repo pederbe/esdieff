@@ -592,7 +592,7 @@ _Avoid_: Generation target, which names the edge a Generated value probes.
 
 ## Revision comparison
 
-These Esdieff terms describe how a later revision of a model affects the clients of the Things it describes. The comparison policy is defined in [the revision comparison contract](docs/revision-comparison-contract.md).
+These Esdieff terms describe how a later revision of a model affects clients and existing implementations of the Things it describes. The comparison policy is defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 
 **Model revision**:
 The documents of an SDF model at one point in their evolution, supplied together as one Catalogue.
@@ -603,8 +603,11 @@ A grouping, affordance or Context in a later Model revision with the same Given 
 _Avoid_: Global name, which many device documents lack.
 
 **Revision comparison**:
-Classification of each difference between the corresponding groupings of two Model revisions as breaking, compatible or undetermined, for Client interactions. Changes to shared definitions appear through the effective groupings that use them. Context differences remain visible without assessing compatibility for metadata consumers. A difference Esdieff cannot classify remains undetermined, never compatible, following [ADR 0039: Client-side revision comparison](docs/adr/0039-client-side-revision-comparison.md) and [ADR 0049: Context revision comparison](docs/adr/0049-context-revision-comparison.md).
+Classification of each difference between the corresponding groupings of two Model revisions as breaking, compatible or undetermined, from a selected Comparison perspective. Changes to shared definitions appear through the effective groupings that use them. Context differences remain visible without assessing compatibility for metadata consumers. A difference Esdieff cannot classify remains undetermined, never compatible, following [ADR 0039: Client-side revision comparison](docs/adr/0039-client-side-revision-comparison.md), [ADR 0049: Context revision comparison](docs/adr/0049-context-revision-comparison.md) and [ADR 0053: Implementer revision comparison](docs/adr/0053-implementer-revision-comparison.md).
 _Avoid_: Model checking, which assesses one model against SDF requirements.
+
+**Comparison perspective**:
+Whose existing behavior must remain valid under the later Model revision. The client perspective preserves interactions of Clients built for the earlier model, while the implementer perspective preserves conformance of implementations satisfying the earlier model.
 
 **Client**:
 The party that reads, writes and observes a Thing's Properties, invokes its Actions and receives its Events.
@@ -620,7 +623,7 @@ Interaction data a Thing sends to a Client: read or observed Property values, Ac
 Whether data is Client-supplied or Thing-supplied. A Property's effective characteristics decide which directions its data carries.
 
 **Breaking change**:
-A difference between two Model revisions after which an interaction the earlier revision described can fail for a Client, or yield data the Client was not described to receive. Esdieff's classification rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
+A difference between two Model revisions that invalidates existing behavior from the selected Comparison perspective. It can break a Client's interaction or require an existing implementation to change. Esdieff's classification rules are defined in [the revision comparison contract](docs/revision-comparison-contract.md).
 _Avoid_: Any difference; Restrictive refinement, which concerns overrides within one model.
 
 **Meaning quality**:
@@ -637,7 +640,7 @@ _Avoid_: Sample value, which a caller supplies.
 How a change to one data quality relates the values two Model revisions admit, with every other quality as it is: the later revision admits more, fewer or the same values, or none of these is established.
 
 **Compatibility proof**:
-A demonstration that a data description's changes admit no Breaking witness: every changed quality loosens in the safe direction for each Client direction, widening Client-supplied data and narrowing Thing-supplied data, and nothing else in the description changed except documentation or content no Client of the earlier revision uses.
+A demonstration that a data description's changes admit no Breaking witness in the selected Comparison perspective. Safe value-set changes widen Client-supplied data and narrow Thing-supplied data for clients, and reverse those relations for existing implementations.
 _Avoid_: Subset proof, which suggests general satisfiability solving.
 
 **Difference acknowledgement**:

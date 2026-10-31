@@ -56,7 +56,7 @@ fn an_acknowledged_removed_property_passes_while_the_comparison_stays_breaking()
     assert!(difference.side(Revision::Later).is_none());
 
     let wire: Value = serde_json::from_str(&comparison.to_json()).unwrap();
-    assert_eq!(wire["version"], "1.6");
+    assert_eq!(wire["version"], "1.7");
     assert_eq!(wire["result"]["outcome"], "breaking");
     assert_eq!(wire["outcome"]["disposition"], "passed");
     assert_eq!(wire["outcome"]["errors"], 0);
@@ -275,7 +275,7 @@ fn the_human_report_lists_acknowledged_differences_and_unused_entries() {
     let human = comparison.to_human();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/4: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/5: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -339,7 +339,7 @@ fn omitted_details_keep_unacknowledged_rows_first_with_the_counts_and_unused_ent
     assert_eq!(wire["diagnostics"]["truncated"], true);
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/4: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/5: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -484,7 +484,7 @@ fn an_acknowledged_added_unit_passes_complete_while_it_stays_undetermined() {
     let human = comparison.to_human();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/4: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/5: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );

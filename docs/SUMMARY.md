@@ -104,3 +104,4 @@
   - [0050: Selected Markdown model reference](adr/0050-selected-markdown-model-reference.md)
   - [0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md)
   - [0052: Selected JSON Schema export](adr/0052-selected-json-schema-export.md)
+  - [0053: Implementer revision comparison](adr/0053-implementer-revision-comparison.md)

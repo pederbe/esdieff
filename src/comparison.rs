@@ -1,5 +1,6 @@
 //! Revision comparison classifies the differences between two Model revisions from the
-//! Client's side. Follows ADR 0039: Client-side revision comparison, ADR 0009: Bounded
+//! selected perspective. Follows ADR 0053: Implementer revision comparison,
+//! ADR 0039: Client-side revision comparison, ADR 0009: Bounded
 //! processing and reporting, ADR 0013: Shared workflow and report guarantees, and
 //! ADR 0020: Owned effective views and nearest origins.
 //!
@@ -33,10 +34,45 @@ pub use witness::Witness;
 
 /// The identity of the comparison rules, which binds the classified differences. A
 /// release that classifies more differences gets a new identity.
-pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/4";
+pub const COMPARISON_CONTRACT: &str = "esdieff.revision-comparison/5";
 
 pub(crate) const SCOPE_NOTICE: &str =
     "Client interactions only. Context metadata compatibility is not assessed.";
+
+/// Whose existing behavior must remain valid when adopting the later Model revision.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Perspective {
+    /// Clients built for the earlier model can still interact with the later model.
+    #[default]
+    Client,
+    /// Implementations satisfying the earlier model still satisfy the later model.
+    Implementer,
+}
+impl Perspective {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Client => "client",
+            Self::Implementer => "implementer",
+        }
+    }
+    pub(crate) fn scope_notice(self) -> &'static str {
+        match self {
+            Self::Client => SCOPE_NOTICE,
+            Self::Implementer => {
+                "Existing implementation obligations only. Context metadata compatibility is not assessed."
+            }
+        }
+    }
+    /// Value-set obligations are dual to client obligations. Keep chronology at the
+    /// public boundary while reusing the same proof and witness machinery internally.
+    fn ordered<T>(self, mut pair: [T; 2]) -> [T; 2] {
+        if self == Self::Implementer {
+            pair.swap(0, 1);
+        }
+        pair
+    }
+}
 
 /// One of the two Model revisions under comparison.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,7 +102,7 @@ impl Revision {
     }
 }
 
-/// How a difference, or the comparison as a whole, affects Client interactions.
+/// How a difference, or the comparison as a whole, affects the selected perspective.
 /// Compatibility for consumers of Context metadata is not assessed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -382,11 +418,31 @@ impl Record<'_> {
     }
 }
 
+/// Restore chronological labels on reasons produced by the dual value comparison.
+fn reverse_reason(verdict: Verdict) -> Verdict {
+    use UndeterminedReason::{ContentFormat, Unit};
+    match verdict {
+        Verdict::Undetermined(reason) => Verdict::Undetermined(match reason {
+            Unit(UnitReason::Added) => Unit(UnitReason::Removed),
+            Unit(UnitReason::Removed) => Unit(UnitReason::Added),
+            ContentFormat(ContentFormatReason::Added) => {
+                ContentFormat(ContentFormatReason::Removed)
+            }
+            ContentFormat(ContentFormatReason::Removed) => {
+                ContentFormat(ContentFormatReason::Added)
+            }
+            reason => reason,
+        }),
+        verdict => verdict,
+    }
+}
+
 use crate::budgeted::failure;
 
 /// Compares an earlier and a later Catalogue. Both share one `Limits` configuration,
 /// which sets the single allowance covering both revisions.
 pub struct ComparisonRequest<'a> {
+    perspective: Perspective,
     catalogues: [&'a Catalogue; 2],
     registry_policy: crate::RecordedRegistryPolicy,
     acknowledgements: Option<&'a DifferenceAcknowledgements>,
@@ -394,10 +450,16 @@ pub struct ComparisonRequest<'a> {
 impl<'a> ComparisonRequest<'a> {
     pub fn new(earlier: &'a Catalogue, later: &'a Catalogue) -> Self {
         Self {
+            perspective: Perspective::default(),
             catalogues: [earlier, later],
             registry_policy: crate::RecordedRegistryPolicy::default(),
             acknowledgements: None,
         }
+    }
+    /// Select whose existing behavior the later model must continue to accommodate.
+    pub fn perspective(mut self, value: Perspective) -> Self {
+        self.perspective = value;
+        self
     }
     /// Control whether unit and content-format comparison may use the bundled dated registry
     /// evidence. As for `check`, the default uses it.
@@ -452,7 +514,7 @@ impl<'a> ComparisonRequest<'a> {
         // already made stand when a later document exhausts the allowance.
         let mut models = Vec::new();
         let mut required = Vec::new();
-        let mut outcome = walk::Outcome::new(self.registry_policy);
+        let mut outcome = walk::Outcome::new(self.registry_policy, self.perspective);
         let mut warnings = Vec::new();
         for &(earlier_id, later_id) in &compared {
             let budget = &mut allowance.budget;
@@ -463,7 +525,8 @@ impl<'a> ComparisonRequest<'a> {
             let later_root = composed(later, later_id, acquired)?;
             let found = outcome.counts[Classification::Breaking.rank()];
             let mut walk = walk::Walk::new(&models, &required, &mut allowance, outcome);
-            walk.document(earlier_root, later_root);
+            let [first, second] = self.perspective.ordered([earlier_root, later_root]);
+            walk.document(first, second);
             outcome = walk.finish();
             // Every difference of this pair's walk, retained or not, lies in its documents.
             let breaking = outcome.counts[Classification::Breaking.rank()] - found;
@@ -480,21 +543,42 @@ impl<'a> ComparisonRequest<'a> {
                 let budget = &mut allowance.budget;
                 let root = compose(catalogue, id, acquired, budget, &mut models, &mut required)?;
                 let mut walk = walk::Walk::new(&models, &required, &mut allowance, outcome);
+                let revision = if self.perspective == Perspective::Implementer {
+                    revision.other()
+                } else {
+                    revision
+                };
                 walk.unmatched(revision, root);
                 outcome = walk.finish();
             }
         }
         let walk::Outcome {
-            records,
+            mut records,
             counts,
             unretained,
             registry,
             interpretations,
+            ..
         } = outcome;
+        if self.perspective == Perspective::Implementer {
+            for record in &mut records {
+                record.sides.swap(0, 1);
+                record.kind = match record.kind {
+                    DifferenceKind::Added => DifferenceKind::Removed,
+                    DifferenceKind::Removed => DifferenceKind::Added,
+                    kind => kind,
+                };
+                record.verdict = reverse_reason(record.verdict);
+                if let Some(witness) = &mut record.witness {
+                    witness.reverse_revisions();
+                }
+            }
+        }
         let relocation = models.iter().any(|model| model.relocation_interpretation);
         // The comparison consults no recorded extension evidence.
         let undeclared = allowance.budget.set_aside.relies_on_reading(false);
         let mut comparison = RevisionComparison {
+            perspective: self.perspective,
             catalogues: self.catalogues,
             models,
             records,
@@ -602,6 +686,7 @@ fn compose<'a>(
 /// The result of comparing two Model revisions. It borrows both Catalogues and owns
 /// their effective models, which its differences and reports borrow.
 pub struct RevisionComparison<'a> {
+    perspective: Perspective,
     catalogues: [&'a Catalogue; 2],
     models: Vec<EffectiveModel<'a>>,
     records: Vec<Record<'a>>,
@@ -627,6 +712,9 @@ pub struct RevisionComparison<'a> {
     interpretations: crate::sample::ValueInterpretations,
 }
 impl<'a> RevisionComparison<'a> {
+    pub fn perspective(&self) -> Perspective {
+        self.perspective
+    }
     pub fn catalogue(&self, revision: Revision) -> &'a Catalogue {
         self.catalogues[revision.index()]
     }

@@ -1,6 +1,6 @@
 # Revision comparison
 
-Esdieff compares two Model revisions from the Client's side and classifies each difference between their corresponding groupings as breaking, compatible or undetermined. The rules follow [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md), and the terms Model revision, Corresponding definition, Client, Client-supplied data, Thing-supplied data, Client direction, Breaking change, Meaning quality, Breaking witness, Representative value, Monotone rule, Compatibility proof, Difference acknowledgement, Acknowledged difference and Version warning come from [the domain language](../GLOSSARY.md#revision-comparison). A difference Esdieff cannot classify stays undetermined, so it is never presented as safe.
+Esdieff compares two Model revisions and classifies each difference between their corresponding groupings as breaking, compatible or undetermined. The default perspective preserves existing Client interactions under [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md). An explicit implementer perspective assesses existing implementation obligations under [ADR 0053: Implementer revision comparison](adr/0053-implementer-revision-comparison.md). Comparison perspective and the other comparison terms come from [the domain language](../GLOSSARY.md#revision-comparison). A difference Esdieff cannot classify stays undetermined, so it is never presented as safe.
 
 ```rust
 use esdieff::{Catalogue, ComparisonRequest, SourceInput};
@@ -13,16 +13,67 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/4`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/5`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/4`, including the
-pattern-aware representative candidates below, was added after release 0.2.0.
-The serialized comparison envelope remains version `1.6` independently of this
+This page describes the current checkout. Contract `/5` adds the implementer
+perspective to `/4`, which introduced pattern-aware representative candidates.
+The serialized comparison envelope is version `1.7` independently of this
 classification-contract identity.
+
+## Comparison perspective
+
+`--perspective client|implementer` selects the direct CLI perspective, defaulting
+to `client`. The library selects it with
+`ComparisonRequest::new(&earlier, &later).perspective(Perspective::Implementer)`.
+`RevisionComparison::perspective()` returns the selection. A saved Check plan's
+diff case accepts `"perspective": "implementer"` or `"client"`, also defaulting
+to client. Unknown values and duplicate CLI selectors are invocation errors.
+
+Implementer comparison asks whether an implementation satisfying the earlier
+model still satisfies the later model. It does not ask whether a later
+implementation can replace an earlier one. For corresponding data descriptions,
+the safe value-set direction reverses. The rest of this page describes client
+rules unless stated otherwise.
+
+| Data change | Client perspective | Implementer perspective |
+| --- | --- | --- |
+| Accepted integer input maximum grows from 10 to 20 | Compatible | Breaking with a witness, such as 20 |
+| Accepted integer input maximum shrinks from 20 to 10 | Breaking with a witness, such as 20 | Compatible |
+| Permitted integer output maximum grows from 10 to 20 | Breaking with a witness, such as 20 | Compatible |
+| Permitted integer output maximum shrinks from 20 to 10 | Compatible | Breaking with a witness, such as 20 |
+
+These examples assume no other constraint excludes the witness. Both
+perspectives use the same bounded sample checks and compatibility proofs.
+Changed constraints, choices, map entries and array items are assessed through
+their whole effective data descriptions. A change to established meaning, such
+as changing the unit from seconds to metres, can break either perspective.
+Unsettled meaning and limits remain undetermined.
+
+Unlike client comparison, implementer comparison also assesses optional map
+entries absent from the later description. Removing an integer constraint on
+an optional input entry admits non-integer values, so an existing implementation
+can need change even though the entry remains optional. Adding that constraint
+to an output entry can likewise invalidate an implementation's existing output.
+
+The initial implementer perspective leaves endpoint additions and removals,
+declaration requiredness, grouping counts, Property capability changes and whole
+Action/Event input or output additions and removals undetermined. These need
+separate obligation rules rather than reversal of the client rules. Documentary
+changes remain compatible. Context metadata compatibility remains outside scope
+in both perspectives, with available Context differences compatible within
+the interaction-only scope.
+
+Earlier and later always retain their chronological meaning in public
+differences, witness admissions, source origins and version warnings. Human and
+Markdown reports state the selected perspective. JSON records it in
+`policy.perspective`. SARIF records it in `runs[].properties.perspective`, even
+when there are no differences. Acknowledgements retain file format `1` and do
+not bind entries to a perspective. Export and review them using the perspective
+you intend to assess.
 
 ## Context metadata
 
-The comparison assesses client interactions only. It does not assess compatibility for consumers of instance metadata, following [ADR 0049: Context revision comparison](adr/0049-context-revision-comparison.md).
+The comparison assesses interactions only, from the selected perspective. It does not assess compatibility for consumers of instance metadata, following [ADR 0049: Context revision comparison](adr/0049-context-revision-comparison.md).
 
 Named Context definitions correspond within Objects and Things after inheritance and refinement. Their additions, removals and changed effective content appear as separate `sdfContext` differences, with no client data directions. Available Context differences are compatible for client interactions, including changed constraints, defaults and documentary content. This says nothing about whether a metadata consumer can accept the new values. Structural comparison uses exact numbers and unordered maps. It does not compare the abstract meaning of metadata values, including unsupported meanings such as `sdfType: "link"`, or settle disputed Context defaults.
 
@@ -425,15 +476,15 @@ Comparison is plain code point order, without date parsing, so `2020-07-06` afte
 
 The warning never changes a classification, the outcome, the disposition or the exit code, and `strict_warnings` stays false. Reading the two versions and comparing the document bytes is linear in content both Catalogues already admitted, so it charges nothing to the operation allowance.
 
-## Report 1.6
+## Report 1.7
 
-Operation `diff` uses the `esdieff.report` envelope with version `1.6`, which adds the explicit client-interaction compatibility scope to version `1.5`. Version `1.5` added [Version warnings](#version-warnings) to version `1.4`. Version `1.4` added the acknowledgement fields and the disposition they decide to version `1.3`. Every diff report is emitted at `1.6`, with or without acknowledgements or warnings. The shared source, outcome and diagnostic meanings of the [report contract](report-contract.md) remain intact. Both Catalogues number their sources from 1, so each source names its revision, and every ID inside an `earlier` or `later` member selects a source of that revision.
+Operation `diff` uses the `esdieff.report` envelope with version `1.7`, which adds the explicit perspective to version `1.6`. Version `1.6` added the client-interaction compatibility scope to version `1.5`. Version `1.5` added [Version warnings](#version-warnings) to version `1.4`. Version `1.4` added the acknowledgement fields and the disposition they decide to version `1.3`. Every diff report is emitted at `1.7`, with or without acknowledgements or warnings. The shared source, outcome and diagnostic meanings of the [report contract](report-contract.md) remain intact. Both Catalogues number their sources from 1, so each source names its revision, and every ID inside an `earlier` or `later` member selects a source of that revision.
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/4"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/5"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
-| Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
+| Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; policy.perspective:`"client"|"implementer"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |
 | Diff diagnostics | retained:Count; omitted:Count; truncated:boolean; reasons:string[]; omissions:Omission[]; items:VersionCondition[] | Each item is one retained Version warning. `omitted` counts the Version warnings whose details did not fit, with the reason `byte_limit`. |
 | VersionCondition | code:`"comparison.version_not_increased"`; severity:`"warning"`; basis:{kind:`"advice"`, id:`"comparison.version_not_increased"`, citation:`"RFC 9880 Section 3.1"`}; message:string; primary:RevisionSourceLocation; related:[RevisionSourceLocation]; arguments:{earlier_version:string, later_version?:string, breaking_differences:Count} | The primary location is the later document's `/info/version`, or its `/info` or root when that member is absent, and the related location is the earlier `/info/version`. `later_version` is absent exactly when the later document has no version. |

@@ -21,8 +21,8 @@
 //! alternatives that inherit the changed quality, and `meaning` judges a meaning quality alike.
 //! A map `properties` entry that only one revision describes reaches `entry` instead.
 use super::{
-    CLIENT, ContentFormatReason, DifferenceKind, Direction, Revision, THING, UndeterminedReason,
-    UnitReason, Verdict, read,
+    CLIENT, ContentFormatReason, DifferenceKind, Direction, Perspective, Revision, THING,
+    UndeterminedReason, UnitReason, Verdict, read,
 };
 use crate::allowance::{OperationBudget, push};
 use crate::content_format::Unsettled;
@@ -100,6 +100,7 @@ pub(super) fn entry(
     name: &str,
     kind: DifferenceKind,
     data: DataDirections,
+    perspective: Perspective,
     allowance: &mut ValueAllowance,
 ) -> Option<Result<Rule, UndeterminedReason>> {
     let revision = match kind {
@@ -107,10 +108,15 @@ pub(super) fn entry(
         _ => Revision::Later,
     };
     let mut descriptions = Descriptions::new(owners, data.directions, allowance);
-    match entry::used(&mut descriptions, name, revision) {
-        Ok(false) => return None,
-        Ok(true) => {}
-        Err(reason) => return Some(Err(reason)),
+    // Implementations must accept all admitted inputs, including optional entries
+    // newly unconstrained by an open map. The client-only usage filter is not a
+    // proof about implementation obligations.
+    if perspective == Perspective::Client {
+        match entry::used(&mut descriptions, name, revision) {
+            Ok(false) => return None,
+            Ok(true) => {}
+            Err(reason) => return Some(Err(reason)),
+        }
     }
     Some(match data.unknown {
         Some(reason) => Err(reason),

@@ -114,7 +114,7 @@ fn a_breaking_revision_that_keeps_its_version_warns_once() {
     );
 
     let wire = wire(&comparison);
-    assert_eq!(wire["version"], "1.6");
+    assert_eq!(wire["version"], "1.7");
     assert_eq!(wire["outcome"]["warnings"], 1);
     assert_eq!(wire["outcome"]["errors"], 1);
     assert_eq!(wire["outcome"]["disposition"], "failed");

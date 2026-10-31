@@ -39,7 +39,11 @@ pub(super) fn render(comparison: &RevisionComparison<'_>) -> String {
         ));
     }
     text.push_str("\n\n");
-    text.push_str(super::SCOPE_NOTICE);
+    text.push_str(&format!(
+        "Perspective: {}. ",
+        comparison.perspective.as_str()
+    ));
+    text.push_str(comparison.perspective.scope_notice());
     text.push('\n');
 
     // Keep sections and items in order while they fit with the closing line's reserve. Version

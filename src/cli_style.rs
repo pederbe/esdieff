@@ -175,7 +175,7 @@ pub(crate) fn help(style: Style) -> String {
         ),
         (
             "diff",
-            "--old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]",
+            "--old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--perspective client|implementer] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]",
         ),
     ] {
         help.push_str(&format!(

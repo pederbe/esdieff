@@ -50,8 +50,8 @@ pub use author::{
 pub use comparison::{
     COMPARISON_CONTRACT, Classification, ComparisonRequest, ContentFormatReason, Difference,
     DifferenceAcknowledgement, DifferenceAcknowledgements, DifferenceKind, DifferenceSide,
-    DifferenceSubject, Direction, Presence, Revision, RevisionComparison, UndeterminedReason,
-    UnitReason, VersionWarning, Witness,
+    DifferenceSubject, Direction, Perspective, Presence, Revision, RevisionComparison,
+    UndeterminedReason, UnitReason, VersionWarning, Witness,
 };
 pub use domain::{
     BaseType, Characteristic, Class, DataDescription, DataDescriptions, DataRole, DataType,
