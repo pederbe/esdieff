@@ -141,6 +141,22 @@ pub(crate) fn check_generated(
     check_value(description, value.0.sample_value().require()?, allowance)
 }
 
+/// Check and observe the same traversal without lending it the evidence allowance.
+pub(crate) fn check_generated_observed(
+    description: EffectiveDataDescription<'_>,
+    value: &CheckedValue,
+    allowance: &mut ValueAllowance,
+    observations: &mut crate::generation::choice::Collection,
+) -> Result<ValueAdmission, &'static str> {
+    observations.begin();
+    check_value_inner(
+        description,
+        value.0.sample_value().require()?,
+        allowance,
+        Some(observations),
+    )
+}
+
 /// Check `sample` against `description` on `allowance`. The sample may be any value within its
 /// source, such as the value of a Trace entry, and the description may belong to any effective
 /// model but must be a root that Sample-value checking can select, or the check is refused
@@ -150,19 +166,32 @@ pub(crate) fn check_value(
     sample: SampleValueView<'_>,
     allowance: &mut ValueAllowance,
 ) -> Result<ValueAdmission, &'static str> {
+    check_value_inner(description, sample, allowance, None)
+}
+fn check_value_inner(
+    description: EffectiveDataDescription<'_>,
+    sample: SampleValueView<'_>,
+    allowance: &mut ValueAllowance,
+    observations: Option<&mut crate::generation::choice::Collection>,
+) -> Result<ValueAdmission, &'static str> {
     let json = description.json();
     description_root(json)?;
     let mut numbers = NumberWork::from_remaining(allowance.numbers);
     let mut equality = EqualityWork::new(allowance.equality_pairs);
-    let mut evaluation = evaluate_branches(
-        &ValueContext {
-            description: json,
-            root: BorrowedValue::Sample(sample),
-        },
-        &mut allowance.budget,
-        &mut numbers,
-        &mut equality,
-    );
+    let context = ValueContext {
+        description: json,
+        root: BorrowedValue::Sample(sample),
+    };
+    let mut evaluation = match observations {
+        Some(observations) => super::evaluate_branches_observed(
+            &context,
+            &mut allowance.budget,
+            &mut numbers,
+            &mut equality,
+            observations,
+        ),
+        None => evaluate_branches(&context, &mut allowance.budget, &mut numbers, &mut equality),
+    };
     allowance.numbers = numbers.remaining();
     allowance.equality_pairs = equality.remaining();
     // A refused charge empties its counter, so an exactly spent counter counts as exhausted.

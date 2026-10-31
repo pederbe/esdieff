@@ -13,7 +13,7 @@ pub(crate) mod abstract_value;
 mod generated;
 pub(crate) use generated::{
     CheckedValue, ValueAdmission, ValueAllowance, ValueInterpretations, check_generated,
-    check_value,
+    check_generated_observed, check_value,
 };
 mod meaning;
 pub use meaning::{SampleBasisRef, SampleMeaning, SampleMeaningArea, SampleMeaningConclusion};
@@ -882,7 +882,19 @@ pub(crate) fn evaluate_branches<'a>(
     work: &mut crate::NumberWork,
     equality: &mut crate::equality::EqualityWork<'a>,
 ) -> Evaluation {
-    let mut evaluation = evaluate_branches_inner(context, budget, work, equality);
+    let mut evaluation = evaluate_branches_inner(context, budget, work, equality, None);
+    evaluation.temporal_use |= equality.temporal_use;
+    evaluation
+}
+pub(crate) fn evaluate_branches_observed<'a>(
+    context: &ValueContext<'a>,
+    budget: &mut OperationBudget,
+    work: &mut crate::NumberWork,
+    equality: &mut crate::equality::EqualityWork<'a>,
+    observations: &mut crate::generation::choice::Collection,
+) -> Evaluation {
+    let mut evaluation =
+        evaluate_branches_inner(context, budget, work, equality, Some(observations));
     evaluation.temporal_use |= equality.temporal_use;
     evaluation
 }
@@ -891,6 +903,7 @@ fn evaluate_branches_inner<'a>(
     budget: &mut OperationBudget,
     work: &mut crate::NumberWork,
     equality: &mut crate::equality::EqualityWork<'a>,
+    mut observations: Option<&mut crate::generation::choice::Collection>,
 ) -> Evaluation {
     if !context.valid() {
         return Evaluation::unavailable();
@@ -909,6 +922,9 @@ fn evaluate_branches_inner<'a>(
     let root = context.description;
     let sample = context.root;
     let initial = pair_frame(context, root, root, sample, budget, work, equality);
+    if let Some(observations) = observations.as_deref_mut() {
+        observations.enter();
+    }
     frames.push(initial);
     while !frames.is_empty() {
         if !matches!(
@@ -935,6 +951,9 @@ fn evaluate_branches_inner<'a>(
                             return interrupted(frames, budget, 5);
                         }
                         let child = pair_frame(context, item, item, value, budget, work, equality);
+                        if let Some(observations) = observations.as_deref_mut() {
+                            observations.enter();
+                        }
                         frames.push(child);
                     }
                     continue;
@@ -976,6 +995,9 @@ fn evaluate_branches_inner<'a>(
                             }
                             let child =
                                 pair_frame(context, child, child, value, budget, work, equality);
+                            if let Some(observations) = observations.as_deref_mut() {
+                                observations.enter();
+                            }
                             frames.push(child);
                         }
                         Field::Absent => {}
@@ -1022,6 +1044,9 @@ fn evaluate_branches_inner<'a>(
                                     work,
                                     equality,
                                 );
+                                if let Some(observations) = observations.as_deref_mut() {
+                                    observations.enter();
+                                }
                                 frames.push(child);
                             }
                             _ => frame.unknown = true,
@@ -1046,6 +1071,9 @@ fn evaluate_branches_inner<'a>(
         if completed {
             let frame = frames.pop().expect("completed frame");
             let mut result = frame.evaluation;
+            if let Some(observations) = observations.as_deref_mut() {
+                observations.leave(result.admission);
+            }
             if frame.json.node != frame.pair_root.node {
                 if charge(&mut budget.work, result.findings.len()) {
                     for finding in &mut result.findings {
@@ -1061,6 +1089,9 @@ fn evaluate_branches_inner<'a>(
                 return result;
             };
             if matches!(parent.kind, FrameKind::Choice) && result.admission == Admission::Admitted {
+                if let Some(observations) = observations.as_deref_mut() {
+                    observations.observe(parent.json.node, frame.json.node, frame.sample);
+                }
                 parent.evaluation.accept_choice_witness(result);
                 parent.kind = FrameKind::Leaf;
             } else {

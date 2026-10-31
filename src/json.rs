@@ -262,6 +262,9 @@ pub(crate) struct PointerSize {
     depth: usize,
 }
 impl PointerSize {
+    pub(crate) fn storage(&self) -> usize {
+        self.bytes + self.depth * std::mem::size_of::<usize>()
+    }
     pub(crate) fn render_work(&self) -> usize {
         // Ancestry collection, rendering visits, key scans and output writes.
         2 * self.depth + 1 + 2 * self.bytes

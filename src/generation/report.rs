@@ -136,6 +136,7 @@ fn within(result: &GenerationResult<'_>, limit: usize) -> String {
     let room = limit.saturating_sub(size + OMISSION_SLACK);
     let mut details = String::new();
     let mut kept = 0;
+    let mut ends = Vec::new();
     for description in &result.descriptions {
         let start = details.len();
         if kept > 0 {
@@ -147,6 +148,18 @@ fn within(result: &GenerationResult<'_>, limit: usize) -> String {
             break;
         }
         kept += 1;
+        ends.push(details.len());
+    }
+    // Values and every baseline description take priority over optional evidence.
+    let mut offset = 0;
+    for (description, end) in result.descriptions.iter().zip(ends) {
+        if let Some(extra) = choice_json(
+            &description.choice_evidence,
+            room.saturating_sub(details.len()),
+        ) {
+            details.insert_str(end + offset - 1, &extra);
+            offset += extra.len();
+        }
     }
     let dropped = result.descriptions.len() - kept;
     selected::splice(envelope(result, dropped), "descriptions", &details)
@@ -431,7 +444,126 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
             return within(result, limit);
         }
     }
+    // Optional sections use only space left after all ordinary generation output.
+    for description in &result.descriptions {
+        let prefix = format!(
+            "\nChoice admission evidence for {} {}:\n",
+            description.kind.as_str(),
+            description.pointer
+        );
+        if let Some(extra) = choice_human(
+            &description.choice_evidence,
+            &prefix,
+            limit.saturating_sub(text.len()),
+        ) {
+            text.push_str(&extra);
+        }
+    }
     text.finish(limit)
+}
+
+/// Semantic coordinates identify final alternatives without inventing selectors.
+fn coordinate(steps: &[super::ChoiceCoordinate]) -> Value {
+    Value::Array(
+        steps
+            .iter()
+            .map(|step| match step {
+                super::ChoiceCoordinate::Property(name) => json!({"kind":"property","name":name}),
+                super::ChoiceCoordinate::Items => json!({"kind":"items"}),
+                super::ChoiceCoordinate::Choice(name) => json!({"kind":"choice","name":name}),
+                super::ChoiceCoordinate::Enum(index) => json!({"kind":"enum","index":index}),
+            })
+            .collect(),
+    )
+}
+fn choice_row(row: &super::ChoiceAlternativeEvidence) -> Value {
+    let mut value =
+        json!({"owner":coordinate(row.owner()), "alternative":row.name(), "status":row.status()});
+    if let Some(witness) = row.witness() {
+        value["witness"] =
+            json!({"value_index":witness.value_index(), "sample_pointer":witness.sample_pointer()});
+    }
+    value
+}
+fn choice_container(evidence: &super::ChoiceEvidence, rows: &str, shown: usize) -> String {
+    let omitted = evidence.alternatives_omitted() + evidence.alternatives().len() - shown;
+    let state = if shown < evidence.alternatives().len() {
+        "partial"
+    } else {
+        evidence.state().as_str()
+    };
+    format!(
+        ",\"choice_evidence\":{{\"state\":\"{state}\",\"alternatives\":[{rows}],\"alternatives_omitted\":{omitted}}}"
+    )
+}
+fn choice_json(evidence: &super::ChoiceEvidence, room: usize) -> Option<String> {
+    let mut rows = String::new();
+    let mut container = choice_container(evidence, &rows, 0);
+    if container.len() > room {
+        return None;
+    }
+    for (index, row) in evidence.alternatives().enumerate() {
+        let start = rows.len();
+        if index > 0 {
+            rows.push(',');
+        }
+        rows.push_str(&choice_row(row).to_string());
+        let candidate = choice_container(evidence, &rows, index + 1);
+        if candidate.len() > room {
+            rows.truncate(start);
+            break;
+        }
+        container = candidate;
+    }
+    Some(container)
+}
+fn choice_human(evidence: &super::ChoiceEvidence, prefix: &str, room: usize) -> Option<String> {
+    if evidence.alternatives().len() == 0
+        && evidence.state() == super::ChoiceEvidenceState::Complete
+    {
+        return None;
+    }
+    let explanation = "  A missing witness establishes neither rejection nor impossibility. Overlapping alternatives may be skipped after the first admission.\n";
+    let render = |rows: &str, shown: usize| {
+        let omitted = evidence.alternatives_omitted() + evidence.alternatives().len() - shown;
+        let state = if shown < evidence.alternatives().len() {
+            "partial"
+        } else {
+            evidence.state().as_str()
+        };
+        format!(
+            "{prefix}  Collection: {state}, {omitted} known alternatives omitted\n{explanation}{rows}"
+        )
+    };
+    let mut rows = String::new();
+    let mut output = render(&rows, 0);
+    if output.len() > room {
+        return None;
+    }
+    for (index, row) in evidence.alternatives().enumerate() {
+        let start = rows.len();
+        rows.push_str(&format!(
+            "  {} {}: {}",
+            coordinate(row.owner()),
+            json!(row.name()),
+            row.status()
+        ));
+        if let Some(witness) = row.witness() {
+            rows.push_str(&format!(
+                " (value {}, sample {})",
+                witness.value_index(),
+                json!(witness.sample_pointer())
+            ));
+        }
+        rows.push('\n');
+        let candidate = render(&rows, index + 1);
+        if candidate.len() > room {
+            rows.truncate(start);
+            break;
+        }
+        output = candidate;
+    }
+    Some(output)
 }
 
 /// A description's human heading, which begins with an empty line.

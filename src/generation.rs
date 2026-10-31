@@ -9,10 +9,14 @@
 //! generation request, while each checked value retains its own counters. The value and
 //! description ceilings keep the request finite under ADR 0009: Bounded processing and
 //! reporting and ADR 0013: Shared workflow and report guarantees.
+pub(crate) mod choice;
 mod evidence;
 mod report;
 mod targets;
 
+pub use choice::{
+    ChoiceAlternativeEvidence, ChoiceCoordinate, ChoiceEvidence, ChoiceEvidenceState, ChoiceWitness,
+};
 pub use evidence::GenerationEvidence;
 
 use crate::allowance::OperationBudget;
@@ -97,6 +101,7 @@ pub struct GenerationResult<'a> {
 }
 
 struct Description {
+    choice_evidence: ChoiceEvidence,
     kind: SampleKind,
     pointer: String,
     state: GenerationState,
@@ -111,6 +116,9 @@ struct Description {
 #[derive(Clone, Copy)]
 pub struct GeneratedDescription<'a>(&'a Description);
 impl<'a> GeneratedDescription<'a> {
+    pub fn choice_evidence(self) -> &'a ChoiceEvidence {
+        &self.0.choice_evidence
+    }
     /// The Sample selector kind of the description.
     pub fn kind(self) -> SampleKind {
         self.0.kind
@@ -459,6 +467,7 @@ fn settle(
             kind,
             pointer,
             state: GenerationState::Unavailable,
+            choice_evidence: choice::Collection::new(None, &result.catalogue.limits).finish(),
             values: Vec::new(),
             omitted: 0,
             oversized: 0,
@@ -475,7 +484,8 @@ fn settle(
         line: &line,
     };
     patterns.lend_worker(&mut allowance.budget.patterns);
-    let generated = targets::generate(json, VALUES, &mut allowance, room);
+    let mut choices = choice::Collection::new(Some(json), &result.catalogue.limits);
+    let generated = targets::generate(json, VALUES, &mut allowance, room, &mut choices);
     patterns.reclaim_worker(&mut allowance.budget.patterns);
     result.scope.interpretations |= generated.interpretations;
     result.scope.set_aside |= allowance.budget.set_aside;
@@ -495,6 +505,7 @@ fn settle(
         } else {
             GenerationState::Partial
         },
+        choice_evidence: choices.finish(),
         values: generated.values,
         omitted: generated.omitted,
         oversized: generated.oversized,

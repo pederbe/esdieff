@@ -583,6 +583,26 @@ impl<'a> SampleValueView<'a> {
             .as_deref()
             .map_or(Field::Absent, Field::Present)
     }
+    /// Render an observation pointer using only the optional evidence allowance.
+    pub(crate) fn evidence_pointer(
+        self,
+        budget: &mut crate::allowance::OperationBudget,
+    ) -> Result<String, ()> {
+        let json = crate::JsonView {
+            source: self.source,
+            node: self.value.node,
+        };
+        let mut work = crate::json::PointerBudget::new(budget.work);
+        let size = json.pointer_size(8192, &mut work);
+        budget.work = *work.counter();
+        let size = size.map_err(|_| ())?;
+        if !crate::allowance::charge(&mut budget.work, size.render_work())
+            || !crate::allowance::charge(&mut budget.allocation, size.storage())
+        {
+            return Err(());
+        }
+        Ok(json.render_pointer(size))
+    }
     pub fn pointer(self, bytes: u32) -> Field<String> {
         crate::JsonView {
             source: self.source,

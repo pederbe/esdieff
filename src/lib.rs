@@ -71,7 +71,8 @@ pub use effective::{
 };
 pub use formats::FormatKnowledgeView;
 pub use generation::{
-    GENERATION_CONTRACT, GeneratedDescription, GeneratedValue, GenerationEvidence,
+    ChoiceAlternativeEvidence, ChoiceCoordinate, ChoiceEvidence, ChoiceEvidenceState,
+    ChoiceWitness, GENERATION_CONTRACT, GeneratedDescription, GeneratedValue, GenerationEvidence,
     GenerationRequest, GenerationResult, GenerationState,
 };
 pub use human::HumanStyle;
