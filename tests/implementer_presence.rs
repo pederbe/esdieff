@@ -665,3 +665,36 @@ fn unavailable_identity_never_establishes_an_optional_addition() {
             .all(|difference| difference.classification() == Classification::Undetermined)
     );
 }
+
+#[test]
+fn incoming_obligations_do_not_treat_unavailable_earlier_groupings_as_absent() {
+    let old = r##"{"sdfThing":{"Kitchen":{"sdfRef":"#/missing","sdfObject":{"Controller":{}}}},"sdfObject":{"Oven":{}}}"##;
+    for known_obligation in [false, true] {
+        // Put Kitchen first so its unavailable correspondence is encountered before Oven.
+        let new = format!(
+            r##"{{"sdfThing":{{"Kitchen":{{"sdfObject":{{"Controller":{{"sdfRequired":["#/sdfObject/Oven/sdfProperty/temp"]}}}}}}}},"sdfObject":{{"Oven":{{"sdfProperty":{{"temp":{{}}}}{}}}}}}}"##,
+            if known_obligation {
+                r#", "sdfRequired":["temp"]"#
+            } else {
+                ""
+            }
+        );
+        let earlier = catalogue(&[("model", old)]);
+        let later = catalogue(&[("model", &new)]);
+        let comparison = ComparisonRequest::new(&earlier, &later)
+            .perspective(Perspective::Implementer)
+            .compare()
+            .unwrap();
+        let presence = at(&comparison, "/temp");
+        if known_obligation {
+            assert_eq!(presence.classification(), Classification::Breaking);
+        } else {
+            assert_eq!(presence.classification(), Classification::Undetermined);
+            assert_eq!(presence.reason().unwrap().code(), "reference.unavailable");
+        }
+        assert_eq!(
+            at(&comparison, "/Kitchen").classification(),
+            Classification::Undetermined
+        );
+    }
+}
