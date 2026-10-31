@@ -40,7 +40,7 @@ The reports are trimmed to the lines about the sample. A rejected sample is a fa
 `esdieff generate` builds values from the model's rules, so your tests get expectations without hand-written payloads. Select one definition with `--kind` and `--pointer`, or leave them out to cover every property, action and event in the document:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
-<b>Generated values</b> esdieff.generation/1: <span class="g">passed</span>
+<b>Generated values</b> esdieff.generation/2: <span class="g">passed</span>
 <b>Values:</b> 2 <span class="g">admitted</span>, 8 <span class="r">rejected</span>, 0 <span class="y">undetermined</span>
 <b>Descriptions:</b> 1
 

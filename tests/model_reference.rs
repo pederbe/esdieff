@@ -301,7 +301,7 @@ fn every_displayed_example_is_independently_admitted_for_its_selector() {
 }
 
 #[test]
-fn rejected_pattern_candidate_and_documentary_default_are_not_admitted_examples() {
+fn pattern_candidates_supply_admitted_examples_without_substituting_bad_defaults() {
     let (_, markdown) = reference(
         r#"{"sdfObject":{"Device":{"sdfProperty":{"pattern":{"type":"string","nullable":false,"pattern":"^z$","default":"bad"},"constant":{"type":"integer","nullable":false,"minimum":10,"default":1}}}}}"#,
         "/sdfObject/Device",
@@ -314,8 +314,8 @@ fn rejected_pattern_candidate_and_documentary_default_are_not_admitted_examples(
         .split("## constant")
         .next()
         .unwrap();
-    assert!(!pattern.contains("```json"));
-    assert!(pattern.contains("No small admitted example"));
+    assert!(pattern.contains("```json\n\"z\"\n```"));
+    assert!(!pattern.contains("```json\n\"bad\"\n```"));
     let constant = markdown.split("## constant").nth(1).unwrap();
     assert!(!constant.contains("```json\n1\n```"));
 }

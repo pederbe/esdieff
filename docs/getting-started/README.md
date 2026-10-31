@@ -101,7 +101,7 @@ The example is a room thermostat with two properties, one action and one event. 
 Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/thermostat-check/rich.sdf.json) from the repository, or copy it from a checkout, and save it as `thermostat.sdf.json` in an empty directory. Take the rich model, not the smaller `thermostat.sdf.json` next to it in the repository: that one has no half-degree step, so it accepts 5.25. Then generate test values from its rules. The command names the document to generate for, followed by every model file to supply, which here is the same file:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json thermostat.sdf.json
-<b>Generated values</b> esdieff.generation/1: <span class="g">passed</span>
+<b>Generated values</b> esdieff.generation/2: <span class="g">passed</span>
 <b>Values:</b> 15 <span class="g">admitted</span>, 60 <span class="r">rejected</span>, 0 <span class="y">undetermined</span>
 <b>Descriptions:</b> 4
 

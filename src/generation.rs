@@ -1,6 +1,6 @@
 //! Generated values for selected effective data descriptions, following ADR 0041: Generated
 //! values settled by Sample-value checking. Each value aims at one Generation target of the
-//! contract `esdieff.generation/1`, and Sample-value checking settles it against the
+//! contract `esdieff.generation/2`, and Sample-value checking settles it against the
 //! description it was generated for, so its admission is the only statement made about it.
 //! Composition and selection spend the request's allowance, the values of each description
 //! are built on an allowance of the description's own, and each value is checked with the
@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// The identity of the fixed Generation target list, order and value rules.
-pub const GENERATION_CONTRACT: &str = "esdieff.generation/1";
+pub const GENERATION_CONTRACT: &str = "esdieff.generation/2";
 
 /// The most values kept for one description, after duplicates are removed.
 const VALUES: usize = 64;

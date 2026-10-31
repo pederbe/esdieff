@@ -1,5 +1,5 @@
 //! The Generation targets of one effective data description, in the order the contract
-//! `esdieff.generation/1` fixes, each settled by Sample-value checking as soon as it is kept.
+//! `esdieff.generation/2` fixes, each settled by Sample-value checking as soon as it is kept.
 //! Settling each value before generating the next keeps every kept admission, even when later
 //! generation runs out of the description's allowance.
 //!

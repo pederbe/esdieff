@@ -1,10 +1,10 @@
 //! Breaking witnesses and compatibility proofs for changed string lengths, `multipleOf`,
 //! `pattern` and `format`. Follows ADR 0039: Client-side revision comparison.
-use esdieff::{Catalogue, Classification, ComparisonRequest};
+use esdieff::{Catalogue, Classification, ComparisonRequest, Limits, SourceInput};
 use serde_json::{Value, json};
 
 mod comparison_support;
-use comparison_support::{at, catalogue, client, revised, thing, witness};
+use comparison_support::{at, client, revised, thing, witness};
 
 /// A station whose `code` and `setpoint` only Clients supply and whose `name` and `reading`
 /// only the Thing supplies.
@@ -33,10 +33,79 @@ fn station(revisions: &[(&str, &str, Value)]) -> String {
 
 /// The earlier and later stations with each revision applied to its own side.
 fn stations(old: &[(&str, &str, Value)], new: &[(&str, &str, Value)]) -> (Catalogue, Catalogue) {
-    (
-        catalogue(&[("station", &station(old))]),
-        catalogue(&[("station", &station(new))]),
+    // These assertions test admitted values, not scheduling inside the matching time limit.
+    // Keep a finite allowance while avoiding incidental deadline exhaustion under CI load.
+    stations_with_limits(
+        old,
+        new,
+        Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
     )
+}
+
+fn stations_with_limits(
+    old: &[(&str, &str, Value)],
+    new: &[(&str, &str, Value)],
+    limits: Limits,
+) -> (Catalogue, Catalogue) {
+    let catalogue = |text: String| {
+        Catalogue::with_limits(
+            &[SourceInput::supplied("station", text.as_bytes())],
+            limits.clone(),
+        )
+        .unwrap()
+    };
+    (catalogue(station(old)), catalogue(station(new)))
+}
+
+#[test]
+fn an_exhausted_pattern_time_budget_leaves_a_candidate_witness_undetermined() {
+    let (earlier, later) = stations_with_limits(
+        &[
+            ("code", "pattern", json!("^A[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+        &[
+            ("code", "pattern", json!("^B[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+        Limits::default().pattern_deadline(std::time::Duration::ZERO),
+    );
+    let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
+    let difference = at(&comparison, "/code/pattern");
+    assert_eq!(
+        difference.classification(),
+        Classification::Undetermined,
+        "{}",
+        comparison.to_human()
+    );
+    assert!(difference.witness().is_none());
+    assert_eq!(
+        difference.reason().unwrap().code(),
+        "comparison.witness_unsettled"
+    );
+}
+
+#[test]
+fn a_changed_identifier_pattern_has_a_settled_breaking_witness() {
+    let (earlier, later) = stations(
+        &[
+            ("code", "pattern", json!("^A[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+        &[
+            ("code", "pattern", json!("^B[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+    );
+    let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
+    let pattern = at(&comparison, "/code/pattern");
+    assert_eq!(
+        pattern.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
+    assert_eq!(witness(&pattern), client(r#""A00""#));
 }
 
 #[test]
@@ -156,9 +225,9 @@ fn a_length_candidate_another_constraint_excludes_gives_way_to_a_representative_
 }
 
 #[test]
-fn a_length_change_whose_candidates_other_constraints_exclude_stays_undetermined() {
-    // The pattern rejects every string of `a`, and a length beyond the value capabilities is
-    // never generated.
+fn pattern_representatives_witness_length_changes_but_not_unbounded_lengths() {
+    // Digits replace rejected copies of a. A length beyond the value capabilities still
+    // supplies no witness.
     let digits = ("code", "pattern", json!("^[0-9]+$"));
     let huge = ("name", "maxLength", json!(1e30));
     let (earlier, later) = stations(
@@ -166,20 +235,24 @@ fn a_length_change_whose_candidates_other_constraints_exclude_stays_undetermined
         &[digits, ("code", "minLength", json!(4))],
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
-    for suffix in ["/code/minLength", "/name/maxLength"] {
-        let (classification, code) = unsettled(&comparison, suffix);
-        assert_eq!((classification, code.as_str()), UNPROVEN, "{suffix}");
-    }
+    assert_eq!(
+        witness(&at(&comparison, "/code/minLength")),
+        client(r#""00""#)
+    );
+    let (classification, code) = unsettled(&comparison, "/name/maxLength");
+    assert_eq!((classification, code.as_str()), UNPROVEN);
 
-    // The pattern rejects every string of `a` as Thing-supplied data loses its minimum too.
+    // The later representative also witnesses a removed minimum of Thing-supplied data.
     let digits = ("name", "pattern", json!("^[0-9]+$"));
     let (earlier, later) = stations(
         &[digits.clone(), ("name", "minLength", json!(3))],
         &[digits],
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
-    let (classification, code) = unsettled(&comparison, "/name/minLength");
-    assert_eq!((classification, code.as_str()), UNPROVEN);
+    assert_eq!(
+        witness(&at(&comparison, "/name/minLength")),
+        thing(r#""0""#)
+    );
 }
 
 fn step(property: &str, step: f64) -> (&str, &'static str, Value) {
@@ -316,10 +389,20 @@ fn an_added_pattern_breaks_client_data_and_a_removed_one_thing_data_with_a_repre
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
     let code = at(&comparison, "/code/pattern");
-    assert_eq!(code.classification(), Classification::Breaking);
+    assert_eq!(
+        code.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
     assert_eq!(witness(&code), client("\"\""));
     let name = at(&comparison, "/name/pattern");
-    assert_eq!(name.classification(), Classification::Breaking);
+    assert_eq!(
+        name.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
     assert_eq!(witness(&name), thing("\"\""));
 
     let comparison = ComparisonRequest::new(&later, &earlier).compare().unwrap();
@@ -329,8 +412,7 @@ fn an_added_pattern_breaks_client_data_and_a_removed_one_thing_data_with_a_repre
 
 #[test]
 fn a_changed_pattern_breaks_only_when_a_representative_value_separates_the_revisions() {
-    // A one-letter code matches only the earlier pattern, while the empty name that the
-    // later revision represents matches neither.
+    // Each direction now supplies a representative matching its admitting revision.
     let short = ("code", "minLength", json!(1));
     let (earlier, later) = stations(
         &[
@@ -346,8 +428,7 @@ fn a_changed_pattern_breaks_only_when_a_representative_value_separates_the_revis
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
     assert_eq!(witness(&at(&comparison, "/code/pattern")), client("\"a\""));
-    let (classification, code) = unsettled(&comparison, "/name/pattern");
-    assert_eq!((classification, code.as_str()), UNPROVEN);
+    assert_eq!(witness(&at(&comparison, "/name/pattern")), thing(r#""0""#));
 }
 
 fn format<'a>(property: &'a str, format: &str) -> (&'a str, &'static str, Value) {
@@ -410,16 +491,36 @@ fn a_uri_that_becomes_a_uri_reference_widens_and_the_reverse_narrows() {
 }
 
 #[test]
-fn a_format_whose_candidates_another_constraint_excludes_stays_undetermined() {
-    // The pattern rejects `""` as the Client-supplied code gains a format and the
-    // Thing-supplied name loses one.
+fn pattern_representatives_witness_added_and_removed_formats() {
+    // The digit representative is admitted without the UUID format and rejected with it.
     let digits = |property| pattern(property, "^[0-9]+$");
     let (earlier, later) = stations(
         &[digits("code"), digits("name"), format("name", "uuid")],
         &[digits("code"), digits("name"), format("code", "uuid")],
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
-    for suffix in ["/code/format", "/name/format"] {
+    assert_eq!(witness(&at(&comparison, "/code/format")), client(r#""0""#));
+    assert_eq!(witness(&at(&comparison, "/name/format")), thing(r#""0""#));
+}
+
+#[test]
+fn unsupported_synthesis_keeps_unproven_changes_without_false_witnesses() {
+    let digits = |property| pattern(property, "^(?:[0-9]+)$");
+    let (earlier, later) = stations(
+        &[
+            digits("code"),
+            digits("name"),
+            format("name", "uuid"),
+            ("code", "minLength", json!(2)),
+        ],
+        &[
+            digits("code"),
+            digits("name"),
+            ("code", "minLength", json!(4)),
+        ],
+    );
+    let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
+    for suffix in ["/code/minLength", "/name/format"] {
         let (classification, code) = unsettled(&comparison, suffix);
         assert_eq!((classification, code.as_str()), UNPROVEN, "{suffix}");
     }

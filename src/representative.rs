@@ -9,6 +9,7 @@
 //! own description, so generation recurses into nested descriptions, as deep as a generated
 //! value may nest. Every lookup and value is charged to the allowance the generator is given.
 pub(crate) mod bounds;
+mod pattern;
 
 use crate::allowance::{OperationBudget, charge};
 pub(crate) use crate::budgeted::Exhausted;
@@ -371,7 +372,8 @@ impl<'s> Generator<'s> {
     }
 
     /// A string: a conventional value of a format that Sample-value checking checks beside
-    /// an explicit `type`, otherwise `minLength` copies of `a`, which is `""` without one.
+    /// an explicit `type`, otherwise a bounded pattern-aware candidate, falling back to
+    /// `minLength` copies of `a`, which is `""` without one.
     fn string(
         &mut self,
         description: EffectiveJson<'_>,
@@ -387,6 +389,24 @@ impl<'s> Generator<'s> {
         let Some(length) = self.count_or_zero(description, "minLength", limit)? else {
             return Ok(None);
         };
+        if let Some(pattern) = self.member(description, "pattern")?
+            && failure(pattern).is_none()
+            && let Some(pattern) = pattern.text().present()
+            && pattern.len() <= description.model.catalogue.limits.pattern_bytes
+        {
+            let maximum = match self.member(description, "maxLength")? {
+                None => Some(limit),
+                Some(json) => json
+                    .number()
+                    .present()
+                    .and_then(|number| count(number, limit)),
+            };
+            if let Some(maximum) = maximum
+                && let Some(text) = pattern::synthesize(pattern, length, maximum, self)?
+            {
+                return self.build(text.len() + 2, |builder| builder.text(&text));
+            }
+        }
         self.build(length + 2, |builder| builder.text(&"a".repeat(length)))
     }
 

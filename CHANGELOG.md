@@ -4,6 +4,11 @@
 
 ### Added
 
+- Generate pattern-aware string representatives for a documented ASCII subset,
+  combining length limits and required map entries. Revision comparison can use
+  them as breaking witnesses. Generation now reports `esdieff.generation/2` and
+  comparison `esdieff.revision-comparison/4`. Consumers checking those identities
+  must accept the new values. Report schemas and recorded traces are unchanged.
 - Generate a Markdown model reference for a selected Thing or Object with
   effective constraints, illustrative admitted values and source origins. Use
   `esdieff reference --document MODEL --pointer POINTER INPUT...` or the

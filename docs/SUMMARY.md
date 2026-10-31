@@ -99,3 +99,4 @@
 - [0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md)
 - [0049: Context revision comparison](adr/0049-context-revision-comparison.md)
 - [0050: Selected Markdown model reference](adr/0050-selected-markdown-model-reference.md)
+- [0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md)

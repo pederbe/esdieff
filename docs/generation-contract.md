@@ -18,7 +18,7 @@ assert_eq!((below.to_json(), below.admission()), ("9", Admission::Rejected));
 # Ok::<(), &'static str>(())
 ```
 
-The generation contract identity is `esdieff.generation/1`. It binds the Generation targets, their order and the rules that build their values, so a release that changes any of them gets a new identity and a report keeps its meaning. Generation is deterministic, with no randomness or seed, so the same model and request give the same values in the same order.
+The generation contract identity is `esdieff.generation/2`. It binds the Generation targets, their order and the rules that build their values, so a release that changes any of them gets a new identity and a report keeps its meaning. Generation is deterministic, with no randomness or seed, so the same model and request give the same values in the same order.
 
 ## Command line
 
@@ -52,7 +52,21 @@ With a selector, generation covers the one description that Sample-value checkin
 
 ## Generation targets
 
-Each description's targets come in four groups, in this order. A target that does not apply produces no value, and so does one whose value would exceed the value capabilities, such as a string longer than a document may be or a value nested deeper than the depth limit. `pattern` has no target in this contract, since Esdieff does not synthesize strings that match a pattern.
+Each description's targets come in four groups, in this order. A target that does not apply produces no value, and so does one whose value would exceed the value capabilities, such as a string longer than a document may be or a value nested deeper than the depth limit. `pattern` has no separate target. The string `type` representative uses the bounded synthesis below, including when it fills a required sibling of a nested target.
+
+### Pattern-aware representatives
+
+Without a conventional checked format value, a string representative first tries to satisfy its effective `pattern`, `minLength` and `maxLength` together. For example, `{"type":"string","pattern":"^ID-[0-9]+$","minLength":5,"maxLength":7}` gives `"ID-00"`. This same representative fills required entries of maps and supplies candidate revision-comparison witnesses. Sample-value checking still settles every candidate against all applicable constraints.
+
+The supported synthesis subset is ASCII literals and concatenation, optional leading `^` and trailing `$`, positive character classes with ASCII ranges, `\d`, `\w`, `\s`, escaped regular-expression punctuation, and `\n`, `\r`, `\t`, `\f`, `\v`. Atoms can use `?`, `*`, `+`, `{n}`, `{n,m}` or `{n,}`, including lazy forms. Inside a class, escapes can contribute characters but a range needs single-character endpoints. Groups, alternation, negated classes, wildcard `.`, lookaround, backreferences, Unicode literals and Unicode escapes are outside this subset. This synthesis boundary does not restrict the patterns Sample-value checking can match.
+
+Each atom chooses its lowest ASCII character, using `0` for `\d` and `\w`, and space for `\s`. Generation starts with each atom's minimum repetition and increases repetitions from left to right until `minLength` is met. If repetitions cannot reach that length, an unanchored pattern permits `a` padding after its matched text, or before it when `$` is present. A fully anchored pattern permits no padding. A candidate longer than `maxLength` or the document byte ceiling is not built. Without `maxLength`, the document byte ceiling bounds open repetitions. Supplied counts must fit the generator's count capabilities.
+
+Unsupported syntax, unreadable `maxLength`, impossible lengths or overflowing repetition counts keep the ordinary `minLength` copies of `a` fallback. An unreadable or unsupported `minLength` prevents even that fallback. No satisfying candidate is promised in those cases, and failure to synthesize is not a proof that the description admits no string. Conventional format values retain precedence, and const, enum and default candidates retain their existing order. Boundary and outside length targets still use copies of `a`, so another constraint can reject them. Exhausted synthesis work or allocation leaves the description partial rather than silently replenishing its allowance. The parser storage, parse work and constructed text are charged to that description's existing allowance before they are used.
+
+This is contract `esdieff.generation/2`, superseding `/1` for the changed string representative rules. The target names, order, report version and trace format stay the same. [ADR 0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md) records the decision.
+
+### Target order
 
 The first group is the [Representative values](revision-comparison-contract.md#representative-values) of ADR 0039, with their number, string, map and array rules:
 
@@ -136,7 +150,7 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"generate"
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
 | Generate request | assessment:null; inventory:null; generation:Generation; scope:Scope | Generation names its own contract. Scope is `selected` with the document as its one root, the other model sources its composition used as dependencies, both as assessed, and the needed sources it could not use as unavailable. |
-| Generation | contract:`"esdieff.generation/1"`; document:Id | selector:SampleSelector, present only for an explicit selector. |
+| Generation | contract:`"esdieff.generation/2"`; document:Id | selector:SampleSelector, present only for an explicit selector. |
 | Generate outcome | Outcome fields | `errors`, `warnings` and `notices` are 0. `incomplete_checks` counts descriptions that are not complete, descriptions left out beyond the ceiling or for the report byte limit, and 1 more when the selection is partial. The disposition is passed or undetermined. |
 | Generate requested coverage | inventory:null; count_unit:`"description"`; total:Count|null; assessed:Count; not_applicable:0; unassessed:Count; undetermined:Count | Complete descriptions are assessed, partial and unavailable ones undetermined, and those left out beyond the ceiling or for the report byte limit unassessed. total is null when the selection is partial, since some descriptions may be missing. |
 | GenerateResult | kind:`"generate"`; summary:GenerateSummary; selection:`"complete"|"partial"`; descriptions:GeneratedDescription[]; descriptions_omitted:Count; omissions:Omission[] | descriptions_omitted counts descriptions beyond the ceiling and those whose details did not fit the report. omissions has a `count_limit` record for the first, a `report_limit` record for the second, and for values a `count_limit` record for those beyond the ceiling and a `byte_limit` record for those that did not fit. The `report_limit` and `byte_limit` records also appear in `diagnostics.omissions`, which makes the report truncated. |
