@@ -182,6 +182,69 @@ fn the_human_report_shows_targets_values_and_admissions() {
 }
 
 #[test]
+fn corpus_evidence_explains_blocked_boundaries_in_human_and_json_reports() {
+    let model = Model::new(
+        r#"{"sdfProperty":{
+            "identifier":{"type":"string","nullable":false,"pattern":"^(foo|bar)$","minLength":3,"maxLength":3},
+            "level":{"type":"integer","nullable":false,"minimum":10,"maximum":20}
+        }}"#,
+    );
+    let path = model.path();
+    let json = report(
+        &run(&["generate", "--document", path, "--format", "json", path]),
+        0,
+    );
+    let descriptions = json["result"]["descriptions"].as_array().unwrap();
+    let blocked = &descriptions[0];
+    assert_eq!(blocked["state"], "complete");
+    assert_eq!(blocked["evidence"]["admitted_boundary"], 0);
+    assert_eq!(blocked["evidence"]["admitted_example"], 0);
+    let boundary = blocked["values"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|value| value["target"] == "min_length")
+        .unwrap();
+    assert_eq!(boundary["evidence"], "rejected_candidate");
+    assert_eq!(boundary["codes"], serde_json::json!(["sample.pattern"]));
+    assert_eq!(
+        descriptions[1]["evidence"],
+        serde_json::json!({
+            "admitted_example":0,"admitted_boundary":2,"rejected_outside":6,
+            "rejected_candidate":1,"undetermined":0
+        })
+    );
+    let human = run(&["generate", "--document", path, path]);
+    assert_eq!(human.status.code(), Some(0));
+    let text = String::from_utf8(human.stdout).unwrap();
+    assert!(
+        text.contains(
+            "No admitted example was retained. This does not prove the description admits no value."
+        ),
+        "{text}"
+    );
+    assert!(text.contains("0 other admitted examples, 2 admitted boundary candidates, 6 rejected outside candidates, 1 other rejected candidates, 0 undetermined"), "{text}");
+    let boundary = text
+        .lines()
+        .find(|line| line.contains("min_length"))
+        .unwrap();
+    assert!(
+        boundary.contains("(sample.pattern) [rejected_candidate]"),
+        "{boundary}"
+    );
+    assert!(text.contains("Complete generation does not imply complete constraint coverage."));
+
+    // Evidence is report detail. Recorded traces retain their existing schema.
+    let vectors = run(&["generate", "--document", path, "--format", "jsonl", path]);
+    assert_eq!(vectors.status.code(), Some(0));
+    for line in String::from_utf8(vectors.stdout).unwrap().lines() {
+        let entry: Value = serde_json::from_str(line).unwrap();
+        assert!(entry.get("evidence").is_none());
+        assert_eq!(entry.as_object().unwrap().len(), 5);
+    }
+}
+
+#[test]
 fn json_lines_give_one_trace_entry_per_settled_value() {
     let model = Model::new(THERMOSTAT);
     let output = run(&[

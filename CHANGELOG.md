@@ -9,6 +9,11 @@
 
 ### Added
 
+- Explain generated corpora with admitted examples and boundary candidates,
+  rejected outside and other candidates, and undetermined values. The library,
+  human report and optional JSON `evidence` fields share these observations.
+  Counts describe retained values rather than all constraints or Choice
+  alternatives. Report and generation identities and JSON Lines remain unchanged.
 - Explore a shared definition with `esdieff reference --uses` or
   `ReferenceRequest::with_uses()`. The Markdown reference lists effective
   consumers across supplied models, inherited and overridden scalar values,

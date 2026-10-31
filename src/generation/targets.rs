@@ -11,6 +11,7 @@
 //! Each of their values is placed where that nested description stands, inside enclosing maps
 //! whose other required entries hold Representative values and enclosing arrays that hold as
 //! many items as they require, so the enclosing constraints still apply to it.
+use super::evidence::Aim;
 use crate::budgeted::{self, listed};
 use crate::representative::bounds::{self, End, step, step_power};
 use crate::representative::{self, Bound, Exhausted, Generator, KINDS, Representative, TYPES};
@@ -28,6 +29,7 @@ pub(super) struct Settled {
     pub(super) value: CheckedValue,
     pub(super) admission: Admission,
     pub(super) codes: Vec<&'static str>,
+    pub(super) aim: Aim,
     /// The target's precedence, which decides which of two targets with the same value
     /// keeps it.
     precedence: u8,
@@ -660,10 +662,11 @@ impl<'m> Run<'_, 'm, '_> {
             return Ok(());
         };
         let precedence = self.precedence(target);
+        let aim = Aim::of(target);
         let target = self.name(target);
         let key = self.key(&value)?;
         match self.seen.get(&key) {
-            Some(true) => return self.yield_to(&key, target, value, precedence),
+            Some(true) => return self.yield_to(&key, target, value, precedence, aim),
             Some(false) => return Ok(()),
             None => {}
         }
@@ -713,6 +716,7 @@ impl<'m> Run<'_, 'm, '_> {
         self.remember(key.clone(), true)?;
         let settled = Settled {
             target,
+            aim,
             value,
             admission: checked.admission,
             codes,
@@ -732,6 +736,7 @@ impl<'m> Run<'_, 'm, '_> {
         target: String,
         value: JsonValue,
         precedence: u8,
+        aim: Aim,
     ) -> Result<(), Exhausted> {
         let Some(index) = self
             .generated
@@ -751,6 +756,7 @@ impl<'m> Run<'_, 'm, '_> {
         );
         let mut kept = self.generated.values.remove(index);
         kept.target = target;
+        kept.aim = aim;
         kept.value = CheckedValue::new(value);
         kept.precedence = precedence;
         self.generated.values.push(kept);

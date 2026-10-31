@@ -10,7 +10,10 @@
 //! once they would not fit, and the human report then gives the JSON report instead. The JSON
 //! Lines entries are written whole, since their bytes were charged.
 use super::targets::Settled;
-use super::{Description, GENERATION_CONTRACT, GenerationResult, GenerationState};
+use super::{
+    Description, GENERATION_CONTRACT, GeneratedDescription, GeneratedValue, GenerationEvidence,
+    GenerationResult, GenerationState,
+};
 use crate::human::{HumanText, Role};
 use crate::report::selected;
 use crate::{Admission, SampleKind, SourceId};
@@ -34,13 +37,53 @@ const TARGET_WIDTH: usize = 40;
 const INDENT: &str = "  ";
 const ADMISSION_WIDTH: usize = 12;
 
+const NO_ADMITTED: &str =
+    "  No admitted example was retained. This does not prove the description admits no value.\n";
+
+/// Each kept value belongs to exactly one evidence category. This does not count
+/// constraints, alternatives, discarded duplicate targets or omitted candidates.
+fn evidence_counts(description: &Description) -> [u32; 5] {
+    let description = GeneratedDescription(description);
+    [
+        GenerationEvidence::AdmittedExample,
+        GenerationEvidence::AdmittedBoundary,
+        GenerationEvidence::RejectedOutside,
+        GenerationEvidence::RejectedCandidate,
+        GenerationEvidence::Undetermined,
+    ]
+    .map(|evidence| description.count_evidence(evidence))
+}
+
+fn evidence_json(counts: [u32; 5]) -> Value {
+    let [examples, boundaries, outside, rejected, undetermined] = counts;
+    json!({"admitted_example":examples,"admitted_boundary":boundaries,
+        "rejected_outside":outside,"rejected_candidate":rejected,"undetermined":undetermined})
+}
+
+fn human_evidence(counts: [u32; 5]) -> String {
+    let [examples, boundaries, outside, rejected, undetermined] = counts;
+    format!(
+        "  Corpus evidence: {examples} other admitted examples, {boundaries} admitted boundary candidates, {outside} rejected outside candidates, {rejected} other rejected candidates, {undetermined} undetermined\n"
+    )
+}
+
 /// The bytes one description needs in its largest rendering, apart from its values: its JSON
 /// record with the longest state and count, or its human heading and omission lines.
 pub(super) fn description_bytes(document: SourceId, kind: SampleKind, pointer: &str) -> usize {
-    let json = description_open(document, kind, pointer, GenerationState::Unavailable).len()
+    let counts = [u32::MAX; 5];
+    let json = description_open(
+        document,
+        kind,
+        pointer,
+        GenerationState::Unavailable,
+        counts,
+    )
+    .len()
         + description_close(u32::MAX).len()
         + 1;
     let human = human_heading(kind, pointer, GenerationState::Unavailable).len()
+        + human_evidence(counts).len()
+        + NO_ADMITTED.len()
         + human_omitted(u32::MAX, u32::MAX).len();
     json.max(human)
 }
@@ -56,10 +99,27 @@ pub(super) fn value_bytes(
     codes: &[&'static str],
 ) -> usize {
     let mut json = String::new();
-    value_json(&mut json, target, value, admission, codes);
+    // Charge the longest evidence label even before settlement. A duplicate can
+    // later move to a target with a different aim without needing more report room.
+    value_json(
+        &mut json,
+        target,
+        value,
+        admission,
+        codes,
+        GenerationEvidence::RejectedCandidate,
+    );
     let mut line = String::new();
     trace_line(&mut line, kind, pointer, target, value, admission);
-    let human = human_value(target, value, admission, codes, TARGET_WIDTH).len();
+    let human = human_value(
+        target,
+        value,
+        admission,
+        codes,
+        TARGET_WIDTH,
+        GenerationEvidence::RejectedCandidate,
+    )
+    .len();
     (json.len() + 1).max(line.len()).max(human)
 }
 
@@ -173,6 +233,7 @@ fn description_json(output: &mut String, document: SourceId, description: &Descr
         description.kind,
         &description.pointer,
         description.state,
+        evidence_counts(description),
     ));
     for (index, value) in description.values.iter().enumerate() {
         if index > 0 {
@@ -184,6 +245,7 @@ fn description_json(output: &mut String, document: SourceId, description: &Descr
             value.value.to_json(),
             value.admission,
             &value.codes,
+            GeneratedValue(value).evidence(),
         );
     }
     output.push_str(&description_close(
@@ -197,14 +259,16 @@ fn description_open(
     kind: SampleKind,
     pointer: &str,
     state: GenerationState,
+    counts: [u32; 5],
 ) -> String {
     let document = document.get();
     let selector = json!({"kind":kind.as_str(),"document":document,"pointer":pointer});
     let location = json!({"kind":"effective","root":document,
         "pointer":format!("{pointer}{}", kind.suffix())});
     format!(
-        "{{\"selector\":{selector},\"description\":{location},\"state\":\"{}\",\"values\":[",
-        state.as_str()
+        "{{\"selector\":{selector},\"description\":{location},\"state\":\"{}\",\"evidence\":{},\"values\":[",
+        state.as_str(),
+        evidence_json(counts)
     )
 }
 
@@ -220,15 +284,17 @@ fn value_json(
     value: &str,
     admission: Admission,
     codes: &[&'static str],
+    evidence: GenerationEvidence,
 ) {
     output.push_str("{\"target\":");
     output.push_str(&json!(target).to_string());
     output.push_str(",\"value\":");
     output.push_str(value);
     output.push_str(&format!(
-        ",\"admission\":\"{}\",\"codes\":{}}}",
+        ",\"admission\":\"{}\",\"codes\":{},\"evidence\":\"{}\"}}",
         admission.as_str(),
-        json!(codes)
+        json!(codes),
+        evidence.as_str()
     ));
 }
 
@@ -330,6 +396,7 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         text.span(Role::Incomplete, "selection partial");
     }
     text.push('\n');
+    text.push_str("Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.\n");
     for description in &result.descriptions {
         text.push('\n');
         text.heading(&format!(
@@ -344,6 +411,11 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         };
         text.span(role, description.state.as_str());
         text.push('\n');
+        let counts = evidence_counts(description);
+        text.push_str(&human_evidence(counts));
+        if counts[0] == 0 && counts[1] == 0 {
+            text.push_str(NO_ADMITTED);
+        }
         let width = description
             .values
             .iter()
@@ -390,6 +462,7 @@ fn human_value(
     admission: Admission,
     codes: &[&'static str],
     width: usize,
+    evidence: GenerationEvidence,
 ) -> String {
     let mut line = format!(
         "{INDENT}{:<ADMISSION_WIDTH$} {target:<width$} {value}",
@@ -398,6 +471,7 @@ fn human_value(
     if !codes.is_empty() {
         line.push_str(&format!(" ({})", codes.join(", ")));
     }
+    line.push_str(&format!(" [{}]", evidence.as_str()));
     line.push('\n');
     line
 }
@@ -409,6 +483,7 @@ fn human_value_line(text: &mut HumanText, value: &Settled, width: usize) {
         value.admission,
         &value.codes,
         width,
+        GeneratedValue(value).evidence(),
     );
     // The admission is styled, and the rest of the line is plain.
     let (admission, rest) = line.split_at(INDENT.len() + ADMISSION_WIDTH);

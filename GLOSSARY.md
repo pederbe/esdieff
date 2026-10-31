@@ -563,6 +563,10 @@ _Avoid_: Sample value, which a caller supplies; Representative value, which revi
 The named edge of a data description that a Generated value probes, such as `minimum`, `below_minimum` or `missing_entry`, fixed by the generation contract. A target that does not apply produces no value.
 _Avoid_: Expected result, since only Sample-value checking settles admission.
 
+**Corpus evidence**:
+Observations about retained Generated values that combine each value's Generation target with its settled admission, distinguishing admitted examples and boundary candidates from rejected outside and other candidates. These observations count values, not constraints or individual Choice alternatives.
+_Avoid_: RFC assessment coverage, operation completeness, constraint coverage percentage.
+
 **Simulation trace**:
 The ordered record of one deterministic device demonstration: an initial state reading, then each command's step, simulated time and invocation with its input, optional Action result and Event, and subsequent state reading in observed order. Sample-value checking assesses its individual values, while its sequence meaning comes only from the demonstration's own authored rules and adds nothing to any Model requirement inventory.
 _Avoid_: Check case, protocol log, device state machine.

@@ -47,21 +47,30 @@ The reports are trimmed to the lines about the sample. A rejected sample is a fa
 <b>Generated values</b> esdieff.generation/2: <span class="g">passed</span>
 <b>Values:</b> 2 <span class="g">admitted</span>, 8 <span class="r">rejected</span>, 0 <span class="y">undetermined</span>
 <b>Descriptions:</b> 1
+Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
 <b>property /sdfObject/Thermostat/sdfProperty/targetTemperature</b>: <span class="g">complete</span>
-  <span class="r">rejected    </span> null          null (sample.null)
-  <span class="g">admitted    </span> minimum       5
-  <span class="g">admitted    </span> maximum       30
-  <span class="r">rejected    </span> below_minimum 4 (sample.bound)
-  <span class="r">rejected    </span> above_maximum 31 (sample.bound)
-  <span class="r">rejected    </span> not_multiple  5.25 (sample.multiple)
-  <span class="r">rejected    </span> wrong_type    "" (sample.type)
-  <span class="r">rejected    </span> wrong_type    true (sample.type)
-  <span class="r">rejected    </span> wrong_type    {} (sample.type)
-  <span class="r">rejected    </span> wrong_type    [] (sample.type)
+  Corpus evidence: 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
+  <span class="r">rejected    </span> null          null (sample.null) [rejected_candidate]
+  <span class="g">admitted    </span> minimum       5 [admitted_boundary]
+  <span class="g">admitted    </span> maximum       30 [admitted_boundary]
+  <span class="r">rejected    </span> below_minimum 4 (sample.bound) [rejected_outside]
+  <span class="r">rejected    </span> above_maximum 31 (sample.bound) [rejected_outside]
+  <span class="r">rejected    </span> not_multiple  5.25 (sample.multiple) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    "" (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    true (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    {} (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    [] (sample.type) [rejected_outside]
 </code></pre>
 
 Each value aims at one **target**, named in the middle column: the two bounds, a value just outside each, a value off the step, and one wrong type of each kind. Esdieff then checks every value against the model, and the first column is the result of that check, not the intention. The two agree here, but a model that allows null would list the `null` target as admitted. For a map, generation also builds a value missing each required entry, and a wrong value for each entry, as the full thermostat output in the getting-started guide shows for the `configure` action.
+
+The **corpus evidence** summary counts retained candidates by what they establish.
+Here both boundary candidates are admitted. A pattern could reject a length
+boundary candidate, leaving it under `rejected_candidate` instead. Complete
+generation does not promise an admitted example for every constraint or Choice
+alternative. See [corpus evidence](../generation-contract.md#corpus-evidence)
+for the categories and their limits.
 
 For non-interactive metadata, select `--kind context` and its `sdfContext` pointer. Context requires explicit selection and uses the same value-checking rules, including unresolved nullability when `nullable` is absent. The [Context round trip](../context-contract.md#generate-and-replay-context-vectors) shows generation and offline replay with inherited and refined constraints.
 

@@ -44,6 +44,61 @@ Each `GeneratedDescription` has its Sample selector `kind()` and `pointer()`, it
 
 Each `GeneratedValue` has its `target()`, its `to_json()` text, in which each number keeps the spelling it was generated with, its `admission()` and its `codes()`, the distinct condition codes behind a rejection, at most 8, such as `sample.bound`.
 
+## Corpus evidence
+
+Use corpus evidence to see what the retained candidates establish before using
+them as test cases. `GeneratedValue::evidence()` combines the value's construction
+aim with its settled admission. `GeneratedDescription::count_evidence(evidence)`
+counts the kept values in that category. The five categories are disjoint:
+
+| Evidence | What it establishes |
+| --- | --- |
+| `admitted_example` | An admitted example candidate, or an outside candidate that the whole description nevertheless admits. |
+| `admitted_boundary` | A candidate for `minimum`, `maximum`, `min_length`, `max_length`, `min_items` or `max_items` that the whole description admits, including nested targets. |
+| `rejected_outside` | A candidate for one of the third group's outside targets that the whole description rejects. It may fail several constraints, so it does not establish an isolated cause of rejection. |
+| `rejected_candidate` | A rejected example or boundary candidate. It establishes no admitted example or admitted boundary. |
+| `undetermined` | A candidate whose admission could not be settled. |
+
+For an integer with `minimum:10` and `maximum:20`, `10` and `20` establish
+admitted boundary candidates, while `9` and `21` establish rejected outside
+candidates. For `{"type":"string","nullable":false,"pattern":"^(foo|bar)$","minLength":3,"maxLength":3}`,
+the length-boundary candidate `"aaa"` is rejected with `sample.pattern`.
+It contributes to `rejected_candidate`, never `admitted_boundary`. This pattern
+is outside the synthesis subset, so the report can show complete generation
+with no admitted example even though `"foo"` and `"bar"` would be admitted.
+The human report calls out the absence of retained admitted examples without
+claiming that the description admits no value.
+
+For a map with a required `mode` entry whose description is `{"const":"on"}`,
+the `missing_entry` candidate `{}` establishes a rejected outside case with
+`sample.required`. A candidate rejected for another constraint alone is still
+only a whole-description rejection. Corpus evidence does not attribute causes
+or prove that the omitted entry was the sole reason for rejection.
+
+Counts describe retained values under their winning targets after
+[deduplication](#settlement-and-duplicates). They exclude omitted values and
+discarded target labels. Two Choice alternatives with `const:1` give one
+retained candidate, and admission checks the whole Choice. Even distinct
+admitted `alternative` candidates do not prove admission by their originating
+branches. There is no per-alternative or per-constraint denominator, inventory,
+coverage percentage or new search for examples. Constraints without generation
+targets, such as `pattern`, have no dedicated evidence category.
+
+This is separate from the report's requested description coverage and operation
+completeness. Complete generation can have no admitted boundary candidates.
+Partial generation can retain useful admitted examples. An unavailable
+description has zero evidence counts because it has no values, not because its
+constraints were exercised. Check description state and omissions alongside
+these counts.
+
+The human report lists the category counts per description and annotates each
+value with its evidence. JSON report 1.5 adds optional `evidence` fields: a
+category string on each GeneratedValue and an object of five category counts on
+each GeneratedDescription. Older reports without them do not establish zero
+evidence. These additions leave the generation contract, admission, completeness,
+exit codes and JSON Lines Trace schema unchanged. The extra report detail is
+charged to the existing byte limit and can leave less room for retained values.
+
 ## Selection
 
 With a selector, generation covers the one description that Sample-value checking would select for that `kind` and `pointer`, including an sdfData definition or Context under an Object or Thing. Without one, it covers every Property, Action `sdfInputData`, Action `sdfOutputData` and Event `sdfOutputData` reachable from the document's top-level groupings and affordances, including nested groupings. They are taken in document order, and an Action's input comes before its output. sdfData and Context definitions are generated only when selected explicitly, so adding metadata does not add vectors to an existing affordance corpus. Event input and groupings have no description to generate. A description whose effective meaning is unavailable is listed as unavailable, and a grouping, Action or Event that cannot be read leaves the selection partial.
@@ -155,8 +210,8 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"generate"
 | Generate requested coverage | inventory:null; count_unit:`"description"`; total:Count|null; assessed:Count; not_applicable:0; unassessed:Count; undetermined:Count | Complete descriptions are assessed, partial and unavailable ones undetermined, and those left out beyond the ceiling or for the report byte limit unassessed. total is null when the selection is partial, since some descriptions may be missing. |
 | GenerateResult | kind:`"generate"`; summary:GenerateSummary; selection:`"complete"|"partial"`; descriptions:GeneratedDescription[]; descriptions_omitted:Count; omissions:Omission[] | descriptions_omitted counts descriptions beyond the ceiling and those whose details did not fit the report. omissions has a `count_limit` record for the first, a `report_limit` record for the second, and for values a `count_limit` record for those beyond the ceiling and a `byte_limit` record for those that did not fit. The `report_limit` and `byte_limit` records also appear in `diagnostics.omissions`, which makes the report truncated. |
 | GenerateSummary | admitted:Count; rejected:Count; undetermined:Count | Counts every kept value by admission. Omitted values are counted separately. |
-| GeneratedDescription | selector:SampleSelector; description:EffectiveLocation; state:`"complete"|"partial"|"unavailable"`; values:GeneratedValue[]; values_omitted:Count | The effective location points at the selected description, including an `sdfInputData` or `sdfOutputData` suffix. |
-| GeneratedValue | target:string; value:any JSON value; admission:`"admitted"|"rejected"|"undetermined"`; codes:string[] | value is the generated JSON, with each number in its generated spelling. codes is empty unless the value is rejected. |
+| GeneratedDescription | selector:SampleSelector; description:EffectiveLocation; state:`"complete"|"partial"|"unavailable"`; values:GeneratedValue[]; values_omitted:Count | The effective location points at the selected description, including an `sdfInputData` or `sdfOutputData` suffix. Optional evidence holds the five [corpus evidence](#corpus-evidence) category counts, each a Count. |
+| GeneratedValue | target:string; value:any JSON value; admission:`"admitted"|"rejected"|"undetermined"`; codes:string[] | value is the generated JSON, with each number in its generated spelling. codes is empty unless the value is rejected. Optional evidence is one [corpus evidence](#corpus-evidence) category string. |
 
 `baseline.interpretations` names the value interpretations that the checks relied on, as model reports name them. An explicit Context request also records the supported draft and its limitations in `baseline.extensions`. Every source stays in `sources`. Description details are written in selection order within the report byte limit, and any that do not fit are counted, never silently dropped. The human report shows the disposition, the value counts, then each description with its state and one line per value with its admission, its target padded to at most 40 characters, its value and its rejection codes. It is written one description at a time and gives the JSON report instead as soon as it would not fit the report byte limit.
 
