@@ -22,6 +22,7 @@ mod directory_discovery;
 mod document_cli;
 mod edit_cli;
 mod generate_cli;
+mod reference_cli;
 mod trace_cli;
 use cli_style::{ColorMode, Role};
 
@@ -72,12 +73,12 @@ fn parse<'a>(
 ) -> Result<Option<Options<'a>>, (u8, String)> {
     let command = args.first().and_then(|v| v.to_str()).ok_or_else(|| {
         usage(
-            "expected check, inspect, sample, generate, trace, author, edit, diff or acquire and explicit inputs",
+            "expected check, inspect, sample, generate, reference, trace, author, edit, diff or acquire and explicit inputs",
         )
     })?;
     if !matches!(command, "check" | "inspect" | "sample") {
         return Err(usage(
-            "unknown command; use check, inspect, sample, generate, trace, author, edit, diff or acquire",
+            "unknown command; use check, inspect, sample, generate, reference, trace, author, edit, diff or acquire",
         ));
     }
     let mut options = Options {
@@ -457,6 +458,9 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
     }
     if args.first().is_some_and(|arg| arg == "diff") {
         return diff_cli::run(args, color);
+    }
+    if args.first().is_some_and(|arg| arg == "reference") {
+        return reference_cli::run(args, color);
     }
     if args.first().is_some_and(|arg| arg == "generate") {
         return generate_cli::run(args, color);

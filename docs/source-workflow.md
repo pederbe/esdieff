@@ -159,3 +159,10 @@ An authored refinement's ordinary `EffectiveModel::explanation` keeps inherited,
 `Catalogue::generate(GenerationRequest::new(document))` builds Generated values for every affordance description of one model document, and `select(kind, pointer)` narrows the request to one description. Each value aims at one Generation target, such as a minimum or a value just below it, and Sample-value checking settles it, so the `GenerationResult` gives each description's values with their targets and admissions. The [generation contract](generation-contract.md) defines the targets, their order, the ceilings, the JSON Lines Trace entries and report version 1.5, following ADR 0041: Generated values settled by Sample-value checking.
 
 `Catalogue::check_trace(TraceRequest::new(document, trace))` checks a Recorded trace, a JSON Lines file of Trace entries, against one model document. The document is composed once and every entry is checked on its own, so a malformed line fails alone, and the `TraceResult` counts passing entries and lists failed and undetermined ones with their line numbers, labels and conditions located in the trace file. The [trace contract](trace-contract.md) defines the entry format, the outcomes, the bounds and report version 1.5, following ADR 0042: Recorded traces with independent entries.
+
+## Model references
+
+Generate a selected effective Thing or Object as Markdown with the
+[model reference workflow](model-reference.md). `Catalogue::reference` accepts a
+`ReferenceRequest` and exposes documentation completion, disposition, processing
+conditions and omissions, independently of model assessment.
