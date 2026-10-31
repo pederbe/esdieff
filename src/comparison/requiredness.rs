@@ -62,6 +62,10 @@ impl Requiredness {
             .binary_search(&(grouping, declaration))
             .is_ok()
     }
+    /// All resolved grouping/declaration pairs, including conditional obligations.
+    pub(super) fn obligations(&self) -> &[(usize, usize)] {
+        &self.mandatory
+    }
     /// Whether every relationship was resolved, or why one was not.
     pub(super) fn resolution(&self) -> Result<(), UndeterminedReason> {
         self.unresolved.map_or(Ok(()), Err)

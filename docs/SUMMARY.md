@@ -106,3 +106,4 @@
   - [0052: Selected JSON Schema export](adr/0052-selected-json-schema-export.md)
   - [0053: Implementer revision comparison](adr/0053-implementer-revision-comparison.md)
   - [0054: Implementer declaration requiredness](adr/0054-implementer-declaration-requiredness.md)
+  - [0055: Implementer declaration presence](adr/0055-implementer-declaration-presence.md)

@@ -87,6 +87,13 @@ type Pair<'c> = [EffectiveJson<'c>; 2];
 /// The members of the same name in each revision, when present.
 type Members<'c> = [Option<EffectiveJson<'c>>; 2];
 
+/// Missing content establishes absence only when the path to it is available.
+enum Counterpart {
+    Present(usize),
+    Absent,
+    Unavailable(UndeterminedReason),
+}
+
 pub(super) struct Walk<'c, 'a> {
     models: &'c [EffectiveModel<'a>],
     /// The requiredness of each model's groupings.
@@ -332,7 +339,7 @@ impl<'c, 'a> Walk<'c, 'a> {
         });
         let mut dropped = false;
         for &(_, declaration) in earlier.mandatory(pair[0].node) {
-            if let Some(node) = self.counterpart(Revision::Earlier, declaration)?
+            if let Counterpart::Present(node) = self.counterpart(Revision::Earlier, declaration)?
                 && !later.is_mandatory(pair[1].node, node)
             {
                 dropped = true;
@@ -341,7 +348,7 @@ impl<'c, 'a> Walk<'c, 'a> {
         }
         let mut entered = false;
         for &(_, declaration) in later.mandatory(pair[1].node) {
-            if let Some(node) = self.counterpart(Revision::Later, declaration)?
+            if let Counterpart::Present(node) = self.counterpart(Revision::Later, declaration)?
                 && !earlier.is_mandatory(pair[0].node, node)
             {
                 entered = true;
@@ -410,8 +417,9 @@ impl<'c, 'a> Walk<'c, 'a> {
         Ok(false)
     }
 
-    /// The node at the same position in the other revision's document, if it has one.
-    fn counterpart(&mut self, revision: Revision, node: usize) -> Step<Option<usize>> {
+    /// The node at the same position in the other revision's document, an established
+    /// absence, or why the path could not establish either.
+    fn counterpart(&mut self, revision: Revision, node: usize) -> Step<Counterpart> {
         let models = self.models;
         let model = &models[self.model(revision)];
         let mut keys = Vec::new();
@@ -419,21 +427,33 @@ impl<'c, 'a> Walk<'c, 'a> {
         while let Some(parent) = model.nodes[current].parent {
             self.charge(1)?;
             let Some(key) = model.nodes[current].key else {
-                return Ok(None);
+                return Ok(Counterpart::Unavailable(identity_unavailable()));
             };
             keep(&mut keys, key, self.allowance)?;
             current = parent;
         }
-        let Ok(mut json) = self.root_json(revision.other()) else {
-            return Ok(None);
+        let mut json = match self.root_json(revision.other()) {
+            Ok(json) => json,
+            Err(reason) => return Ok(Counterpart::Unavailable(reason)),
         };
         for key in keys.into_iter().rev() {
+            if !available_map(json) {
+                return Ok(Counterpart::Unavailable(unavailable_reason(json)));
+            }
             match self.member(json, key)? {
                 Some(child) => json = child,
-                None => return Ok(None),
+                None => {
+                    for child in json.children() {
+                        self.charge(1)?;
+                        if child.n().key.is_none() {
+                            return Ok(Counterpart::Unavailable(identity_unavailable()));
+                        }
+                    }
+                    return Ok(Counterpart::Absent);
+                }
             }
         }
-        Ok(Some(json.node))
+        Ok(Counterpart::Present(json.node))
     }
 
     /// The index of a compared revision's effective model.
@@ -921,12 +941,96 @@ impl<'c, 'a> Walk<'c, 'a> {
         let kind = removal(members);
         let sides = self.present_sides(members);
         let verdict = if self.outcome.perspective == Perspective::Implementer {
-            Verdict::NOT_CLASSIFIED
+            match self.declaration_presence(members) {
+                Ok(verdict) => verdict,
+                Err(Stop(reason)) => Verdict::Undetermined(reason),
+            }
         } else {
             classify::definition(kind)
         };
         self.record(kind, subject, directions, verdict, sides);
         Ok(())
+    }
+
+    /// Classify a maximal declaration subtree under ADR 0055. Implementer walks reverse
+    /// revisions for data proofs, so their first revision is chronologically later.
+    fn declaration_presence(&mut self, members: Members<'c>) -> Step<Verdict> {
+        let revision = if members[0].is_some() {
+            Revision::Earlier
+        } else {
+            Revision::Later
+        };
+        let json = members[revision.index()].expect("one present definition");
+        // Only declarations inside corresponding groupings have this policy. Top-level
+        // groupings and unmatched documents keep their existing comparison boundaries.
+        let Some(owner) = json
+            .n()
+            .parent
+            .and_then(|group| json.model.nodes[group].parent)
+        else {
+            return Ok(Verdict::NOT_CLASSIFIED);
+        };
+        if !matches!(
+            json.model.nodes[owner].role,
+            Some(Role::Definition(Class::Thing | Class::Object))
+        ) || !self.corresponding_grouping(revision, owner)?
+        {
+            return Ok(Verdict::NOT_CLASSIFIED);
+        }
+        if !available_map(json) {
+            return Ok(Verdict::Undetermined(unavailable_reason(json)));
+        }
+        let required = &self.required[self.model(Revision::Earlier)];
+        if let Err(reason) = required.resolution() {
+            return Ok(Verdict::Undetermined(reason));
+        }
+        // A removal releases either optional or mandatory obligations. Obsolete payload
+        // constraints need not be evaluated to establish that release.
+        if revision == Revision::Later {
+            return Ok(Verdict::Compatible);
+        }
+        let mut unknown = None;
+        for &(grouping, declaration) in required.obligations() {
+            self.charge(1)?;
+            let mut current = declaration;
+            let contained = loop {
+                self.charge(1)?;
+                if current == json.node {
+                    break true;
+                }
+                let Some(parent) = json.model.nodes[current].parent else {
+                    break false;
+                };
+                current = parent;
+            };
+            if contained {
+                match self.corresponding_grouping(revision, grouping) {
+                    Ok(true) => return Ok(Verdict::Breaking),
+                    Ok(false) => {}
+                    Err(Stop(reason)) => {
+                        unknown.get_or_insert(reason);
+                    }
+                }
+            }
+        }
+        Ok(unknown.map_or(Verdict::Compatible, Verdict::Undetermined))
+    }
+
+    fn corresponding_grouping(&mut self, revision: Revision, node: usize) -> Step<bool> {
+        let other = match self.counterpart(revision, node)? {
+            Counterpart::Present(other) => other,
+            Counterpart::Absent => return Ok(false),
+            Counterpart::Unavailable(reason) => return Err(Stop(reason)),
+        };
+        let model = &self.models[self.model(revision.other())];
+        let json = EffectiveJson { model, node: other };
+        if !available_map(json) {
+            return Err(Stop(unavailable_reason(json)));
+        }
+        Ok(matches!(
+            json.n().role,
+            Some(Role::Definition(Class::Thing | Class::Object))
+        ))
     }
     /// The side of each revision that has the member.
     fn present_sides(&self, members: Members<'c>) -> [Option<Side<'a>>; 2] {
