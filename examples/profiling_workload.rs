@@ -6,9 +6,9 @@
 //! rich door lock plan's comparison of the minimal and rich models is the round's only one.
 //! Each round ends with two Recorded traces and one generation request: thermostat readings
 //! checked against the rich thermostat model, door lock credentials checked against the rich
-//! door lock model's length and pattern constraints, and generated values for every definition
-//! of the rich door lock model. Build with the `hotpath` feature for a profile, or without it
-//! for a plain timing. See docs/profiling.md.
+//! door lock model's length and pattern constraints, and generated values for every affordance
+//! description of the rich door lock model. Build with the `hotpath` feature for a profile,
+//! or without it for a plain timing. See docs/profiling.md.
 
 use esdieff::{
     Admission, Assessment, Catalogue, CheckRequest, ComparisonRequest, DifferenceAcknowledgements,

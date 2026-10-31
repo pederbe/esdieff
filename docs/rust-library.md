@@ -1,35 +1,65 @@
 # Use the Rust library
 
-Everything the `esdieff` command does is available as a Rust library, so you can embed model checking, inspection, generation and revision comparison in your own tools. The library uses no unsafe code and performs no network access.
+The model operations behind the `esdieff` command are available as a Rust
+library, so you can embed checking, inspection, generation and revision
+comparison in your own tools. The library forbids unsafe Rust in its own code
+and performs no network access. The separate `acquire` command's network
+retrieval and command-line file-output adapters are outside this library API.
 
 ## Add the crate
 
-There is no release on crates.io yet, so depend on the repository directly:
+Add the released crate from [crates.io](https://crates.io/crates/esdieff):
+
+```toml
+[dependencies]
+esdieff = "0.2"
+```
+
+The crate uses the 2024 edition. Use the Rust version required by your selected
+release. For APIs added after 0.2.0, including model references and JSON Schema
+export, depend on a current repository revision instead:
 
 ```toml
 [dependencies]
 esdieff = { git = "https://github.com/pederbe/esdieff" }
 ```
 
-The crate builds on stable Rust with the 2024 edition. Pin a commit with `rev = "..."` once you depend on it in CI.
+Pin a verified commit with `rev = "..."` for a reproducible Git dependency.
 
 ## The entry points
 
-A `Catalogue` holds the documents you supply. Build one from `SourceInput` values, each with a key that names it in reports: `SourceInput::file` reads a path, `SourceInput::supplied` takes bytes you already hold, and `.sample()` marks a sample value rather than a model. Every operation is a method on the catalogue that takes a request and returns a result you can query or render:
+A `Catalogue` retains the documents you supply and their acquisition attempts.
+Build one from `SourceInput` values, each with a key that names it in reports.
+`SourceInput::file` reads a path, `SourceInput::supplied` takes bytes you already
+hold, and `.sample()` marks a sample value rather than a model document.
+Operations take explicit requests:
 
-| Operation | Request | Result |
+| Operation | Call | Result |
 | --- | --- | --- |
-| Check a model | `CheckRequest` | `Report` |
-| Inspect one definition | `InspectRequest` | `Report` |
-| Read the composed interface | `EffectiveRequest` | `EffectiveModel` |
-| Check one sample | `SampleRequest` | `Report` |
-| Generate values | `GenerationRequest` | `GenerationResult` |
-| Check a recorded trace | `TraceRequest` | `TraceResult` |
-| Compose a thing | `AuthorRequest` | `AuthorResult` |
-| Edit qualities | `EditRequest` | `EditResult` |
-| Compare revisions | `ComparisonRequest` | `RevisionComparison` |
+| Check a model | `catalogue.check(CheckRequest)` | `Report` |
+| Inspect selected content | `catalogue.inspect(InspectRequest)` | `Report` |
+| Read the composed interface | `catalogue.effective(EffectiveRequest)` | `EffectiveModel` |
+| Check one sample | `catalogue.check_sample(SampleRequest)` | `Report` |
+| Generate values | `catalogue.generate(GenerationRequest)` | `GenerationResult` |
+| Check a recorded trace | `catalogue.check_trace(TraceRequest)` | `TraceResult` |
+| Compose an sdfThing | `AuthorRequest::author()` | `AuthorResult` |
+| Edit qualities | `EditRequest::edit()` | `EditResult` |
+| Compare revisions | `ComparisonRequest::compare()` | `RevisionComparison` |
+| Document a definition, after 0.2.0 | `catalogue.reference(ReferenceRequest)` | `ReferenceResult` |
+| Export JSON Schema, after 0.2.0 | `catalogue.export_schema(SchemaRequest)` | `SchemaResult` |
 
-Results borrow the catalogue, so keep it alive while you read them. Each has `to_json()` and `to_human()` for the same reports the command prints, and a disposition whose `exit_code()` matches the command's exit status.
+Checking, inspection, effective views, generation and trace results borrow their
+catalogue. Revision comparison borrows both catalogues. Authoring and editing
+requests own their input catalogue, and their results own the resulting one.
+Schema export owns its serialized output.
+
+`Report`, generation, trace, authoring, editing and comparison results provide
+JSON and human report renderers. An `EffectiveModel` instead exposes typed views
+and effective JSON. A `ReferenceResult` renders Markdown, and a `SchemaResult`
+exposes its JSON fidelity report and any established schema. Query each
+operation's disposition separately from its content. Its `exit_code()` maps the
+domain result to the command's exit status, while invocation and host errors are
+handled by the command-line adapter.
 
 ## A complete example
 
@@ -98,7 +128,13 @@ A few things to notice. Operations return `Err(&'static str)` only for an invali
 
 ## Keep the memory and work bounded
 
-Every operation runs within `Limits`, which cap input size, decoding depth, work and report size, so an untrusted document cannot make a tool run away. The defaults suit ordinary models. `Catalogue::take_inputs_with_limits` sets others, and an operation that reaches a limit reports the work it could not finish instead of failing silently. [ADR 0009](adr/0009-bounded-processing-and-reporting.md) explains the approach.
+Operations use `Limits` to bound input size, decoding depth, charged work and
+retained report size. The defaults suit ordinary models.
+`Catalogue::take_inputs_with_limits` or `Catalogue::with_limits` selects other
+allowances. An exhausted processing allowance leaves affected work explicitly
+unfinished. A request that cannot reserve its mandatory output can instead
+return a request error before processing. [ADR 0009](adr/0009-bounded-processing-and-reporting.md)
+explains the approach.
 
 ## Where the contracts are
 
@@ -110,6 +146,7 @@ Each operation's reference page states what its result promises, with a Rust exa
 - [Recorded traces](trace-contract.md) covers `TraceRequest` and per-entry outcomes.
 - [Composed sdfThing authoring](authoring-contract.md) and [Authored-quality editing](editing-contract.md) cover `AuthorRequest`, `EditRequest`, plans and fidelity.
 - [Revision comparison](revision-comparison-contract.md) covers `ComparisonRequest`, differences, witnesses and acknowledgements.
+- [Model references](model-reference.md) and [JSON Schema export](json-schema.md) cover the current-checkout `ReferenceRequest` and `SchemaRequest` APIs.
 - [Workflow and report contract](report-contract.md) covers the shared report envelope that `to_json()` renders.
 
 The repository's [examples directory](https://github.com/pederbe/esdieff/blob/main/examples) holds complete programs that read effective values and requirement coverage.

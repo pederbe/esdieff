@@ -220,7 +220,7 @@ pub(crate) static DESCRIPTORS: [Descriptor; 54] = [
         id: "rfc9880.model.M010/1",
         citations: "RFC 9880 3.1;4.6",
         area: "full.metadata/1",
-        plan: "Expose absent Information metadata through the domain defaults without imposing lifecycle advice.",
+        plan: "Expose authored Information metadata and its absence without inserting values or imposing lifecycle advice.",
     },
     Descriptor {
         id: "rfc9880.model.M011/1",

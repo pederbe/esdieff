@@ -3,7 +3,7 @@
 Bug reports, examples and improvements are welcome. Open an issue to discuss a
 substantial change before implementing it.
 
-Use the stable Rust toolchain and run the maintained checks:
+Use the Rust toolchain pinned in `rust-toolchain.toml` and run the maintained checks:
 
 ```sh
 bash scripts/check.sh

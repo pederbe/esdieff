@@ -2,9 +2,13 @@
 
 This guide builds a new device description from reusable definitions and then makes repeatable edits to an existing document. Both commands read a small JSON plan, write a new file and leave every input unchanged. It assumes Esdieff is [installed](../getting-started/README.md).
 
-## Compose a thing from reusable objects
+## Compose an sdfThing from reusable objects
 
-In SDF, an `sdfObject` describes one capability and an `sdfThing` groups objects into a product. `esdieff author` creates a new `sdfThing` document whose objects reference the reusable ones through `sdfRef`, so the new document stays linked to its sources instead of copying them.
+An `sdfObject` groups affordances and reusable definitions. An `sdfThing` can
+contain `sdfObject` and `sdfThing` groupings. `esdieff author` creates a new
+`sdfThing` document whose `sdfObject` declarations reference supplied reusable
+`sdfObject` definitions through `sdfRef`. The generated source keeps those references.
+Effective inspection then composes the referenced content and local refinements.
 
 Save a reusable capabilities document as `capabilities.sdf.json`:
 
@@ -32,7 +36,12 @@ Save a reusable capabilities document as `capabilities.sdf.json`:
 }
 ```
 
-Then write the recipe as `recipe.json`. It names the new thing, binds the namespace prefixes the generated document will use, and declares each object: a name in the new thing, the supplied source and pointer to copy the reference from, the prefix that reference should use, a refinement patch and whether the object is required. The thermostat refinement lowers the maximum to 25 for this product:
+Then write the recipe as `recipe.json`. It names the new `sdfThing`, binds the
+namespace prefixes the generated document will use, and declares each `sdfObject`.
+Each entry names the declaration, the supplied source and pointer selecting its
+reusable definition, the output namespace prefix, a refinement patch and whether
+the declaration is required. The thermostat refinement lowers the maximum to
+25 for this product:
 
 ```json
 {
@@ -198,6 +207,8 @@ Compare the result with the original to see exactly what changed and what it mea
 
 Disposition: failed, with 1 breaking, 0 undetermined and 2 compatible differences.
 
+Client interactions only. Context metadata compatibility is not assessed.
+
 ## Breaking differences
 
 - Changed quality `maximum` in `document` at `/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum` (witness `30` for client-supplied data, earlier admitted, later rejected)
@@ -208,7 +219,13 @@ Disposition: failed, with 1 breaking, 0 undetermined and 2 compatible difference
 - Changed quality `description` in `document` at `/sdfObject/Thermostat/sdfProperty/currentTemperature/description`
 </code></pre>
 
-Lowering the maximum is breaking, because an app that used to write 30 would now be refused. [Compare two revisions](revision-comparison.md) explains the classification. The [editing contract](../editing-contract.md) lists the qualities each kind of definition accepts and the limits. Definitions behind an authored `sdfRef` cannot be edited in place, because the member lives in the referenced document.
+Lowering the maximum is breaking, because an app that used to write 30 would
+now be refused under the later description. [Compare two revisions](revision-comparison.md)
+explains Esdieff's classification. The [editing contract](../editing-contract.md)
+lists the qualities each kind of definition accepts and the limits. The editing
+operation refuses an owner or enclosing definition/data-description context with
+an authored `sdfRef`, including locally written overrides there. It does not
+rewrite a composition patch or modify the referenced document through that owner.
 
 ## Where to go next
 

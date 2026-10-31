@@ -50,11 +50,11 @@
   function data() {
     if (flow === 'overview') return {
       title:'From supplied documents to useful evidence',
-      summary:'Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads original content. Effective views resolve supplied definitions. Model checking, revision comparison and value checking use the resulting meaning and produce located evidence.',
+      summary:'Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checking, revision comparison and value checking use the resulting meaning and produce located evidence.',
       rows:[
         [node('local','Local SDF files','Models + shared definitions'),node('acquire','Optional: acquire','GitHub commit + expected SHA-256 → local bytes')],
-        [node('catalogue','Catalogue','Explicit inputs · original bytes · exact numbers · source locations')],
-        [node('source','Source inspection','Read a selected definition as written'),node('effective','Effective view','Resolve supplied references · apply refinements + defaults · retain origins')],
+        [node('catalogue','Catalogue','Explicit inputs · retained content · exact numbers · source locations')],
+        [node('source','Source inspection','Inspect retained source JSON'),node('effective','Effective view','Compose references + refinements · report defaults separately · retain origins')],
         [node('check','Check models','Assess the requested model rules'),node('compare','Compare revisions','Earlier + later effective interfaces'),node('values','Test values','Check samples · generate · check traces')],
         [node('report','Results with evidence','Outcome · scope · coverage where applicable · findings + locations')]
       ],

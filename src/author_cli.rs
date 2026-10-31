@@ -1,4 +1,4 @@
-//! Explicit new-Thing authoring follows ADR 0017, Reference-preserving sdfThing authoring.
+//! Explicit sdfThing authoring follows ADR 0017, Reference-preserving sdfThing authoring.
 use crate::{
     cli_style::ColorMode,
     document_cli::{self, Operation, OperationResult},

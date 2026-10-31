@@ -35,7 +35,7 @@ and documentary default 1 does not supply missing required servings.
 Brew output requires a Boolean result and nonempty message. Maintenance output
 conjoins an enumerated reason with nested resource readings. A valid reason
 cannot erase an invalid nested water percentage. Decisive failures retain
-sample, effective and source pointer relations in the private expectations.
+sample, effective and source pointer relations in the regression expectations.
 
 These are selected data values inspired by a coffee-machine interface. They do
 not simulate brewing, resource consumption, maintenance schedules or interaction

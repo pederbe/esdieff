@@ -9,7 +9,7 @@ use super::{Candidate, Descriptions, Relation, Rule};
 use crate::EffectiveJson;
 use crate::comparison::{CLIENT, Direction, Revision, THING, UndeterminedReason, Verdict};
 
-/// The conventions of RFC 9880 Section 4.7.1 that Sample-value checking establishes.
+/// Semantic types from RFC 9880 Section 4.7.1 with Esdieff's recorded JSON representations.
 const CONVENTIONS: [&str; 2] = ["byte-string", "unix-time"];
 
 /// A change between the two conventions is breaking. Any other change awaits `rule`.

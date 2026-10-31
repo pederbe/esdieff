@@ -47,13 +47,14 @@ hundredth reading is too hot, so 10 entries fail. A second Recorded trace of
 1,000 door lock credentials goes through the credential's length and pattern
 checks, as `trace --document examples/door-lock-check/rich.sdf.json` would.
 Every hundredth credential holds a space, which the pattern rejects, so 10
-more entries fail. Finally the round generates values for every definition of
+more entries fail. Finally the round generates values for every affordance description of
 the rich door lock model, as
 `generate --document examples/door-lock-check/rich.sdf.json` would.
 
-One round covers 138 sources, 23 effective views, 40 model checks, 116 sample
-checks, one comparison, 2,000 trace entries and 83 generated values. Report
-rendering is not part of the workload.
+The previously documented totals were 138 sources, 23 effective views, 40 model checks,
+116 sample checks, one comparison, 2,000 trace entries and 83 generated values per
+round. These are historical observations. Use the totals printed by your run for
+the current workload and code. Report rendering is not part of the workload.
 
 ## Instrumented operations
 
@@ -76,10 +77,12 @@ so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
 once, however many entries it holds, so each trace adds one
 `effective::compose_mode` call per round. A Recorded trace or generation
-request shares one pattern engine among all the values it matches, following
+request reuses a live pattern engine across matched values and can start another
+after a worker stops, following
 [ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md).
-Each other operation that matches a pattern starts its own, so `Engine::new`
-counts 34 starts per round. Allocation figures count each
+Each other operation that matches a pattern starts its own. The previously documented
+profile count was 34 `Engine::new` starts per round. That count depends on the workload and
+code. Allocation figures count each
 operation's own allocations, so composition allocations appear only under
 `effective::compose_mode`. Other programs built with the feature record
 nothing, because only the workload starts the profiler.
@@ -87,7 +90,7 @@ nothing, because only the workload starts the profiler.
 ## Live view and JSON reports
 
 The hotpath CLI shows the same measurements live. Install the matching version
-with `cargo install hotpath --version 0.29.2 --features tui`. Start
+with `cargo install hotpath --version 0.30.2 --features tui`. Start
 `hotpath console` in one terminal, then run the workload with the `hotpath`
 feature and enough rounds to watch, such as `-- 20000`, in another.
 

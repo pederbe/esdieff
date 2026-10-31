@@ -1,6 +1,9 @@
 # Compare two revisions
 
-This guide compares two revisions of a model before a change is published, reads which differences break the apps that use the device, and records the ones you intend. It assumes Esdieff is [installed](../getting-started/README.md).
+This guide compares two revisions of a model before a change is published, reads
+which differences break the apps that use the device, and records the ones you
+intend. It uses a [current-checkout installation](../getting-started/README.md#direct-downloads-and-cargo)
+for the `esdieff.revision-comparison/4` output shown here.
 
 ## Build a before and after pair
 
@@ -72,7 +75,13 @@ Esdieff takes the side of the **client**, the app or controller that talks to th
 - **Compatible** means the difference preserves client interactions, as with a changed description.
 - **Undetermined** means Esdieff found neither a breaking witness nor a proof of compatibility, so the change needs a human look. Removing the step is such a case. An undetermined difference is never presented as safe.
 
-The warning says that a breaking change shipped under an unchanged `version`, which RFC 9880 advises against. Warnings do not change the result. The command exits 1 for a breaking comparison, 3 for an undetermined one and 0 for a compatible one, so a CI job can stop a breaking change from merging.
+The warning says the later document's `version` does not compare higher despite
+a breaking difference. The comparison has not established that anything was
+shipped. RFC 9880 recommends version strings that increase lexicographically
+over a model's lifetime. Esdieff emits this advisory specifically when it finds
+a breaking difference. Warnings do not change the comparison disposition. Without acknowledgements,
+the command exits 1 for a breaking comparison, 3 for an undetermined one and 0
+for a compatible one, so a CI job can stop a breaking change from merging.
 
 ## Context metadata
 
@@ -86,7 +95,12 @@ The [shared-definition walkthrough](shared-definition-changes.md) starts with
 `reference --uses`, explains a local override, and follows a changed shared
 quality into a comparison of two revisions.
 
-A changed shared definition appears in every device model that reuses it, at the place where that device presents it. Compare two directories to see this. Put a `types.sdf.json` with a shared `Celsius` type and a thermostat that references it in `v1/`, then copy both to `v2/` and lower the shared minimum from -40 to -50:
+A change in a shared definition can appear at each effective consumer where it
+survives local overrides. For this separate example, create `shared-v1/` and
+`shared-v2/`. Save the following documents as `shared-v1/types.sdf.json` and
+`shared-v1/thermostat.sdf.json`, respectively. Copy both to `shared-v2/`, then
+lower the shared minimum there from -40 to -50. Keep the original `v1/` and
+`v2/` pair for the acknowledgement walkthrough below:
 
 ```json
 {
@@ -112,7 +126,7 @@ A changed shared definition appears in every device model that reuses it, at the
 }
 ```
 
-<pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1 --new v2
+<pre class="terminal"><code><span class="p">$</span> esdieff diff --old shared-v1 --new shared-v2
 <b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
 Client interactions only. Context metadata compatibility is not assessed.
 <b>Documents:</b> 2 compared, 0 removed, 0 added
@@ -189,7 +203,15 @@ Client interactions only. Context metadata compatibility is not assessed.
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/description
 </code></pre>
 
-The classification is still `breaking`, the disposition is `passed` and the exit status is 0. Only unacknowledged differences decide the result. An entry stops matching if the difference changes, for example when a later release can classify a former undetermined change as breaking, so a stale acknowledgement never hides a new problem. The version warning stays, so bump the version before publishing.
+The classification is still `breaking`, the disposition is `passed` and the exit
+status is 0. Only unacknowledged differences decide the result. An entry matches
+the difference's kind, subject, quality, classification and document/pointer
+coordinates. It does not bind the model bytes, changed values or witness. Review
+acknowledgements again whenever the compared revisions change, since a different
+limit at the same coordinates can still match. A reclassified difference, such
+as an undetermined change later proved breaking, no longer matches its old
+entry. The version warning stays after acknowledgement, so update the document's
+version before publishing the intended breaking revision.
 
 ## Share the comparison
 
@@ -199,6 +221,8 @@ The classification is still `breaking`, the disposition is `passed` and the exit
 # Model changes
 
 Disposition: failed, with 1 breaking, 1 undetermined and 1 compatible differences.
+
+Client interactions only. Context metadata compatibility is not assessed.
 
 ## Warnings
 

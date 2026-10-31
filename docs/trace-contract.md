@@ -103,7 +103,7 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"trace"`, 
 
 ## Replaying Generated values
 
-`esdieff generate --format jsonl` writes one Trace entry per admitted or rejected Generated value, with its settled admission as `expected` and its Generation target as `label`, as the [generation contract](generation-contract.md#json-lines) describes. So its output is a Recorded trace. Checked against the same model, every entry passes. Checked against a later revision, exactly the entries whose admission changed fail, so last release's values become regression vectors for the next.
+`esdieff generate --format jsonl` writes one Trace entry per admitted or rejected Generated value, with its settled admission as `expected` and its Generation target as `label`, as the [generation contract](generation-contract.md#json-lines) describes. So its output is a Recorded trace. An unchanged model retains the expected admissions when replay completes the needed checks. Against a later revision, a changed definite admission fails its entry, so last release's values become regression vectors for the next. Missing selectors also fail. Unavailable needed meaning or exhausted processing capacity leaves affected entries undetermined.
 
 ```sh
 cargo run -- generate --document examples/thermostat-check/rich.sdf.json --format jsonl examples/thermostat-check/rich.sdf.json > vectors.jsonl

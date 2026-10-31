@@ -36,7 +36,7 @@ its description carries a documentary default of 10.
 
 Array items use explicit Full Choice alternatives for their nonnullable
 identifier and zone descriptions. They do not assume wider Direct-item
-semantics. The private regression expectations require decisive sample,
+semantics. The regression expectations require decisive sample,
 effective and source locations, including the pair of duplicate identifiers
 and nested `/zones/0/feedback/moisture` failures.
 

@@ -123,8 +123,9 @@ impl<'s, 'm> Selectors<'s, 'm> {
         }
     }
 
-    /// Decode, read and check one line, lending the entry's allowance the pattern worker that
-    /// `patterns` holds for the trace, so entries share one engine.
+    /// Decode, read and check one line, lending the entry's allowance any live pattern worker
+    /// that `patterns` holds for the trace. Later entries can start another engine after a
+    /// worker stops; they retain their independent Sample-value checking allowances.
     pub(super) fn check(&mut self, line: Line<'_>, patterns: &mut MatchingWork) -> Checked {
         let catalogue = self.model.catalogue;
         let limits = &catalogue.limits;

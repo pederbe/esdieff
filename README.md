@@ -60,7 +60,7 @@ walks through the results.
   files to model checks, comparisons and test values.
 - [User guides](docs/guides/inspect-and-check.md) for inspecting models, testing
   values, comparing revisions and automating checks.
-- [Rust library](docs/source-workflow.md) for using Esdieff in another application.
+- [Rust library](docs/rust-library.md) for using Esdieff in another application.
 - [SDF coverage](docs/model-coverage-boundaries.md) for detailed support and limits.
 - [Changelog](CHANGELOG.md) for changes between versions.
 

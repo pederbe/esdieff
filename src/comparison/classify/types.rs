@@ -1,6 +1,7 @@
 //! A changed `type` relates the revisions only when one type contains the other. Every
-//! integer is a number, and a description without a type admits values of every type, so
-//! adding a type narrows and removing one widens. A fraction separates number data from
+//! integer is a number, and an absent type adds no base-type restriction, so adding a type
+//! narrows and removing one widens under that quality alone. Other constraints still apply.
+//! A fraction separates number data from
 //! integer data, so it is the candidate witness of that change. Any other change of type
 //! has no monotone relation. Every change between base types other than integer and number
 //! may be witnessed by a representative value of the revision that must admit it.

@@ -15,6 +15,11 @@ std::process::exit(comparison.disposition().exit_code().into());
 
 The comparison contract identity is `esdieff.revision-comparison/4`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
+This page describes the current checkout. Contract `/4`, including the
+pattern-aware representative candidates below, was added after release 0.2.0.
+The serialized comparison envelope remains version `1.6` independently of this
+classification-contract identity.
+
 ## Context metadata
 
 The comparison assesses client interactions only. It does not assess compatibility for consumers of instance metadata, following [ADR 0049: Context revision comparison](adr/0049-context-revision-comparison.md).
@@ -51,7 +56,14 @@ Each `Difference` has:
 - `side(revision)`: the difference in the earlier or later revision, absent when that revision lacks the corresponding definition, `properties` entry or document. A side has its `presence()` (present, absent or unavailable), its `root_document()` numbered within its revision, its effective `pointer(limit)`, and its `origin()`. The origin is the `Explanation` of the nearest content origin, or of the composition patch deletion that removed an absent quality.
 - `acknowledged()`: whether a supplied entry acknowledges the difference, and `acknowledgement()`: the `DifferenceAcknowledgement` that would, present when the difference can be acknowledged and its effective pointers can be rendered.
 
-Each `VersionWarning` has its `code()`, the earlier and later source IDs of its document pair as `documents()`, its `earlier_version()`, its `later_version()`, absent when the later document has none, and the pair's breaking difference count as `breaking()`. `location()` is the later document's source view at `/info/version`, or at `/info` or the document root when that member is absent, and `related()` the earlier document's `/info/version`.
+Each `VersionWarning` has its `code()`, the earlier and later source IDs of its
+document pair as `documents()`, its `earlier_version()`, its `later_version()`,
+absent when the later document has none, and the pair's breaking difference
+count as `breaking()`. `location(Revision::Later)` returns the later document's
+source view at `/info/version`, or at `/info` or the document root when that
+member is absent. `location(Revision::Earlier)` returns the earlier document's
+`/info/version`. The serialized warning presents these as its primary and
+related locations, respectively.
 
 ## Acknowledged differences
 
@@ -112,7 +124,24 @@ Every grouping of each corresponding document is compared through the effective 
 
 ## Whether a quality changed
 
-Exact numbers and Value equality decide whether an effective quality changed at all, following [ADR 0012: Exact numbers and JSON input policies](adr/0012-exact-numbers-and-json-input-policies.md) and [ADR 0015: Bounded value equality in a resolved data context](adr/0015-value-equality.md). Numbers compare their exact values, so `10` and `1e1` are the same bound. Text compares decoded Unicode scalar values, arrays are ordered and maps unordered. `enum` values and map-data `required` names compare as sets. An absent readable, writable or observable characteristic, or an absent Nullable characteristic of a data description, equals its explicit Specified default `true`, and an absent `uniqueItems` equals an explicit `false`. Inside `items` neither default applies. A representation that ordinary equality cannot settle under another meaning, such as two spellings of one instant, counts as a change and is classified like any other. Two `contentFormat` declarations in data with one established meaning, such as `50` and `application/json`, are the same, as described under [Content formats](#content-formats).
+Structural comparison decides whether an effective quality changed, using the
+exact numbers of [ADR 0012: Exact numbers and JSON input policies](adr/0012-exact-numbers-and-json-input-policies.md).
+It does not derive an abstract-value context or establish denotation under
+[ADR 0015: Bounded value equality in a resolved data context](adr/0015-value-equality.md).
+Numbers compare their exact values, so `10` and `1e1` are the same bound. Text
+compares decoded Unicode scalar values, arrays are ordered and maps unordered.
+`enum` values and map-data `required` names compare as sets. An absent readable,
+writable or observable characteristic, or an absent nullable characteristic of
+a full data description, equals its explicit specified default `true`. An absent
+`uniqueItems` in a full data description equals an explicit `false`. The nullable
+and unique-items defaults do not apply to a Direct items description itself.
+Full descriptions nested inside its object properties or alternatives retain
+their own roles. These defaults are comparison semantics, not inserted JSON.
+A representation that ordinary equality cannot settle under another meaning,
+such as two spellings of one instant, counts as a change and is classified like
+any other. Two `contentFormat` declarations in data with one established
+meaning, such as `50` and `application/json`, are the same, as described under
+[Content formats](#content-formats).
 
 Unchanged qualities produce no difference. `sdfRequired` instead compares by the requiredness it resolves to, described under [Requiredness](#requiredness).
 
@@ -243,6 +272,9 @@ A choice added to or removed from data as a whole may admit values the other rev
 
 ### Type
 
+The widening and narrowing rules here concern the `type` quality alone. Other
+constraints still participate in candidate admission and compatibility proofs.
+
 Every integer is a number, and a description without a `type` admits values of every type. So integer data that becomes number data widens, number data that becomes integer data narrows, an added `type` narrows and a removed one widens. A fraction separates integer data from number data. The candidates are `0.5`, then a fraction just inside each bound of the revision that admits fractions: an inclusive bound that is a fraction itself, and otherwise half a unit inside the bound, of 1 for an integer bound and of its last digit for another. So integer Thing-supplied data that becomes number data has the witness `0.5`, or `10.5` with a minimum of `10`, and integer Client-supplied data that becomes number data is compatible. Any other change between base types, such as string data that becomes boolean data, neither narrows nor widens. The candidates of every change of `type` other than one between integer and number are representative values: those of the earlier revision for Client-supplied data, when the type is added or changed, and those of the later revision for Thing-supplied data, when it is removed or changed. So string Client-supplied data that becomes boolean data has the witness `""`, the same change to Thing-supplied data the witness `true`, and a `type` added to Client-supplied data without one the witness `0`. A `type` other than the six base types neither narrows nor widens and suggests no candidate, so it stays undetermined.
 
 ### Nullable
@@ -263,7 +295,25 @@ A candidate is therefore placed only at an entry that the earlier revision descr
 
 ### Array data
 
-An array's `items` is the nested description of its values. Its changes are compared like those of a map `properties` entry: they are settled together, apart from the array's own qualities, and each is located inside `items`. An `items` description is a [Direct items description](../GLOSSARY.md#data-descriptions), whose vocabulary is `sdfRef`, `type`, `sdfChoice`, `enum`, `minimum`, `maximum`, `format`, `minLength`, `maxLength`, `description` and `$comment`, with `required` and `properties` when its `type` is `object`, following [ADR 0024: Effective alternatives and nullable characteristics](adr/0024-effective-alternatives-and-nullable-characteristics.md). Sample-value checking establishes no meaning for one that carries any other quality, such as `const`, `pattern`, `exclusiveMinimum`, `nullable` or `label`. So when either revision's `items` carries such a quality, every change inside it other than to `description` or `$comment` is undetermined with `comparison.not_classified`, including a narrowed bound beside it. A Direct items description has no Nullable characteristic, so an absent `nullable` there differs from an explicit one, and `null` is never a representative value of `items`.
+An array's `items` is the nested description of its values. Its changes are
+compared like those of a map `properties` entry: they are settled together,
+apart from the array's own qualities, and each is located inside `items`. An
+`items` description is a [Direct items description](../GLOSSARY.md#data-descriptions),
+whose grammar vocabulary is `sdfRef`, `type`, `sdfChoice`, `enum`, `minimum`,
+`maximum`, `format`, `minLength`, `maxLength`, `description` and `$comment`, with
+`required` and `properties` when its `type` is `object`, following
+[ADR 0024: Effective alternatives and nullable characteristics](adr/0024-effective-alternatives-and-nullable-characteristics.md).
+Grammar admission does not establish every processing meaning, including
+Direct-item imports. A description carrying wider qualities such as `const`,
+`pattern`, `exclusiveMinimum`, `nullable` or `label` has no complete supported
+interpretation. When either revision's `items` carries such a quality, the
+comparison leaves every change inside it other than `description` or `$comment`
+undetermined with `comparison.not_classified`, including a narrowed bound
+beside it. Independent known sample violations can still reject a candidate.
+A Direct items description has no nullable characteristic, so an absent
+`nullable` there differs from an explicit one, and `null` is never a
+representative value of `items` itself. Its object properties and choice
+alternatives contain full descriptions with their own roles.
 
 An array without an `items` description admits items of every type, so an `items` description added to array data narrows it and a removed one widens it. The candidates are arrays of `0`, `""`, `true`, `{}` and `[]`, in that order, each repeated as often as the `minItems` of the revision that must admit them requires, and at least once. So an `items` description of integers added to Client-supplied data, or removed from Thing-supplied data, is breaking with the witness `[""]`. An `items` that is a description in one revision and something else in the other is not classified.
 
@@ -277,7 +327,22 @@ A `const` restricts a description to one value, unless it sits beside an enum, w
 
 ### sdfType
 
-`byte-string` and `unix-time` are the `sdfType` conventions of RFC 9880 Section 4.7.1 that Sample-value checking establishes. They tell a Client how to read a value, so a change between them is breaking in every Client direction the data carries, without a witness, following the meaning qualities of [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md). A convention that is added or removed changes how values read as well, so the change neither narrows nor widens, and it is breaking only with a Breaking witness. The candidate is a value outside the convention's JSON representation, which the revision with the convention rejects: `"!"`, outside the base64url alphabet, for `byte-string`, and `""`, which is not a number, for `unix-time`. So `byte-string` added to Client-supplied string data, or removed from Thing-supplied string data, is breaking with the witness `"!"`. The reverse changes, and a candidate that another constraint such as a `pattern` already excludes, stay undetermined with `comparison.unproven`. Any other `sdfType` value is not classified.
+RFC 9880 Section 4.7.1 names the semantic types `byte-string` and `unix-time`.
+Esdieff checks sample JSON using its recorded base64url and POSIX-coordinate
+interpretations, as described in the [sample contract](sample-contract.md).
+These interpretations do not select a device wire protocol. The types tell a
+client how to read a value, so a change between them is breaking in every client
+direction the data carries, without a witness, following the meaning qualities
+of [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md).
+A type added or removed changes how values read as well, so the change neither
+narrows nor widens, and it is breaking only with a breaking witness. The
+candidate lies outside Esdieff's selected JSON representation: `"!"`, outside
+the base64url alphabet, for `byte-string`, and `""`, which is not a number, for
+`unix-time`. Thus `byte-string` added to client-supplied string data, or removed
+from thing-supplied string data, is breaking with the witness `"!"`. The reverse
+changes, and a candidate that another constraint such as a `pattern` already
+excludes, stay undetermined with `comparison.unproven`. Any other `sdfType` value
+is not classified.
 
 ## Requiredness
 
@@ -366,7 +431,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.6`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/4"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents and `unavailable_required` those whose content is unavailable. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/4"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |

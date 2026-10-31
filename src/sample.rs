@@ -118,7 +118,7 @@ pub enum SampleKind {
     ActionInput,
     ActionOutput,
     EventOutput,
-    /// Non-interactive metadata declared under an Object or Thing.
+    /// Non-interactive metadata declared under an `sdfObject` or `sdfThing`.
     Context,
 }
 impl SampleKind {

@@ -1,4 +1,4 @@
-//! A selected effective grouping as a bounded Markdown reference, following ADR 0050.
+//! Selected effective definitions as a bounded Markdown reference, following ADR 0050.
 mod render;
 use crate::allowance::OperationBudget;
 use crate::{Catalogue, Class, Disposition, EffectiveRequest, SourceId};

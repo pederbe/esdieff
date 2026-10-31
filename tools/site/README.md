@@ -26,8 +26,9 @@ the same colours.
 Motion: the hero words rise once on load, each content block fades up as it
 enters view, the hero glow breathes, an orbit dot circles the ring, the aura
 around the illustration pulses, and the thermostat illustration plays a
-14-second loop through the Web Animations API. Loops pause outside the viewport, in hidden tabs, on
-hover and focus, and through the page's motion control. Reduced-motion
+14-second loop through the Web Animations API. Loops pause outside the viewport,
+in hidden tabs and through the page's motion control. The thermostat loop also
+pauses while its illustration is hovered or focused. Reduced-motion
 preferences show the complete static result, and so does a page without
 JavaScript.
 
@@ -122,6 +123,8 @@ You can still start a deployment manually:
 gh workflow run website.yml --ref main -F deploy=true
 ```
 
-The workflow uses the latest published release. To require a particular release,
-add `-f tag=vX.Y.Z`. An explicit tag must match the latest release. Omitting
+The workflow builds the selected source revision. Before deployment, it checks
+the latest published release. To require that release to have a particular tag,
+add `-f tag=vX.Y.Z`. This checks the release identity without selecting different
+website sources. An explicit tag must match the latest release. Omitting
 `deploy=true` builds the website without publishing it.

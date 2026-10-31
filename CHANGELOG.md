@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Correct documentation and requirement descriptions for metadata absence,
+  implicit defaults, report contracts and current capability boundaries.
+
 ### Added
 
 - Explore a shared definition with `esdieff reference --uses` or

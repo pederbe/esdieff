@@ -1,6 +1,6 @@
 # Reuse Context metadata
 
-The [base document](base.sdf.json) defines reusable Location and AssetTag data descriptions, a Sensor Object and a Site Thing. The [device document](device.sdf.json) reuses both groupings, refines the installation floor and calibration limit, adds an asset tag and deletes a description and retired Context entry.
+The [base document](base.sdf.json) defines reusable Location and AssetTag data descriptions, a Sensor sdfObject and a Site sdfThing. The [device document](device.sdf.json) reuses both groupings, refines the installation floor and calibration limit, adds an asset tag and deletes a description and retired Context entry.
 
 From the repository root, check the device with its supplied dependency and inspect the final Context values and explanations:
 

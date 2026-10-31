@@ -188,7 +188,7 @@ order, with `name`, `operation`, `request`, `state: "report"`, native `outcome`,
 `undetermined`, which acknowledgements leave unchanged while the disposition in
 `outcome` follows them. That `outcome` also counts the comparison's Version
 warnings, which never change the case's disposition, and the native diff report
-keeps its own version `1.5`. `request` is the native requested scope,
+keeps its own version `1.6`. `request` is the native requested scope,
 selector and assessment/inventory record, or for a diff case the comparison
 identity and both revisions' scopes. A whole native `report` is optional. A diff
 case's report is the native diff report with both revisions' sources. When it cannot

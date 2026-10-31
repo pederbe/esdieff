@@ -1,4 +1,6 @@
-//! Selected JSON channels follow RFC 9880 Section 4.7.1 Table 5.
+//! Esdieff's selected JSON representations for the semantic types in RFC 9880 Section 4.7.1
+//! Table 5: canonical unpadded base64url and nonnegative POSIX-coordinate numbers. These are
+//! recorded sample-value interpretations, not a device wire-protocol binding.
 use crate::allowance::{OperationBudget, charge};
 use crate::finding::{Basis, Finding, Verdict};
 use crate::scalar::Context;

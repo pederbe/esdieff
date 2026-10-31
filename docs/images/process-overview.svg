@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="674" viewBox="0 0 760 674" role="img" aria-labelledby="title desc">
   <title id="title">Esdieff process overview</title>
-  <desc id="desc">Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads original content. Effective views resolve supplied definitions. Model checks, revision comparison and value testing produce results with evidence.</desc>
+  <desc id="desc">Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checks, revision comparison and value testing produce results with evidence.</desc>
   <style>
     svg { --bg: #fdf0d5; --fg: #003049; --panel: #f6e4c2; --line: #669bbc; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; }
     rect { fill: var(--panel); stroke: var(--line); }
@@ -30,14 +30,14 @@
   <text class="detail" x="564" y="74">Pinned GitHub bytes + expected SHA-256</text>
   <rect x="24" y="142" width="712" height="78" rx="8"/>
   <text class="heading" x="380" y="172">Catalogue</text>
-  <text class="detail" x="380" y="197">Explicit inputs · original bytes · exact numbers · source locations</text>
+  <text class="detail" x="380" y="197">Explicit inputs · retained content · exact numbers · source locations</text>
   <rect x="24" y="266" width="344" height="96" rx="8"/>
   <text class="heading" x="196" y="299">Source inspection</text>
-  <text class="detail" x="196" y="326">Read a selected definition as written</text>
+  <text class="detail" x="196" y="326">Inspect retained source JSON</text>
   <rect x="392" y="266" width="344" height="96" rx="8"/>
   <text class="heading" x="564" y="293">Effective view</text>
   <text class="detail" x="564" y="318">Resolve supplied references + refinements</text>
-  <text class="detail" x="564" y="339">Apply defaults · retain origins</text>
+  <text class="detail" x="564" y="339">Report defaults · retain origins</text>
   <rect x="24" y="414" width="228" height="92" rx="8"/>
   <text class="heading" x="138" y="445">Check models</text>
   <text class="detail" x="138" y="470">Assess the requested rules</text>

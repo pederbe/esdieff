@@ -110,11 +110,10 @@ pub(super) fn context_equal(
 }
 
 /// A structural comparison with exact numbers, decoded text, ordered arrays and unordered
-/// maps. Content it calls equal has equal values under ADR 0015: Bounded value equality in a
-/// resolved data context, but it reads no data context, so a difference may be one of
-/// representation alone. A pair it calls different is therefore classified conservatively,
-/// as a change. One definite difference decides, and otherwise unavailable content leaves
-/// equality unknown.
+/// maps. It does not derive a data context or establish abstract value denotation under
+/// ADR 0015: Bounded value equality in a resolved data context. A structural difference may
+/// therefore be one of representation alone and is classified conservatively as a change.
+/// One definite difference decides, and otherwise unavailable content leaves equality unknown.
 pub(super) fn equal(
     earlier: EffectiveJson<'_>,
     later: EffectiveJson<'_>,

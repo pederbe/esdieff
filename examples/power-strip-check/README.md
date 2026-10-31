@@ -8,7 +8,7 @@ reusable definitions through four model variants and 22 named Sample cases.
 | Minimal supported | `minimal.sdf.json`, `minimal-plan.json` | Two to four outlets with Boolean state and inclusive power bounds |
 | Rich supported | `rich.sdf.json`, `definitions.sdf.json`, `rich-plan.json` | Imported outlets, shared Power and Energy data, an explicit power override and exact fractional energy readings |
 | Missing dependency | `missing.sdf.json`, `missing-plan.json` | Failed acquisition of a named local meter file, with independently usable outlet state |
-| Copied requiredness | `copied.sdf.json`, `definitions.sdf.json`, `copied-plan.json` | An imported Object's own required declaration, relocated to the importing outlet |
+| Copied requiredness | `copied.sdf.json`, `definitions.sdf.json`, `copied-plan.json` | An imported sdfObject's own required declaration, relocated to the importing outlet |
 
 From the repository root, run a plan or the focused regression test.
 

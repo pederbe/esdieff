@@ -4,7 +4,9 @@
 //! description it was generated for, so its admission is the only statement made about it.
 //! Composition and selection spend the request's allowance, the values of each description
 //! are built on an allowance of the description's own, and each value is checked with the
-//! allowance one Sample-value checking request receives, as ADR 0041 states. The value and
+//! ordinary allowance one Sample-value checking request receives, as ADR 0041 states.
+//! A live pattern worker may be reused under ADR 0045: One pattern engine per trace or
+//! generation request, while each checked value retains its own counters. The value and
 //! description ceilings keep the request finite under ADR 0009: Bounded processing and
 //! reporting and ADR 0013: Shared workflow and report guarantees.
 mod report;
@@ -420,9 +422,9 @@ fn pointer(prefix: &str, keyword: &str, name: &str) -> String {
 /// Generate and settle the values of one selected description, or `None` when its details do
 /// not fit the report byte limit. Building its values spends an allowance of the description's
 /// own, and each check spends one of its own, each the allowance one Sample-value checking
-/// request receives, so a heavy description or value leaves only itself unsettled. Each value
-/// is charged the report bytes it needs, so the values a request retains fit the report.
-/// Every allowance borrows the pattern worker that `patterns` holds for the request.
+/// request receives. Request-wide selection and report limits can still omit later
+/// descriptions or values. Each value is charged the report bytes it needs, so the values a request retains fit the report.
+/// Each allowance can reuse the live pattern worker that `patterns` holds for the request.
 fn settle(
     kind: SampleKind,
     pointer: String,
