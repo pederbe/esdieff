@@ -567,6 +567,10 @@ _Avoid_: Expected result, since only Sample-value checking settles admission.
 Observations about retained Generated values that combine each value's Generation target with its settled admission, distinguishing admitted examples and boundary candidates from rejected outside and other candidates. These observations count values, not constraints or individual Choice alternatives.
 _Avoid_: RFC assessment coverage, operation completeness, constraint coverage percentage.
 
+**Choice admission evidence**:
+Observations identifying named Effective alternatives used in the established admission of retained Generated values. A witness identifies one wholly admitted value and its corresponding occurrence. A missing witness establishes neither rejection nor impossibility, since checking may skip overlapping alternatives after its first admission. These observations concern alternatives independently of Corpus evidence's value counts, RFC assessment coverage and operation completeness.
+_Avoid_: Breaking witness, exhaustive branch coverage, proof of impossibility.
+
 **Simulation trace**:
 The ordered record of one deterministic device demonstration: an initial state reading, then each command's step, simulated time and invocation with its input, optional Action result and Event, and subsequent state reading in observed order. Sample-value checking assesses its individual values, while its sequence meaning comes only from the demonstration's own authored rules and adds nothing to any Model requirement inventory.
 _Avoid_: Check case, protocol log, device state machine.

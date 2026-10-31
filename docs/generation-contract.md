@@ -99,6 +99,68 @@ evidence. These additions leave the generation contract, admission, completeness
 exit codes and JSON Lines Trace schema unchanged. The extra report detail is
 charged to the existing byte limit and can leave less room for retained values.
 
+## Choice admission evidence
+
+Choice admission evidence explains which named `sdfChoice` alternatives supplied
+an established admission witness for retained Generated values. It is separate
+from Corpus evidence, which still counts values in its five categories. It does
+not measure RFC assessment coverage, generation completeness or a percentage of
+alternatives exercised.
+
+The checker stops at the first admitting Effective alternative. For
+`{"nullable":false,"sdfChoice":{"low":{"const":1},"high":{"const":9}}}`,
+retained values `1` and `9` witness `low` and `high`. For overlapping alternatives
+that both construct `0`, only the first admitting alternative is witnessed.
+Reversing alternative order can reverse this observation without changing
+admission. `no_witness_established` includes skipped alternatives and establishes
+neither rejection nor impossibility. Documentary names are never constant values.
+Enum occurrences retain their identities and get no invented names or rows.
+
+Rows follow model order, including nested Choices in described properties,
+array items and final alternative contexts. Const/default value maps and
+documentary content are not descriptions. Each row identifies its owning Choice
+by semantic steps relative to the selected effective description. A `property`
+step names a described map entry, `items` denotes its item context, `choice`
+names an ancestor alternative, and `enum` records an ancestor occurrence index.
+These are semantic coordinates, not pointer-selectable authored members. The
+containing description supplies the effective document and description identity.
+Inherited nested Choices remain distinct under their ancestor alternatives.
+
+A `witnessed` row references the zero-based `value_index` in the final retained
+values and an ordinary `sample_pointer` within that value. A root occurrence has
+an empty pointer. Array occurrences use actual indices. The first retained value
+in final deduplicated order wins, then its first occurrence in checking order.
+Moving a duplicate to its winning target preserves its already established proof.
+Rejected or undetermined whole values contribute nothing. Failed outer branches
+discard their nested observations, even when a local nested Choice admitted.
+Shared qualities, references and overrides follow existing Effective alternative
+meaning. Collection neither generates more candidates nor checks skipped branches.
+
+Each selected description has one separate evidence allowance initialized from
+its configured work and effective-allocation ceilings. Enumeration, proof
+bookkeeping and retained observations share it without refill. Existing depth
+and effective-model bounds also apply. Exhaustion stops optional retention and
+leaves evidence `partial`, without spending checking allowances or changing
+admission, retained candidates, generation completeness, disposition or exit codes.
+`complete` means enumeration and observation retention finished within scope,
+even when rows have no witnesses. `unavailable` means the selected description
+could not be meaningfully inspected. Unreadable structure that might hide nested
+Choices leaves evidence partial. Known omitted rows are counted separately.
+Unknown membership supplies no total or coverage denominator.
+
+`GeneratedDescription::choice_evidence()` borrows the typed collection, which
+retains its state independently of presentation. JSON report 1.5 optionally adds
+`choice_evidence` with `state`, ordered `alternatives` and
+`alternatives_omitted`. Each row has `owner`, `alternative`, `status` and an
+optional `witness` with `value_index` and `sample_pointer`. Human output lists
+the same statuses and explains skipped overlapping alternatives. These optional
+sections use capacity remaining after all ordinary generation results fit.
+A shortened rendering reports partial evidence and known omitted rows. If no
+container fits, the field or section is absent. Absence, including in older
+reports, means evidence is unavailable in that rendering, not zero witnesses.
+All output remains within the existing report byte ceiling. JSON Lines Trace
+schema and replay are unchanged.
+
 ## Selection
 
 With a selector, generation covers the one description that Sample-value checking would select for that `kind` and `pointer`, including an sdfData definition or Context under an Object or Thing. Without one, it covers every Property, Action `sdfInputData`, Action `sdfOutputData` and Event `sdfOutputData` reachable from the document's top-level groupings and affordances, including nested groupings. They are taken in document order, and an Action's input comes before its output. sdfData and Context definitions are generated only when selected explicitly, so adding metadata does not add vectors to an existing affordance corpus. Event input and groupings have no description to generate. A description whose effective meaning is unavailable is listed as unavailable, and a grouping, Action or Event that cannot be read leaves the selection partial.

@@ -9,6 +9,13 @@
 
 ### Added
 
+- Report Choice admission evidence for generated corpora through borrowed library
+  accessors, human output and optional JSON `choice_evidence` detail. Named
+  alternatives identify a retained admitted value and its actual sample pointer.
+  Skipped alternatives establish no rejection or impossibility. Collection has
+  separate limits and cannot displace existing generated values or descriptions.
+  Existing generation, admission and Trace contracts remain unchanged.
+
 - Explain generated corpora with admitted examples and boundary candidates,
   rejected outside and other candidates, and undetermined values. The library,
   human report and optional JSON `evidence` fields share these observations.

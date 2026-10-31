@@ -479,3 +479,85 @@ fn an_exhausted_check_exits_3_with_an_undetermined_value() {
     assert_eq!(max_items["admission"], "undetermined");
     assert_eq!(values[0]["admission"], "admitted");
 }
+
+#[test]
+fn choice_admission_evidence_agrees_in_human_json_and_replayable_trace() {
+    for alternatives in [
+        r#""low":{"const":1},"high":{"const":9}"#,
+        r#""first":{"type":"integer","minimum":0,"maximum":10},"second":{"type":"integer","minimum":0,"maximum":5}"#,
+    ] {
+        let model = Model::new(&format!(
+            r#"{{"sdfProperty":{{"setting":{{"nullable":false,"sdfChoice":{{{alternatives}}}}}}}}}"#
+        ));
+        let wire = report(
+            &run(&[
+                "generate",
+                "--document",
+                model.path(),
+                "--format",
+                "json",
+                model.path(),
+            ]),
+            0,
+        );
+        let evidence = &wire["result"]["descriptions"][0]["choice_evidence"];
+        assert_eq!(evidence["state"], "complete");
+        let human = run(&["generate", "--document", model.path(), model.path()]);
+        assert!(human.status.success());
+        let human = String::from_utf8(human.stdout).unwrap();
+        assert!(human.contains("Collection: complete"));
+        assert!(human.contains("Overlapping alternatives may be skipped"));
+        for row in evidence["alternatives"].as_array().unwrap() {
+            assert!(human.contains(&format!(
+                "\"{}\": {}",
+                row["alternative"].as_str().unwrap(),
+                row["status"].as_str().unwrap()
+            )));
+        }
+        let trace = run(&[
+            "generate",
+            "--document",
+            model.path(),
+            "--format",
+            "jsonl",
+            model.path(),
+        ]);
+        assert!(trace.status.success());
+        for line in String::from_utf8(trace.stdout).unwrap().lines() {
+            let entry: Value = serde_json::from_str(line).unwrap();
+            assert!(entry.get("choice_evidence").is_none());
+            assert!(entry.get("expected").is_some());
+        }
+    }
+}
+
+#[test]
+fn nested_choice_witnesses_report_actual_sample_pointers() {
+    let model = Model::new(
+        r#"{"sdfProperty":{"setting":{"type":"object","nullable":false,"required":["mode","level"],"properties":{"mode":{"nullable":false,"sdfChoice":{"off":{"const":"off"},"on":{"const":"on"}}},"level":{"type":"integer","nullable":false,"minimum":5}}}}}"#,
+    );
+    let output = run(&[
+        "generate",
+        "--document",
+        model.path(),
+        "--format",
+        "json",
+        model.path(),
+    ]);
+    let wire = report(&output, 0);
+    let rows = wire["result"]["descriptions"][0]["choice_evidence"]["alternatives"]
+        .as_array()
+        .unwrap();
+    assert_eq!(rows.len(), 2);
+    assert!(
+        rows.iter()
+            .all(|row| row["status"] == "witnessed" && row["witness"]["sample_pointer"] == "/mode")
+    );
+    let human = run(&["generate", "--document", model.path(), model.path()]);
+    assert!(human.status.success());
+    assert!(
+        String::from_utf8(human.stdout)
+            .unwrap()
+            .contains("sample \"/mode\"")
+    );
+}

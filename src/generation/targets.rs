@@ -16,7 +16,7 @@ use crate::budgeted::{self, listed};
 use crate::representative::bounds::{self, End, step, step_power};
 use crate::representative::{self, Bound, Exhausted, Generator, KINDS, Representative, TYPES};
 use crate::role::{Role, SetAside};
-use crate::sample::{CheckedValue, ValueAllowance, ValueInterpretations, check_generated};
+use crate::sample::{CheckedValue, ValueAllowance, ValueInterpretations, check_generated_observed};
 use crate::{
     Admission, DataRole, EffectiveDataDescription, EffectiveJson, Field, JsonBuilder, JsonKind,
     JsonValue, JsonValueView,
@@ -80,6 +80,7 @@ pub(super) fn generate(
     ceiling: usize,
     allowance: &mut ValueAllowance,
     room: Room<'_>,
+    choices: &mut super::choice::Collection,
 ) -> Generated {
     let mut generated = Generated {
         values: Vec::new(),
@@ -95,6 +96,7 @@ pub(super) fn generate(
     let limits = &description.model.catalogue.limits;
     let mut run = Run {
         generator,
+        choices,
         root: EffectiveDataDescription(description, DataRole::Full),
         ceiling,
         depth: limits.depth,
@@ -128,6 +130,7 @@ enum Step<'m> {
 
 struct Run<'s, 'm, 'g> {
     generator: Generator<'s>,
+    choices: &'g mut super::choice::Collection,
     /// The selected description every value is checked against.
     root: EffectiveDataDescription<'m>,
     ceiling: usize,
@@ -690,7 +693,7 @@ impl<'m> Run<'_, 'm, '_> {
         let mut lent = ValueAllowance::new(self.root.json().model.catalogue);
         let patterns = &mut self.generator.allowance.budget.patterns;
         patterns.lend_worker(&mut lent.budget.patterns);
-        let checked = check_generated(self.root, &value, &mut lent);
+        let checked = check_generated_observed(self.root, &value, &mut lent, self.choices);
         patterns.reclaim_worker(&mut lent.budget.patterns);
         let checked = checked.map_err(|_| Exhausted::Work)?;
         self.generated.interpretations |= checked.interpretations;
@@ -724,7 +727,10 @@ impl<'m> Run<'_, 'm, '_> {
             key,
             size,
         };
-        self.generator.push(&mut self.generated.values, settled)
+        self.generator.push(&mut self.generated.values, settled)?;
+        self.choices
+            .retain(self.generated.values.len() - 1, checked.admission);
+        Ok(())
     }
 
     /// Give the kept value with `key` to a later `target` of higher `precedence`. The value
@@ -754,6 +760,7 @@ impl<'m> Run<'_, 'm, '_> {
         debug_assert!(
             (self.room.size)(&target, value.to_json(), kept.admission, &kept.codes) <= kept.size
         );
+        self.choices.moved(index, self.generated.values.len() - 1);
         let mut kept = self.generated.values.remove(index);
         kept.target = target;
         kept.aim = aim;
@@ -941,7 +948,9 @@ mod tests {
             size: &size,
             line: &line,
         };
-        let generated = generate(level.json(), ceiling, &mut allowance, room);
+        let mut choices =
+            super::super::choice::Collection::new(Some(level.json()), &catalogue.limits);
+        let generated = generate(level.json(), ceiling, &mut allowance, room, &mut choices);
         assert!(!generated.exhausted);
         let values = generated
             .values
