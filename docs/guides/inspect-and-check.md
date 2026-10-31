@@ -1,12 +1,12 @@
 # Inspect and check a model
 
-This guide checks a model that reuses a shared definition, reads the findings and looks at what the composed interface contains. It assumes Esdieff is [installed](../getting-started/README.md) and uses the `thermostat.sdf.json` from that page, plus two small files shown below.
+This guide checks a model that reuses a shared definition, reads the findings and inspects effective definitions. It assumes Esdieff is [installed](../getting-started/README.md) and uses the rich model saved as `thermostat.sdf.json` on that page, plus the repository examples linked below.
 
 ## Supply the files a model needs
 
-An SDF model can reference definitions in other documents. Esdieff resolves such references only among the files you supply on the command line, so a check sees exactly what you give it and never fetches anything. Together, the supplied files are the **catalogue**.
+An SDF model can reference definitions in other SDF documents. Esdieff resolves those name references among the documents you supply, without fetching namespace URIs. Together, the supplied SDF documents form the **catalogue**.
 
-Save these two files from the repository's [directory-check example](https://github.com/pederbe/esdieff/blob/main/examples/directory-check) next to each other. The sensor's `reading` property reuses a `Reading` type from the second file through its namespace `types`:
+Save the following two documents from the [directory-check example](https://github.com/pederbe/esdieff/blob/main/examples/directory-check) as `device.sdf.json` and `types.sdf.json`, respectively. The `Sensor` sdfObject declares a Property with the Given Name `reading`. Its `sdfRef` quality reuses the `Reading` sdfData definition through a CURIE reference whose namespace prefix is `types`:
 
 ```json
 {
@@ -47,7 +47,7 @@ effective 1 "/sdfObject/Sensor/sdfProperty/reading"
 ...
 </code></pre>
 
-The verdict is `undetermined`, not `failed`. Esdieff does not treat a missing dependency as a mistake in the model, and it never reports a definition as valid when it could not establish what it means. Supply both files, and name the device as the **root** so the check covers the device and whatever it needs:
+The missing target leaves reference resolution unfinished, producing an `undetermined` verdict and exit status 3. This is an Esdieff processing limitation under the supplied catalogue. Supply both files, and select `device.sdf.json` as the **root document** so the requested model check covers that document and its needed dependencies:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --root device.sdf.json device.sdf.json types.sdf.json
 <b>Esdieff:</b> <span class="g">passed</span>
@@ -67,21 +67,21 @@ The verdict is `undetermined`, not `failed`. Esdieff does not treat a missing de
 <b>Diagnostic details omitted:</b> 0
 </code></pre>
 
-`Scope: selected` with `Dependency sources: [2]` records that the types file was used as a dependency of the root. Without `--root`, the scope is `catalogue` and every supplied file is checked in full, including definitions nobody uses. Both scopes are useful: catalogue scope for a collection you maintain, selected scope for one product and its dependencies.
+`Scope: selected` with `Dependency sources: [2]` records that `types.sdf.json` was used as a dependency of the root document. Without `--root`, the scope is `catalogue`: every supplied model document, including unused definitions, is assessed under the requested assessment profile. Catalogue scope suits a collection you maintain. Selected-model scope starts from the chosen roots and assesses the dependency content needed for their checks.
 
 ## Choose how much to check
 
-`--assessment` selects an assessment level. The default `initial-v1` covers the document envelope, names and roles, namespaces, composition, parameters and the other fundamentals in eight assessment areas. `full-baseline` requests all 13 areas and accounts for all 54 model requirements Esdieff records from RFC 9880, including unit names against a recorded registry snapshot and numeric contradictions. The `expanded-*` levels add one concern to the initial set, such as `expanded-pattern-syntax-v1` for regular expressions. Two of them offer advice that `full-baseline` does not include. `expanded-numeric-v1` finds number ranges that no integer or step value can satisfy, and `expanded-consistency-v1` finds a `const` or `default` value that its own description excludes.
+`--assessment` selects an **assessment profile**. The default `initial-v1` covers the document envelope, names and roles, namespaces, composition, parameters and the other fundamentals in eight assessment areas. `full-baseline` requests all 13 areas and accounts for all 54 model requirements Esdieff records from RFC 9880, including unit names against a recorded registry snapshot and the initial contradiction advice. The `expanded-*` profiles add one concern to the initial set, such as `expanded-pattern-syntax-v1` for regular expressions. Two of them offer additional advice that `full-baseline` does not include. `expanded-numeric-v1` finds number ranges that no integer or step value can satisfy, and `expanded-consistency-v1` finds a `const` or `default` value that its own description excludes.
 
 ```sh
 esdieff check --assessment full-baseline --root device.sdf.json device.sdf.json types.sdf.json
 ```
 
-Every report says which inventory it assessed and how many areas were assessed, not applicable or undetermined, so a passed check always states what it covered. `--strict-warnings` turns warnings into a failed verdict, which is the setting to use in CI once a collection is clean. The [model meaning contract](../model-meaning-contract.md) and the [assessment inventory](../model-assessment-inventory.md) describe each area.
+Every model-check report names its inventory and counts assessed, not applicable, unassessed and undetermined areas. Read those counts with the verdict to see what the requested assessment established. `--strict-warnings` makes warnings fail the check too, which is useful when CI should reject warning advice. The [model meaning contract](../model-meaning-contract.md) and the [assessment inventory](../model-assessment-inventory.md) describe each area.
 
 ## Read findings and locations
 
-A finding has a condition code, a message and a location. The example collection includes a draft with a broken type:
+A finding has a condition code, a message and any available locations. To follow this example, create a `draft` directory and save [unfinished.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/directory-check/draft/unfinished.sdf.json) there. Its `type` quality has a numeric value where text is required:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check draft/unfinished.sdf.json
 <b>Esdieff:</b> <span class="r">failed</span>
@@ -93,13 +93,15 @@ source 1 "/sdfData/Unfinished/type"
 <b>Diagnostic details omitted:</b> 0
 </code></pre>
 
-`data.string` is the stable code of the rule, and the message explains it. The location is a **source** location: source 1 is the first supplied file, and the JSON Pointer `/sdfData/Unfinished/type` is the member in that file. Findings come in four kinds. Errors fail the check, warnings and notices are advice that leave it passed unless `--strict-warnings` is set, and incomplete checks mark work Esdieff could not finish, which makes the verdict undetermined.
+`data.string` is the stable condition code, and the message explains it. This **source location** identifies the authored `type` quality by its source ID and JSON Pointer. The source table maps ID 1 to the supplied document. Errors fail the check. Warnings fail it when `--strict-warnings` is set. Notices are informational and do not themselves fail the check. Incomplete checks mark unfinished requested work. With no error or strict-warning failure, that incompleteness makes the verdict undetermined. `Complete: true` records completed requested work, including established errors.
 
-Some findings are about the composed interface rather than one file. The `reference.unavailable` finding earlier had an **effective** location, `/sdfObject/Sensor/sdfProperty/reading`, which is the property as the device presents it after references and overrides are applied. Its related source locations point at the `sdfRef` that caused it. The [report contract](../report-contract.md#numbers-and-locations) describes both location kinds.
+An **effective location** identifies a position in a root document's composed model space. The earlier `reference.unavailable` finding uses `/sdfObject/Sensor/sdfProperty/reading` for the Property whose composition could not finish. Its related source locations identify the authored `sdfRef` and referencing definition. The [report contract](../report-contract.md#numbers-and-locations) describes both location kinds.
 
 ## Inspect what the interface contains
 
-`esdieff inspect` shows one definition in either view. The `--view source` form prints the member as written in the file, found by its JSON Pointer. The `--view effective` form prints the definition the device presents, with inherited qualities applied and RFC defaults filled in, and then lists where each quality came from. Inspect the thermostat's target temperature:
+`esdieff inspect` selects retained source JSON or composed effective JSON by document and JSON Pointer. In the effective view, `sdfRef` composition copies referenced content and applies the referencing definition's JSON Merge Patch, following [RFC 9880 Section 4.4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.4). Source explanations identify content origins and any importing consumer. Established implicit defaults appear as separate explanations. They are never inserted into the source or composed JSON, as described in [the effective-view contract](../adr/0020-owned-effective-views-and-nearest-origins.md).
+
+Inspection completion concerns the selected view. Run `esdieff check` to request model assessment. Inspect the thermostat's target temperature:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document thermostat.sdf.json --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
 <b>Esdieff:</b> <span class="g">passed</span>
@@ -113,9 +115,9 @@ source at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/descr
 ...
 </code></pre>
 
-The report before the inspection is trimmed. Every quality of this property is authored in the file itself, and `observable` is absent in the source, so the view records that its RFC default of `true` applies.
+The report before the inspection is trimmed. The JSON shows the authored qualities of this Property. `observable` is absent, so a separate `default true` explanation records the specified default from [RFC 9880 Section 5.2](https://www.rfc-editor.org/rfc/rfc9880.html#section-5.2). There is no inserted `observable` member or authored source for that default.
 
-The sensor's `reading` is more interesting, because its content comes from the other file:
+The `Sensor` grouping's `reading` Property obtains its data qualities from the other document:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document device.sdf.json --pointer /sdfObject/Sensor/sdfProperty/reading device.sdf.json types.sdf.json
 ...
@@ -131,9 +133,9 @@ inherited at effective 1 "/sdfObject/Sensor/sdfProperty/reading/type"; source 2 
 inherited at effective 1 "/sdfObject/Sensor/sdfProperty/reading/minimum"; source 2 "/sdfData/Reading/minimum"; imported at source 1 "/sdfObject/Sensor/sdfProperty/reading/sdfRef"
 </code></pre>
 
-Each `inherited` line names the file and pointer the quality came from, and `imported at` names the `sdfRef` that brought it in. This is how you see whether a supplier's property really has the bound you expect and which shared definition sets it.
+The `inherited` explanations identify source contributions to the copied content. `imported at` identifies the source `sdfRef` that establishes the composition boundary, called the **importing consumer** in Esdieff's glossary. The separate `default true` explanations have no authored quality source. Together these locations let you trace an effective bound to the shared definition that supplied it. A bound is a data quality, distinct from the Property that carries it.
 
-The [catalogue-check example](https://github.com/pederbe/esdieff/blob/main/examples/catalogue-check) works the same way for a reusable `sdfData` definition:
+For a reusable sdfData definition, save [count.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/catalogue-check/count.sdf.json) in your working directory, then inspect it:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document count.sdf.json --pointer /sdfData/Count count.sdf.json
 ...
@@ -147,7 +149,7 @@ source at effective 1 "/sdfData/Count/minimum"; source 1 "/sdfData/Count/minimum
 source at effective 1 "/sdfData/Count/maximum"; source 1 "/sdfData/Count/maximum"
 </code></pre>
 
-Add `--required-declarations` to list which contained definitions an owner declares as required through `sdfRequired`, and `--format json` to get the same views as JSON for scripts.
+Add `--required-declarations` to inspect the required declaration relationships selected by `sdfRequired`. These concern affordance and grouping declarations whose corresponding data are mandatory, following [RFC 9880 Section 4.5](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.5). Relationship completion and target capability are reported separately. Map-data `required` selects mandatory map entries. Nullability controls whether a value can be null. Add `--format json` for structured inspection results.
 
 ## Follow a finding to its source
 
@@ -159,7 +161,9 @@ A finding's source location is a pointer you can inspect directly. Take the draf
 { "type": 7 }
 </code></pre>
 
-The source view prints the member byte for byte as it appears in the file, so what you see is what you need to fix. For a finding with an effective location, inspect the effective pointer first to see the composed definition, then use its `inherited` and `imported at` lines to find the file to change. Source inspection also works when a check failed or could not finish, so you can always look at what was supplied.
+For original file inputs, the source view displays retained JSON with its original spelling and formatting. Source inspection can remain available when model checking fails or reference resolution cannot finish. Acquisition and decoding limits can still leave selected content unavailable.
+
+For an effective finding, select the document that owns the effective location and inspect its pointer. Follow the content-origin and importing-consumer locations to the authored documents. If the effective subtree is unavailable, inspect the finding's related source locations directly, starting with the authored `sdfRef` when one is identified.
 
 ## Where to go next
 
