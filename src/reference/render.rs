@@ -1,5 +1,6 @@
 //! Fixed layout and charged Markdown presentation for a selected grouping.
 use super::*;
+mod uses;
 use crate::allowance::charge;
 use crate::budgeted::{self, Exhausted};
 use crate::effective::Collection;
@@ -363,9 +364,14 @@ impl Writer<'_> {
     fn origin(&mut self, json: EffectiveJson<'_>) -> Result<(), Exhausted> {
         let explanation = json.explanation();
         let mut links = Vec::new();
-        for source in explanation.sources().take(1).chain(explanation.consumer()) {
+        let source_count = explanation.sources().count();
+        for (index, source) in explanation
+            .sources()
+            .chain(explanation.consumer())
+            .enumerate()
+        {
             if let Some((link, entry)) = self.source_entry(source)? {
-                budgeted::kept(&mut links, (link, entry), &mut self.budget)?;
+                budgeted::kept(&mut links, (index, link, entry), &mut self.budget)?;
             } else {
                 self.partial = true;
                 self.row(&["Source position unavailable or omitted.\n\n"])?;
@@ -373,9 +379,9 @@ impl Writer<'_> {
         }
         let size: usize = links
             .iter()
-            .map(|(link, entry)| link.len() + entry.len() + 4)
+            .map(|(_, link, entry)| link.len() + entry.len() + 4)
             .sum::<usize>()
-            + 40;
+            + 100;
         if size > self.room {
             self.omissions.bytes += 1;
             return Ok(());
@@ -390,9 +396,13 @@ impl Writer<'_> {
         self.body.push_str("Origin: ");
         self.body.push_str(explanation.kind().as_str());
         self.body.push_str(". ");
-        for (index, (link, entry)) in links.into_iter().enumerate() {
+        for (index, link, entry) in links {
             if index > 0 {
-                self.body.push_str(" Importing consumer: ");
+                self.body.push_str(if index < source_count {
+                    " Previous source: "
+                } else {
+                    " Importing consumer: "
+                });
             }
             self.body.push_str(&link);
             self.body.push_str(". ");
@@ -771,6 +781,9 @@ pub(super) fn render<'a>(
                     }
                 }
             }
+        }
+        if request.uses {
+            uses::render(&mut writer, &request)?;
         }
         Ok(())
     })();

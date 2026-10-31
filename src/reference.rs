@@ -4,13 +4,25 @@ use crate::allowance::OperationBudget;
 use crate::{Catalogue, Class, Disposition, EffectiveRequest, SourceId};
 
 /// Select one effective Thing or Object from an explicitly supplied document.
+/// Use navigation additionally admits other named definitions.
 pub struct ReferenceRequest<'a> {
     document: SourceId,
     pointer: &'a str,
+    uses: bool,
 }
 impl<'a> ReferenceRequest<'a> {
     pub fn new(document: SourceId, pointer: &'a str) -> Self {
-        Self { document, pointer }
+        Self {
+            document,
+            pointer,
+            uses: false,
+        }
+    }
+    /// Include effective uses of the selected authored definition across supplied models.
+    /// This also permits selecting named definitions other than Things and Objects.
+    pub fn with_uses(mut self) -> Self {
+        self.uses = true;
+        self
     }
 }
 
@@ -105,7 +117,7 @@ impl ReferenceResult<'_> {
     }
 }
 impl Catalogue {
-    /// Document one effective grouping. An established absent or wrong-class selector is
+    /// Document one effective definition. An established absent or wrong-class selector is
     /// a request error. Unavailable composition produces a usable domain result instead.
     pub fn reference(
         &self,
@@ -132,13 +144,19 @@ impl Catalogue {
         )?;
         if model.selected.is_some_and(|node| {
             model.nodes[node].role.is_some_and(|role| {
-                !matches!(
-                    role,
-                    crate::role::Role::Definition(Class::Thing | Class::Object)
-                )
+                if request.uses {
+                    !matches!(role, crate::role::Role::Definition(_))
+                } else {
+                    !matches!(
+                        role,
+                        crate::role::Role::Definition(Class::Thing | Class::Object)
+                    )
+                }
             })
         }) {
-            return Err("reference pointer must select an sdfThing or sdfObject");
+            return Err(
+                "reference pointer must select an sdfThing or sdfObject, or a named definition with --uses",
+            );
         }
         render::render(self, request, envelope, &model, required.as_ref(), budget)
     }

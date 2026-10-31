@@ -2,6 +2,244 @@
 use esdieff::{Catalogue, Disposition, ReferenceRequest, SourceInput};
 
 #[test]
+fn shared_temperature_uses_show_inherited_and_overridden_limits() {
+    let catalogue = Catalogue::from_inputs(&[
+        SourceInput::supplied(
+            "shared",
+            include_bytes!("../examples/shared-definitions/shared.sdf.json"),
+        ),
+        SourceInput::supplied(
+            "devices",
+            include_bytes!("../examples/shared-definitions/devices.sdf.json"),
+        ),
+    ])
+    .unwrap();
+    let id = catalogue.source_id("shared").unwrap();
+    let request = || ReferenceRequest::new(id, "/sdfData/Temperature").with_uses();
+    let result = catalogue.reference(request()).unwrap();
+    let markdown = result.to_markdown();
+    assert_eq!(result.disposition(), Disposition::Passed, "{markdown}");
+    let uses = markdown.split("## Shared definition uses").nth(1).unwrap();
+    for expected in [
+        "/sdfObject/Normal/sdfProperty/temperature/maximum",
+        "/sdfObject/Cool/sdfProperty/temperature/maximum",
+        "Effective value: 100",
+        "Effective value: 40",
+        "override",
+        "Previous source:",
+        "Importing consumer:",
+        "/sdfData/Temperature/maximum",
+    ] {
+        assert!(uses.contains(expected), "missing {expected}: {uses}");
+    }
+    navigation(markdown);
+    assert_eq!(
+        markdown,
+        catalogue.reference(request()).unwrap().to_markdown()
+    );
+    assert!(
+        catalogue
+            .reference(ReferenceRequest::new(id, "/sdfData/Temperature"))
+            .is_err()
+    );
+}
+
+#[test]
+fn uses_keep_available_consumers_when_a_companion_is_unavailable() {
+    let catalogue = Catalogue::from_inputs(&[
+        SourceInput::supplied(
+            "shared", br##"{"sdfData":{"Temperature":{"type":"number","maximum":100}},"sdfObject":{"Cool":{"sdfProperty":{"temperature":{"sdfRef":"#/sdfData/Temperature","maximum":40}}}}}"##,
+        ),
+        SourceInput::failed("missing"),
+    ])
+    .unwrap();
+    let result = catalogue
+        .reference(
+            ReferenceRequest::new(
+                catalogue.source_id("shared").unwrap(),
+                "/sdfData/Temperature",
+            )
+            .with_uses(),
+        )
+        .unwrap();
+    assert_eq!(result.disposition(), Disposition::Failed);
+    assert!(
+        result
+            .to_markdown()
+            .contains("/sdfObject/Cool/sdfProperty/temperature/maximum")
+    );
+    assert!(result.to_markdown().contains("reference.input-failed"));
+    navigation(result.to_markdown());
+}
+
+#[test]
+fn same_document_uses_exclude_deleted_and_opaque_references() {
+    let model = br##"{"sdfData":{"Temperature":{"type":"number","maximum":100}},"sdfObject":{"Normal":{"sdfProperty":{"temperature":{"sdfRef":"#/sdfData/Temperature"},"removed":{"sdfRef":"#/sdfData/Temperature","maximum":null}}},"Opaque":{"unknown":{"sdfRef":"#/sdfData/Temperature"}}}}"##;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = catalogue
+        .reference(
+            ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfData/Temperature",
+            )
+            .with_uses(),
+        )
+        .unwrap();
+    assert_eq!(
+        result.disposition(),
+        Disposition::Passed,
+        "{}",
+        result.to_markdown()
+    );
+    let uses = result
+        .to_markdown()
+        .split("## Shared definition uses")
+        .nth(1)
+        .unwrap();
+    assert!(uses.contains("/sdfObject/Normal/sdfProperty/temperature/maximum"));
+    assert!(!uses.contains("Effective occurrence: /sdfObject/Normal/sdfProperty/removed/maximum"));
+    assert!(!uses.contains("Effective occurrence: /sdfObject/Opaque"));
+    navigation(result.to_markdown());
+}
+
+#[test]
+fn effective_only_selection_does_not_silently_query_its_donor() {
+    let model = br##"{"sdfObject":{"Base":{"sdfData":{"Temperature":{"type":"number"}}},"Copy":{"sdfRef":"#/sdfObject/Base"}}}"##;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = catalogue
+        .reference(
+            ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfObject/Copy/sdfData/Temperature",
+            )
+            .with_uses(),
+        )
+        .unwrap();
+    assert_eq!(result.disposition(), Disposition::Undetermined);
+    assert!(
+        result
+            .to_markdown()
+            .contains("Use navigation requires a selected authored definition")
+    );
+    navigation(result.to_markdown());
+}
+
+#[test]
+fn locally_refined_inherited_definition_is_an_authored_selection() {
+    let model = br##"{"sdfObject":{"Base":{"sdfProperty":{"p":{"type":"number","maximum":100}}},"Copy":{"sdfRef":"#/sdfObject/Base","sdfProperty":{"p":{"maximum":40}}},"User":{"sdfRef":"#/sdfObject/Copy"}}}"##;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = catalogue
+        .reference(
+            ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfObject/Copy/sdfProperty/p",
+            )
+            .with_uses(),
+        )
+        .unwrap();
+    assert_eq!(
+        result.disposition(),
+        Disposition::Passed,
+        "{}",
+        result.to_markdown()
+    );
+    let uses = result
+        .to_markdown()
+        .split("## Shared definition uses")
+        .nth(1)
+        .unwrap();
+    assert!(
+        uses.contains("Effective occurrence: /sdfObject/User/sdfProperty/p/maximum"),
+        "{uses}"
+    );
+    assert!(uses.contains("Effective value: 40"), "{uses}");
+    assert!(
+        !uses.contains("Effective occurrence: /sdfObject/Copy/sdfProperty/p"),
+        "{uses}"
+    );
+    navigation(result.to_markdown());
+}
+
+#[test]
+fn authored_alias_is_not_its_own_use_but_keeps_other_consumers() {
+    for consumer in ["", r##", "Other":{"sdfRef":"#/sdfData/T"}"##] {
+        let model = format!(
+            r##"{{"sdfData":{{"Base":{{"type":"number","maximum":100}},"T":{{"sdfRef":"#/sdfData/Base","maximum":40}}{consumer}}}}}"##
+        );
+        let catalogue =
+            Catalogue::from_inputs(&[SourceInput::supplied("model", model.as_bytes())]).unwrap();
+        let result = catalogue
+            .reference(
+                ReferenceRequest::new(catalogue.source_id("model").unwrap(), "/sdfData/T")
+                    .with_uses(),
+            )
+            .unwrap();
+        assert_eq!(
+            result.disposition(),
+            Disposition::Passed,
+            "{}",
+            result.to_markdown()
+        );
+        let uses = result
+            .to_markdown()
+            .split("## Shared definition uses")
+            .nth(1)
+            .unwrap();
+        assert!(!uses.contains("Effective occurrence: /sdfData/T"), "{uses}");
+        if consumer.is_empty() {
+            assert!(
+                uses.contains("No established effective uses found"),
+                "{uses}"
+            );
+        } else {
+            assert!(
+                uses.contains("Effective occurrence: /sdfData/Other/maximum"),
+                "{uses}"
+            );
+            assert!(uses.contains("Effective value: 40"), "{uses}");
+        }
+        navigation(result.to_markdown());
+    }
+}
+
+#[test]
+fn use_navigation_remains_bounded_and_keeps_links_atomic() {
+    let objects = (0..30).map(|i| format!(r#""Device{i}":{{"sdfProperty":{{"temperature":{{"sdfRef":"shared:#/sdfData/Temperature"}}}}}}"#)).collect::<Vec<_>>().join(",");
+    let devices = format!(
+        r#"{{"namespace":{{"shared":"https://example.test/shared"}},"sdfObject":{{{objects}}}}}"#
+    );
+    for bytes in [32768, 65536, 131072] {
+        let catalogue = Catalogue::with_limits(
+            &[
+                SourceInput::supplied(
+                    "shared",
+                    include_bytes!("../examples/shared-definitions/shared.sdf.json"),
+                ),
+                SourceInput::supplied("devices", devices.as_bytes()),
+            ],
+            esdieff::Limits::default().report_bytes(bytes),
+        )
+        .unwrap();
+        let result = catalogue.reference(
+            ReferenceRequest::new(
+                catalogue.source_id("shared").unwrap(),
+                "/sdfData/Temperature",
+            )
+            .with_uses(),
+        );
+        let result = result.unwrap();
+        if bytes == 32768 {
+            assert!(result.omissions().byte_limited() > 0);
+        }
+        assert!(result.to_markdown().len() <= bytes);
+        if result.omissions().byte_limited() > 0 {
+            assert_eq!(result.disposition(), Disposition::Undetermined);
+        }
+        navigation(result.to_markdown());
+    }
+}
+
+#[test]
 fn selected_thermostat_documents_effective_constraints_and_absent_output() {
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied(
         "thermostat",

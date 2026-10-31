@@ -20,13 +20,15 @@ fn run(model: &str, extra: &[&str]) -> Output {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     let mut child = command.spawn().unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(model.as_bytes())
-        .unwrap();
-    child.wait_with_output().unwrap()
+    let written = child.stdin.take().unwrap().write_all(model.as_bytes());
+    let output = child.wait_with_output().unwrap();
+    if let Err(error) = written {
+        assert!(
+            error.kind() == std::io::ErrorKind::BrokenPipe && output.status.code() == Some(2),
+            "stdin write failed: {error}"
+        );
+    }
+    output
 }
 
 #[test]
@@ -82,6 +84,11 @@ fn invalid_selectors_and_duplicate_or_unknown_options_are_invocation_errors() {
         assert_eq!(output.status.code(), Some(2), "{extra:?}");
         assert!(output.stdout.is_empty());
     }
+    // Larger than the pipe buffer, so an early invocation rejection necessarily
+    // closes stdin while the helper is still writing.
+    let output = run(&" ".repeat(2 * 1024 * 1024), &["--bad"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
     let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
         .args(["schema", "--help"])
         .output()

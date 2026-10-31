@@ -157,7 +157,10 @@ pub(crate) fn help(style: Style) -> String {
             "schema",
             "--document MODEL --kind KIND --pointer POINTER [--format json|schema] INPUT...",
         ),
-        ("reference", "--document MODEL --pointer POINTER INPUT..."),
+        (
+            "reference",
+            "[--uses] --document MODEL --pointer POINTER INPUT...",
+        ),
         (
             "trace",
             "--document MODEL --trace FILE [--format human|json] MODEL_INPUT...",

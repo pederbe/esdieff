@@ -5,6 +5,38 @@ use std::{
     process::{Command, Output, Stdio},
 };
 const THERMOSTAT: &str = "examples/thermostat-check/rich.sdf.json";
+#[test]
+fn uses_selects_shared_data_and_rejects_duplicate_flag() {
+    let shared = "examples/shared-definitions/shared.sdf.json";
+    let devices = "examples/shared-definitions/devices.sdf.json";
+    let output = run(&[
+        "reference",
+        "--uses",
+        "--document",
+        shared,
+        "--pointer",
+        "/sdfData/Temperature",
+        shared,
+        devices,
+    ]);
+    assert_eq!(output.status.code(), Some(0), "{:?}", output);
+    let markdown = String::from_utf8(output.stdout).unwrap();
+    assert!(markdown.contains("Shared definition uses"));
+    assert!(markdown.contains("/sdfObject/Cool/sdfProperty/temperature/maximum"));
+    assert!(markdown.contains("Effective value: 40"));
+    let output = run(&[
+        "reference",
+        "--uses",
+        "--uses",
+        "--document",
+        shared,
+        "--pointer",
+        "/sdfData/Temperature",
+        shared,
+    ]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+}
 fn run(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_esdieff"))
         .args(args)
