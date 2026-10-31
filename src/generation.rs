@@ -483,3 +483,69 @@ fn settle(
         oversized: generated.oversized,
     })
 }
+
+/// Reference examples reuse settlement without recomposing each selected description.
+/// The caller supplies the one request's pattern worker and effective views.
+pub(crate) struct ReferenceExamples<'a> {
+    result: GenerationResult<'a>,
+    searched: usize,
+}
+pub(crate) struct ReferenceExample {
+    pub(crate) value: Option<String>,
+    pub(crate) status: &'static str,
+}
+impl<'a> ReferenceExamples<'a> {
+    pub(crate) fn new(catalogue: &'a Catalogue, document: SourceId) -> Self {
+        Self {
+            result: GenerationResult {
+                catalogue,
+                selector: None,
+                descriptions: Vec::new(),
+                unselected: 0,
+                unpresented: 0,
+                room: catalogue.limits.report_bytes,
+                selection_complete: true,
+                scope: SelectedScope::new(document),
+            },
+            searched: 0,
+        }
+    }
+    pub(crate) fn search(
+        &mut self,
+        kind: SampleKind,
+        pointer: String,
+        json: EffectiveJson<'_>,
+        patterns: &mut MatchingWork,
+    ) -> ReferenceExample {
+        if self.searched >= DESCRIPTIONS {
+            return ReferenceExample {
+                value: None,
+                status: "Examples not searched: request ceiling of 1,024 descriptions reached.",
+            };
+        }
+        self.searched += 1;
+        // Candidate retention is transient for one description. Presentation of the selected
+        // example is charged independently by the reference renderer.
+        self.result.room = self.result.catalogue.limits.report_bytes;
+        let description = settle(kind, pointer, Some(json), &mut self.result, patterns);
+        let value = description.as_ref().and_then(|description| {
+            description
+                .values
+                .iter()
+                .find(|value| {
+                    value.admission == Admission::Admitted && value.value.to_json().len() <= 4096
+                })
+                .map(|value| value.value.to_json().to_owned())
+        });
+        let status = match description {
+            _ if value.is_some() => "Illustrative value admitted by the model",
+            Some(description) if description.state == GenerationState::Complete => {
+                "No small admitted example was found. This does not establish an impossible description."
+            }
+            _ => {
+                "Example generation unavailable or limited. No small admitted example was established."
+            }
+        };
+        ReferenceExample { value, status }
+    }
+}

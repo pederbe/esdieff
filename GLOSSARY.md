@@ -736,3 +736,8 @@ The common raw registry source from which the unit sections were extracted. Its 
 
 **Consulted format fact**:
 A specification fact consulted while assessing a selected URI, URI-reference or UUID value. Its evidence is described in [the URI and UUID sample contract](docs/uri-uuid-sample-contract.md).
+
+**Model reference**:
+Esdieff documentation of a selected effective grouping, its surviving contents,
+illustrative admitted values and source origins. Documentation completion is
+separate from model assessment.

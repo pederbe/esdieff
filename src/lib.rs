@@ -28,6 +28,7 @@ mod numeric;
 mod pattern;
 mod proof;
 mod recorded_extension;
+mod reference;
 mod registry;
 mod report;
 mod representative;
@@ -76,6 +77,7 @@ pub use human::HumanStyle;
 pub use inventory::RequirementDescriptor;
 pub use json::{Children, ExactNumber, Field, JsonKind, JsonView, NumberWork};
 pub use limits::Limits;
+pub use reference::{ReferenceCondition, ReferenceOmissions, ReferenceRequest, ReferenceResult};
 pub use registry::{RecordedRegistryPolicy, RegistryKnowledgeView};
 pub use report::{
     Assessment, AssessmentStatus, Basis, BasisKind, CheckRequest, Condition, ConditionDomain,

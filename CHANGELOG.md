@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Generate a Markdown model reference for a selected Thing or Object with
+  effective constraints, illustrative admitted values and source origins. Use
+  `esdieff reference --document MODEL --pointer POINTER INPUT...` or the
+  library’s `ReferenceRequest`. Existing commands and report formats are unchanged.
+
 ## [0.2.0] - 2026-10-30
 
 ### Added

@@ -130,6 +130,7 @@ pub(crate) fn help(style: Style) -> String {
         style.span(Role::Syntax, "esdieff"),
         style.span(Role::Syntax, "--version")
     ));
+    help.push_str("Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.\n");
     for (command, options) in [
         ("check", "--plan PLAN [--format human|json]"),
         (
@@ -152,6 +153,7 @@ pub(crate) fn help(style: Style) -> String {
             "generate",
             "--document MODEL [--kind property|data|action_input|action_output|event_output|context --pointer POINTER] [--format human|json|jsonl] MODEL_INPUT...",
         ),
+        ("reference", "--document MODEL --pointer POINTER INPUT..."),
         (
             "trace",
             "--document MODEL --trace FILE [--format human|json] MODEL_INPUT...",
