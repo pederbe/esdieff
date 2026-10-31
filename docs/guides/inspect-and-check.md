@@ -163,6 +163,7 @@ The source view prints the member byte for byte as it appears in the file, so wh
 
 ## Where to go next
 
+- [Resolve missing and ambiguous name references](resolving-name-references.md) diagnoses unavailable targets and competing contributions to a global name.
 - [Repeat checks and share reports](checks-and-reports.md) saves these commands as a plan, checks whole directories and emits JSON and SARIF.
 - [Compare two revisions](revision-comparison.md) follows a changed shared definition to every device that uses it.
 - The [supplied source documents](../source-workflow.md) reference explains catalogues, roots and views in full.
