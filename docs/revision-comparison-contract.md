@@ -13,7 +13,7 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/3`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/4`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
 ## Context metadata
 
@@ -199,7 +199,9 @@ A representative value is a simple value that an effective data description may 
 
 A number lies at the description's lower bound, or else at its upper bound: the bound itself when it is inclusive, and one unit inside it when it is exclusive, where the unit is 1 for an integer bound and one of the bound's last digit otherwise. Without a bound it is `0`. A string is a conventional value of a `format` that Sample-value checking checks beside `type: "string"`: `"1970-01-01T00:00:00Z"` for `date-time`, `"1970-01-01"` for `date`, `"00:00:00Z"` for `time`, `"https://example.com"` for `uri`, `""` for `uri-reference` and `"00000000-0000-0000-0000-000000000000"` for `uuid`. Otherwise it is `minLength` copies of `a`, which is `""` without a `minLength`. Boolean data gives `true`. A map holds every entry the description requires, each filled with the first representative value of its own description, and `null` for a required entry without a description. An array holds `minItems` copies of the first representative value of its `items`, or of `null` without an `items` description, and is `[]` without a `minItems`. A Direct items description has no Nullable characteristic, so `null` is never a representative value of `items`.
 
-A value that would nest deeper than a generated value may, or a count beyond the value capabilities, is never generated. A representative value that its own description rejects, such as an empty string beside a `pattern`, is no witness, so the change it was generated for may stay unproven. Generation is charged to the one operation allowance, and generation that runs out of it leaves its difference undetermined with `operation.limit`.
+Without a conventional checked format value, strings first use [bounded pattern-aware synthesis](generation-contract.md#pattern-aware-representatives), combining the supported ASCII pattern subset with length limits. This also fills required map entries around a candidate witness. Unsupported patterns or impossible lengths retain the copies-of-`a` fallback above. Contract `esdieff.revision-comparison/4` supersedes `/3` because these candidates can establish additional Breaking witnesses. The classification rules and report version remain unchanged.
+
+A value that would nest deeper than a generated value may, or a count beyond the value capabilities, is never generated. A representative value that its own description rejects is no witness, so the change it was generated for may stay unproven. Generation is charged to the one operation allowance, and generation that runs out of it leaves its difference undetermined with `operation.limit`.
 
 A `Witness` has its `value()` as JSON text, its `direction()`, and its `admission(revision)` in each revision. The JSON report gives the same as the difference's `witness`, and the human report shows it on its own line beneath the difference.
 
@@ -364,7 +366,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.6`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/3"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents and `unavailable_required` those whose content is unavailable. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/4"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents and `unavailable_required` those whose content is unavailable. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |

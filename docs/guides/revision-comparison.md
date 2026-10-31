@@ -45,7 +45,7 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 ## Compare them
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json
-<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
 Client interactions only. Context metadata compatibility is not assessed.
 <b>Documents:</b> 1 compared, 0 removed, 0 added
 <b>Differences:</b> 1 <span class="r">breaking</span>, 1 <span class="y">undetermined</span>, 1 <span class="g">compatible</span>
@@ -109,7 +109,7 @@ A changed shared definition appears in every device model that reuses it, at the
 ```
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1 --new v2
-<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
 Client interactions only. Context metadata compatibility is not assessed.
 <b>Documents:</b> 2 compared, 0 removed, 0 added
 <b>Differences:</b> 1 <span class="r">breaking</span>, 0 <span class="y">undetermined</span>, 0 <span class="g">compatible</span>
@@ -164,7 +164,7 @@ The comparison report and exit status stay as before, and `reviewed.json` lists 
 Review the file, delete any entry you do not intend, add a `note` to each if you like, and keep it with the model. Then supply it:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json
-<b>Revision comparison</b> esdieff.revision-comparison/3: <span class="r">breaking</span>
+<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
 Client interactions only. Context metadata compatibility is not assessed.
 <b>Disposition:</b> <span class="g">passed</span>, with 1 breaking and 1 undetermined differences acknowledged
 <b>Documents:</b> 1 compared, 0 removed, 0 added

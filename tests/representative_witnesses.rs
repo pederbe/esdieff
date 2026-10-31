@@ -200,11 +200,9 @@ fn a_representative_map_fills_each_required_entry_from_its_own_description() {
 }
 
 #[test]
-fn a_representative_value_another_constraint_excludes_leaves_its_difference_undetermined() {
-    // Neither the empty string nor a flow of 1 meets the constraints of the revision that
-    // must admit it, and the mode and state admit no `null`, while both revisions admit a
-    // `null` setting or report. The Client-supplied mode and settings narrow, and the
-    // Thing-supplied state and report widen.
+fn pattern_representatives_witness_consts_while_unadmitted_flow_stays_unproven() {
+    // A digit representative separates each const change. A flow of 1 still fails its
+    // multipleOf constraint and cannot witness the required-entry changes.
     let digits = |property| (property, "pattern", json!("^[0-9]+$"));
     let not_null = |property| (property, "nullable", json!(false));
     let pinned = |property| (property, "const", json!("1"));
@@ -239,12 +237,9 @@ fn a_representative_value_another_constraint_excludes_leaves_its_difference_unde
         ],
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
-    for suffix in [
-        "/mode/const",
-        "/settings/required",
-        "/state/const",
-        "/report/required",
-    ] {
+    assert_eq!(witness(&at(&comparison, "/mode/const")), client("\"0\""));
+    assert_eq!(witness(&at(&comparison, "/state/const")), thing("\"0\""));
+    for suffix in ["/settings/required", "/report/required"] {
         let difference = at(&comparison, suffix);
         assert_eq!(
             difference.classification(),
@@ -474,10 +469,10 @@ fn both_reports_show_representative_witnesses_alike() {
     let wire: Value = serde_json::from_str(&comparison.to_json()).unwrap();
     assert_eq!(
         wire["request"]["comparison"],
-        "esdieff.revision-comparison/3"
+        "esdieff.revision-comparison/4"
     );
     let human = comparison.to_human();
-    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/3: breaking\n"));
+    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/4: breaking\n"));
     let valve = "/sdfObject/Valve/sdfProperty";
     for (quality, raw, direction, earlier, later, absent) in [
         ("mode/type", "\"\"", "client", "admitted", "rejected", ""),

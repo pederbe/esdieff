@@ -53,6 +53,129 @@ fn a_minimum_gives_an_admitted_bound_and_a_rejected_value_below_it() {
     has(&values, "below_minimum", "9", Admission::Rejected);
 }
 
+#[test]
+fn a_pattern_and_length_limits_give_an_admitted_identifier() {
+    let values = property(
+        r#"{"type":"string","nullable":false,"pattern":"^ID-[0-9]+$","minLength":5,"maxLength":7}"#,
+    );
+    has(&values, "type", r#""ID-00""#, Admission::Admitted);
+}
+
+#[test]
+fn bounded_pattern_candidates_respect_repetition_classes_and_anchors() {
+    for (pattern, minimum, maximum, expected) in [
+        (r"^SN-[A-Z]{2}[0-9]{2}$", 0, 9, "SN-AA00"),
+        (r"^x[ba]{1,3}z$", 5, 5, "xaaaz"),
+        (r"^x[0-9]{2,}z$", 6, 6, "x0000z"),
+        (r"^a?b*c+$", 3, 3, "abc"),
+        (r"^x\d+\w?\s$", 4, 6, "x00 "),
+        (r"^A\.B$", 0, 4, "A.B"),
+        (r"^x[a\-]{2}$", 0, 4, "x--"),
+        (r"^x[0-9]+?$", 4, 4, "x000"),
+        (r"ID$", 4, 4, "aaID"),
+        (r"^ID", 4, 4, "IDaa"),
+        (r"ID", 4, 4, "IDaa"),
+        (r"^$", 0, 0, ""),
+    ] {
+        let description = serde_json::json!({
+            "type": "string", "nullable": false, "pattern": pattern,
+            "minLength": minimum, "maxLength": maximum,
+        });
+        let values = property(&description.to_string());
+        let expected = serde_json::to_string(expected).unwrap();
+        assert!(
+            values.iter().any(
+                |(_, value, admission)| value == &expected && *admission == Admission::Admitted
+            ),
+            "{pattern}: {values:?}"
+        );
+    }
+}
+
+#[test]
+fn unsupported_or_impossible_patterns_keep_fallbacks_without_admission_claims() {
+    for pattern in ["^(a|b)$", "^(?=a)a$", "^[^a]$", "^é$", "^abc$"] {
+        let values = property(
+            &serde_json::json!({
+                "type":"string", "nullable":false, "pattern":pattern, "maxLength":2
+            })
+            .to_string(),
+        );
+        assert!(
+            !values
+                .iter()
+                .any(|(_, _, admission)| *admission == Admission::Admitted),
+            "{pattern}: {values:?}"
+        );
+        has(&values, "type", r#""""#, Admission::Rejected);
+    }
+}
+
+#[test]
+fn overflowing_pattern_repetitions_keep_a_bounded_undetermined_fallback() {
+    let values = property(
+        r#"{"type":"string","nullable":false,
+        "pattern":"^x{999999999999999999999999999999}$","maxLength":2}"#,
+    );
+    has(&values, "type", r#""""#, Admission::Undetermined);
+    assert!(
+        !values
+            .iter()
+            .any(|(_, _, admission)| *admission == Admission::Admitted)
+    );
+}
+
+#[test]
+fn nested_boundary_values_keep_patterned_required_siblings_admissible() {
+    let values = property(
+        r#"{"type":"object","nullable":false,"required":["id","level"],
+        "properties":{"id":{"type":"string","nullable":false,"pattern":"^ID-[0-9]+$","minLength":5},
+        "level":{"type":"integer","nullable":false,"minimum":10}}}"#,
+    );
+    has(
+        &values,
+        "level.minimum",
+        r#"{"level":10,"id":"ID-00"}"#,
+        Admission::Admitted,
+    );
+    has(
+        &values,
+        "level.below_minimum",
+        r#"{"level":9,"id":"ID-00"}"#,
+        Admission::Rejected,
+    );
+}
+
+#[test]
+fn pattern_synthesis_spends_its_description_allowance_without_starving_siblings() {
+    let model = br#"{"sdfProperty":{
+        "id":{"type":"string","nullable":false,"pattern":"^x{20000}$"},
+        "level":{"type":"integer","minimum":10}}}"#;
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied("model", model)],
+        Limits::default().decoding_work(10_000),
+    )
+    .unwrap();
+    let result = catalogue
+        .generate(GenerationRequest::new(
+            catalogue.source_id("model").unwrap(),
+        ))
+        .unwrap();
+    let mut descriptions = result.descriptions();
+    assert_eq!(
+        descriptions.next().unwrap().state(),
+        GenerationState::Partial
+    );
+    let level = descriptions.next().unwrap();
+    assert_eq!(level.state(), GenerationState::Complete);
+    assert!(
+        level
+            .values()
+            .any(|value| value.to_json() == "10" && value.admission() == Admission::Admitted)
+    );
+    assert_eq!(result.disposition(), Disposition::Undetermined);
+}
+
 const THERMOSTAT: &str = include_str!("../examples/thermostat-check/rich.sdf.json");
 
 /// The selector of every description a whole-document request selects, in order.
@@ -303,7 +426,7 @@ fn the_json_report_matches_the_library_result_and_repeats_byte_for_byte() {
     assert_eq!(wire["operation"], "generate");
     assert_eq!(
         wire["request"]["generation"]["contract"],
-        "esdieff.generation/1"
+        "esdieff.generation/2"
     );
     assert_eq!(wire["request"]["generation"]["document"], 1);
     assert!(wire["request"]["generation"].get("selector").is_none());
@@ -498,7 +621,7 @@ fn a_step_gives_a_value_half_a_step_past_a_lattice_value() {
 #[test]
 fn a_pattern_adds_no_target_and_unsettled_values_stay_undetermined() {
     let values = property(r#"{"type":"string","pattern":"^[0-9]+$"}"#);
-    has(&values, "type", "\"\"", Admission::Rejected);
+    has(&values, "type", "\"0\"", Admission::Admitted);
     assert!(
         !targets(&values)
             .iter()

@@ -1,0 +1,7 @@
+# 0051: Bounded pattern-aware representatives
+
+Representative strings made only from copies of `a` can violate an identifier pattern and prevent both useful Generated values and Breaking witnesses. Shared representative generation now tries a bounded ASCII concatenation, positive-class and repetition subset together with length limits, including required sibling entries. Sample-value checking continues to settle admission independently. Unsupported syntax and impossible lengths retain the ordinary fallback, without claiming unsatisfiability. Existing format representatives retain precedence.
+
+This supersedes ADR 0041's string-generation boundary and ADR 0039's string representative rule. The generation identity becomes `esdieff.generation/2` and comparison becomes `esdieff.revision-comparison/4`, because new representatives change generated output and can establish additional witnesses. Target order, report schemas and trace replay stay unchanged. Existing contract identities remain historical, and consumers checking identities need to accept the new ones.
+
+The subset has a linear parser and constructs one deterministic candidate within existing pattern-byte, document-byte, work and allocation limits. Its exact syntax, character choices, repetition order and fallback rules are part of the [generation contract](../generation-contract.md#pattern-aware-representatives). A general ECMAScript synthesizer or seeded exploration with shrinking would introduce substantially broader semantics and reproducibility controls. They remain separate work.

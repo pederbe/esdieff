@@ -93,6 +93,62 @@ fn a_selected_property_lists_each_value_with_its_target_and_admission() {
 }
 
 #[test]
+fn patterned_identifiers_agree_across_reports_and_replay_as_trace_entries() {
+    let model = Model::new(
+        r#"{"sdfProperty":{"id":{"type":"string","nullable":false,
+        "pattern":"^ID-[0-9]+$","minLength":5,"maxLength":7}}}"#,
+    );
+    let path = model.path();
+    let json = report(
+        &run(&["generate", "--document", path, "--format", "json", path]),
+        0,
+    );
+    assert_eq!(
+        json["request"]["generation"]["contract"],
+        "esdieff.generation/2"
+    );
+    assert!(rows(&json).contains(&("type".into(), "ID-00".into(), "admitted".into())));
+    let human = run(&["generate", "--document", path, path]);
+    assert_eq!(human.status.code(), Some(0));
+    assert!(
+        String::from_utf8(human.stdout)
+            .unwrap()
+            .lines()
+            .any(|line| line.contains("admitted") && line.contains("\"ID-00\""))
+    );
+    let vectors = run(&["generate", "--document", path, "--format", "jsonl", path]);
+    assert_eq!(vectors.status.code(), Some(0));
+    assert_eq!(
+        vectors.stdout,
+        run(&["generate", "--document", path, "--format", "jsonl", path]).stdout
+    );
+    let mut replay = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+        .args([
+            "trace",
+            "--document",
+            path,
+            "--trace",
+            "-",
+            "--format",
+            "json",
+            path,
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    replay
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(&vectors.stdout)
+        .unwrap();
+    let replay = report(&replay.wait_with_output().unwrap(), 0);
+    assert_eq!(replay["outcome"]["disposition"], "passed");
+}
+
+#[test]
 fn the_human_report_shows_targets_values_and_admissions() {
     let model = Model::new(LEVEL);
     let output = run(&[
@@ -108,7 +164,7 @@ fn the_human_report_shows_targets_values_and_admissions() {
     assert_eq!(output.status.code(), Some(0));
     let text = String::from_utf8(output.stdout).unwrap();
     assert!(
-        text.starts_with("Generated values esdieff.generation/1: passed\n"),
+        text.starts_with("Generated values esdieff.generation/2: passed\n"),
         "{text}"
     );
     assert!(
