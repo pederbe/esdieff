@@ -153,6 +153,10 @@ pub(crate) fn help(style: Style) -> String {
             "generate",
             "--document MODEL [--kind property|data|action_input|action_output|event_output|context --pointer POINTER] [--format human|json|jsonl] MODEL_INPUT...",
         ),
+        (
+            "schema",
+            "--document MODEL --kind KIND --pointer POINTER [--format json|schema] INPUT...",
+        ),
         ("reference", "--document MODEL --pointer POINTER INPUT..."),
         (
             "trace",

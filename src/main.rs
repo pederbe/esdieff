@@ -23,6 +23,7 @@ mod document_cli;
 mod edit_cli;
 mod generate_cli;
 mod reference_cli;
+mod schema_cli;
 mod trace_cli;
 use cli_style::{ColorMode, Role};
 
@@ -461,6 +462,9 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
     }
     if args.first().is_some_and(|arg| arg == "reference") {
         return reference_cli::run(args, color);
+    }
+    if args.first().is_some_and(|arg| arg == "schema") {
+        return schema_cli::run(args, color);
     }
     if args.first().is_some_and(|arg| arg == "generate") {
         return generate_cli::run(args, color);

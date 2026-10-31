@@ -97,7 +97,7 @@ fn cli_generation_and_existing_inspection_expose_exact_refinements_and_origins()
     );
     assert_eq!(
         report["result"]["json"]["maximum"],
-        serde_json::json!(100.0)
+        serde_json::from_str::<serde_json::Value>("1e2").unwrap()
     );
     assert_eq!(report["result"]["json"]["minimum"], -50);
     assert_eq!(report["result"]["json"]["writable"], false);

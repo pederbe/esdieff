@@ -36,6 +36,7 @@ mod role;
 mod sample;
 mod sarif;
 mod scalar;
+mod schema;
 mod source;
 mod structure;
 mod trace;
@@ -88,6 +89,7 @@ pub use sample::{
     Admission, ContextFindings, ContextState, SampleBasisRef, SampleKind, SampleMeaning,
     SampleMeaningArea, SampleMeaningConclusion, SampleRequest, SampleResult,
 };
+pub use schema::{SCHEMA_CONTRACT, SCHEMA_DIALECT, SchemaRequest, SchemaResult};
 pub use source::{Acquisition, Catalogue, Source, SourceId, SourceInput, SourceRole};
 pub use trace::{
     TRACE_CONTRACT, TraceCondition, TraceEntry, TraceOutcome, TraceRequest, TraceResult,

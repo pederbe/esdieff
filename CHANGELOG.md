@@ -4,6 +4,10 @@
 
 ### Added
 
+- Export selected effective payload constraints as JSON Schema Draft 2020-12
+  through `esdieff schema` and `Catalogue::export_schema`. The separate
+  `esdieff.schema/1` report states fidelity and withholds schemas containing
+  unsupported meaning. Existing commands and report formats are unchanged.
 - Generate pattern-aware string representatives for a documented ASCII subset,
   combining length limits and required map entries. Revision comparison can use
   them as breaking witnesses. Generation now reports `esdieff.generation/2` and
