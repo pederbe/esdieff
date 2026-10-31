@@ -144,6 +144,78 @@ fn nested_candidates_are_validated_as_whole_input_values() {
 }
 
 #[test]
+fn optional_map_entries_still_impose_implementation_obligations() {
+    let constrained =
+        json!({"type":"object","properties":{"count":{"type":"integer","maximum":10}}});
+    let open = json!({"type":"object","properties":{}});
+    for (direction, before, after, expected, admissions) in [
+        (
+            Direction::ClientSupplied,
+            &constrained,
+            &open,
+            Classification::Breaking,
+            (Admission::Rejected, Admission::Admitted),
+        ),
+        (
+            Direction::ClientSupplied,
+            &open,
+            &constrained,
+            Classification::Compatible,
+            (Admission::Admitted, Admission::Rejected),
+        ),
+        (
+            Direction::ThingSupplied,
+            &open,
+            &constrained,
+            Classification::Breaking,
+            (Admission::Admitted, Admission::Rejected),
+        ),
+        (
+            Direction::ThingSupplied,
+            &constrained,
+            &open,
+            Classification::Compatible,
+            (Admission::Rejected, Admission::Admitted),
+        ),
+    ] {
+        let before = model(before.clone(), direction);
+        let after = model(after.clone(), direction);
+        let earlier = catalogue(&[("model", &before)]);
+        let later = catalogue(&[("model", &after)]);
+        let comparison = ComparisonRequest::new(&earlier, &later)
+            .perspective(Perspective::Implementer)
+            .compare()
+            .unwrap();
+        assert_eq!(comparison.outcome(), expected, "{direction:?}");
+        let difference = at(&comparison, "/properties/count");
+        if expected == Classification::Breaking {
+            let (value, actual_direction, earlier, later) = witness(&difference);
+            let value: Value = serde_json::from_str(&value).unwrap();
+            assert!(value.get("count").is_some());
+            assert_eq!(actual_direction, direction);
+            assert_eq!((earlier, later), admissions);
+        }
+    }
+}
+
+#[test]
+fn unresolved_declaration_requiredness_retains_its_scoped_reason() {
+    let earlier = catalogue(&[("model", r#"{"sdfObject":{"Device":{}}}"#)]);
+    let later = catalogue(&[(
+        "model",
+        r##"{"sdfObject":{"Device":{"sdfRequired":["#/missing"]}}}"##,
+    )]);
+    let comparison = ComparisonRequest::new(&earlier, &later)
+        .perspective(Perspective::Implementer)
+        .compare()
+        .unwrap();
+    assert_eq!(
+        at(&comparison, "/sdfRequired").reason().unwrap().code(),
+        "required.unavailable"
+    );
+}
+
+#[test]
 fn acknowledgements_and_unmatched_documents_use_chronological_coordinates() {
     let before = model(
         json!({"type":"integer","maximum":10}),

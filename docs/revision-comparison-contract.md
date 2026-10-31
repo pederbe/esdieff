@@ -49,6 +49,12 @@ their whole effective data descriptions. A change to established meaning, such
 as changing the unit from seconds to metres, can break either perspective.
 Unsettled meaning and limits remain undetermined.
 
+Unlike client comparison, implementer comparison also assesses optional map
+entries absent from the later description. Removing an integer constraint on
+an optional input entry admits non-integer values, so an existing implementation
+can need change even though the entry remains optional. Adding that constraint
+to an output entry can likewise invalidate an implementation's existing output.
+
 The initial implementer perspective leaves endpoint additions and removals,
 declaration requiredness, grouping counts, Property capability changes and whole
 Action/Event input or output additions and removals undetermined. These need

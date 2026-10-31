@@ -354,7 +354,9 @@ impl<'c, 'a> Walk<'c, 'a> {
         else {
             return Ok(());
         };
-        if self.outcome.perspective == Perspective::Implementer {
+        if self.outcome.perspective == Perspective::Implementer
+            && !matches!(verdict, Verdict::Undetermined(_))
+        {
             verdict = Verdict::NOT_CLASSIFIED;
         }
         let members = [
@@ -592,7 +594,14 @@ impl<'c, 'a> Walk<'c, 'a> {
         let mut change = Change::new(subject, data.directions, Verdict::NOT_CLASSIFIED, sides);
         change.kind = kind;
         let name = self.key(members);
-        match classify::entry(owner, name, kind, data, self.allowance) {
+        match classify::entry(
+            owner,
+            name,
+            kind,
+            data,
+            self.outcome.perspective,
+            self.allowance,
+        ) {
             Some(rule) => change = change.ruled(rule),
             None => change.verdict = Verdict::Compatible,
         }
@@ -1092,6 +1101,7 @@ impl<'c, 'a> Walk<'c, 'a> {
             // Endpoint and capability obligations need their own implementer rules.
             // Documentary changes retain their existing perspective-independent meaning.
             let verdict = if self.outcome.perspective == Perspective::Implementer
+                && !matches!(verdict, Verdict::Undetermined(_))
                 && !matches!(
                     subject,
                     DifferenceSubject::Quality("description" | "label" | "$comment" | "default")

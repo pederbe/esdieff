@@ -15,6 +15,11 @@ revision labels, difference kinds, source origins, witness admissions,
 acknowledgements and version warnings retain chronological order. Unit and
 content-format added/removed reasons retain that order too.
 
+The client-only exclusion of optional map entries absent from its earlier
+description does not apply to implementers. An open map's newly unconstrained
+entry can widen accepted inputs, and a newly constrained entry can narrow
+permitted outputs. Both need ordinary whole-description witness checking.
+
 This initial implementer perspective classifies data changes, established
 meaning changes and documentary changes. Endpoint presence, declaration
 requiredness, grouping counts, Property capabilities and whole Action/Event
