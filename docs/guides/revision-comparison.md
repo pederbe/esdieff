@@ -82,6 +82,10 @@ Changing shared data used by a Property still receives the Property's usual comp
 
 ## Changes that reach other documents through a shared definition
 
+The [shared-definition walkthrough](shared-definition-changes.md) starts with
+`reference --uses`, explains a local override, and follows a changed shared
+quality into a comparison of two revisions.
+
 A changed shared definition appears in every device model that reuses it, at the place where that device presents it. Compare two directories to see this. Put a `types.sdf.json` with a shared `Celsius` type and a thermostat that references it in `v1/`, then copy both to `v2/` and lower the shared minimum from -40 to -50:
 
 ```json

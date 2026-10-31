@@ -10,6 +10,7 @@
 - [Inspect and check a model](guides/inspect-and-check.md)
 - [Compose and edit models](guides/authoring-and-editing.md)
 - [Compare two revisions](guides/revision-comparison.md)
+- [Follow a shared definition through a change](guides/shared-definition-changes.md)
 - [Test values against a model](guides/testing-values.md)
 - [Repeat checks and share reports](guides/checks-and-reports.md)
 - [Use the Rust library](rust-library.md)
