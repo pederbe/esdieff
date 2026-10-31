@@ -28,6 +28,9 @@ terminal colors. Internal links remain usable when you move the document.
 
 ## Explore shared definitions
 
+For a complete example connecting source explanations to client compatibility,
+follow the [shared-definition walkthrough](guides/shared-definition-changes.md).
+
 Add `--uses` to explore a named authored definition across every supplied model
 document. This also permits selecting a reusable `sdfData`, Property, Action,
 Event or Context definition. For example, compare two devices using a common

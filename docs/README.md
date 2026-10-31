@@ -15,6 +15,7 @@
 The guides walk through one task each with real commands and their output.
 
 - [Compose and edit models](guides/authoring-and-editing.md) builds a new `sdfThing` from reusable definitions and makes repeatable edits to an existing document.
+- [Follow a shared definition through a change](guides/shared-definition-changes.md) connects effective uses and local overrides to a revision comparison.
 - [Repeat checks and share reports](guides/checks-and-reports.md) saves checks as plans, checks whole directories and brings results into automation with JSON, SARIF and Markdown.
 - [Use the Rust library](rust-library.md) embeds the same checking, inspection and comparison in your own program.
 
