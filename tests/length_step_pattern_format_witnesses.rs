@@ -1,10 +1,10 @@
 //! Breaking witnesses and compatibility proofs for changed string lengths, `multipleOf`,
 //! `pattern` and `format`. Follows ADR 0039: Client-side revision comparison.
-use esdieff::{Catalogue, Classification, ComparisonRequest};
+use esdieff::{Catalogue, Classification, ComparisonRequest, Limits, SourceInput};
 use serde_json::{Value, json};
 
 mod comparison_support;
-use comparison_support::{at, catalogue, client, revised, thing, witness};
+use comparison_support::{at, client, revised, thing, witness};
 
 /// A station whose `code` and `setpoint` only Clients supply and whose `name` and `reading`
 /// only the Thing supplies.
@@ -33,10 +33,56 @@ fn station(revisions: &[(&str, &str, Value)]) -> String {
 
 /// The earlier and later stations with each revision applied to its own side.
 fn stations(old: &[(&str, &str, Value)], new: &[(&str, &str, Value)]) -> (Catalogue, Catalogue) {
-    (
-        catalogue(&[("station", &station(old))]),
-        catalogue(&[("station", &station(new))]),
+    // These assertions test admitted values, not scheduling inside the matching time limit.
+    // Keep a finite allowance while avoiding incidental deadline exhaustion under CI load.
+    stations_with_limits(
+        old,
+        new,
+        Limits::default().pattern_deadline(std::time::Duration::from_secs(1)),
     )
+}
+
+fn stations_with_limits(
+    old: &[(&str, &str, Value)],
+    new: &[(&str, &str, Value)],
+    limits: Limits,
+) -> (Catalogue, Catalogue) {
+    let catalogue = |text: String| {
+        Catalogue::with_limits(
+            &[SourceInput::supplied("station", text.as_bytes())],
+            limits.clone(),
+        )
+        .unwrap()
+    };
+    (catalogue(station(old)), catalogue(station(new)))
+}
+
+#[test]
+fn an_exhausted_pattern_time_budget_leaves_a_candidate_witness_undetermined() {
+    let (earlier, later) = stations_with_limits(
+        &[
+            ("code", "pattern", json!("^A[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+        &[
+            ("code", "pattern", json!("^B[0-9]+$")),
+            ("code", "minLength", json!(3)),
+        ],
+        Limits::default().pattern_deadline(std::time::Duration::ZERO),
+    );
+    let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
+    let difference = at(&comparison, "/code/pattern");
+    assert_eq!(
+        difference.classification(),
+        Classification::Undetermined,
+        "{}",
+        comparison.to_human()
+    );
+    assert!(difference.witness().is_none());
+    assert_eq!(
+        difference.reason().unwrap().code(),
+        "comparison.witness_unsettled"
+    );
 }
 
 #[test]
@@ -53,7 +99,12 @@ fn a_changed_identifier_pattern_has_a_settled_breaking_witness() {
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
     let pattern = at(&comparison, "/code/pattern");
-    assert_eq!(pattern.classification(), Classification::Breaking);
+    assert_eq!(
+        pattern.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
     assert_eq!(witness(&pattern), client(r#""A00""#));
 }
 
@@ -338,10 +389,20 @@ fn an_added_pattern_breaks_client_data_and_a_removed_one_thing_data_with_a_repre
     );
     let comparison = ComparisonRequest::new(&earlier, &later).compare().unwrap();
     let code = at(&comparison, "/code/pattern");
-    assert_eq!(code.classification(), Classification::Breaking);
+    assert_eq!(
+        code.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
     assert_eq!(witness(&code), client("\"\""));
     let name = at(&comparison, "/name/pattern");
-    assert_eq!(name.classification(), Classification::Breaking);
+    assert_eq!(
+        name.classification(),
+        Classification::Breaking,
+        "{}",
+        comparison.to_human()
+    );
     assert_eq!(witness(&name), thing("\"\""));
 
     let comparison = ComparisonRequest::new(&later, &earlier).compare().unwrap();
