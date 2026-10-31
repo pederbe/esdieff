@@ -118,24 +118,33 @@ pub(super) fn render(
             for origin in json.explanation().sources() {
                 matched |= within(origin, selected, &mut writer.budget)?;
             }
-            // The authored definition itself is a source, rather than a use.
             if matched
                 && budgeted::failure(json).is_none()
                 && json.explanation().consumer().is_some()
+                && let Some(pointer) = writer.pointer(json)?
             {
-                found = true;
-                occurrences += 1;
-                if let Some(pointer) = writer.pointer(json)?
-                    && let Some(pointer) = writer.text(&pointer)?
-                {
-                    if !writer.row(&["- Effective occurrence: ", &pointer, "\n\n"])? {
-                        continue;
-                    }
-                    if json.kind() != crate::JsonKind::Map && json.kind() != crate::JsonKind::Array
-                    {
-                        writer.quality("Effective value", json, "")?;
-                    } else {
-                        writer.origin(json)?;
+                budgeted::work(&mut writer.budget, pointer.len() + 1)?;
+                // A selected alias has an importing consumer of its own. Its
+                // effective subtree is still the source being queried, not a use.
+                let selected_subtree = source.id() == request.document
+                    && (pointer == request.pointer
+                        || pointer
+                            .strip_prefix(request.pointer)
+                            .is_some_and(|suffix| suffix.starts_with('/')));
+                if !selected_subtree {
+                    found = true;
+                    occurrences += 1;
+                    if let Some(pointer) = writer.text(&pointer)? {
+                        if !writer.row(&["- Effective occurrence: ", &pointer, "\n\n"])? {
+                            continue;
+                        }
+                        if json.kind() != crate::JsonKind::Map
+                            && json.kind() != crate::JsonKind::Array
+                        {
+                            writer.quality("Effective value", json, "")?;
+                        } else {
+                            writer.origin(json)?;
+                        }
                     }
                 }
             }

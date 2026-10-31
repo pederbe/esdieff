@@ -125,6 +125,48 @@ fn effective_only_selection_does_not_silently_query_its_donor() {
 }
 
 #[test]
+fn authored_alias_is_not_its_own_use_but_keeps_other_consumers() {
+    for consumer in ["", r##", "Other":{"sdfRef":"#/sdfData/T"}"##] {
+        let model = format!(
+            r##"{{"sdfData":{{"Base":{{"type":"number","maximum":100}},"T":{{"sdfRef":"#/sdfData/Base","maximum":40}}{consumer}}}}}"##
+        );
+        let catalogue =
+            Catalogue::from_inputs(&[SourceInput::supplied("model", model.as_bytes())]).unwrap();
+        let result = catalogue
+            .reference(
+                ReferenceRequest::new(catalogue.source_id("model").unwrap(), "/sdfData/T")
+                    .with_uses(),
+            )
+            .unwrap();
+        assert_eq!(
+            result.disposition(),
+            Disposition::Passed,
+            "{}",
+            result.to_markdown()
+        );
+        let uses = result
+            .to_markdown()
+            .split("## Shared definition uses")
+            .nth(1)
+            .unwrap();
+        assert!(!uses.contains("Effective occurrence: /sdfData/T"), "{uses}");
+        if consumer.is_empty() {
+            assert!(
+                uses.contains("No established effective uses found"),
+                "{uses}"
+            );
+        } else {
+            assert!(
+                uses.contains("Effective occurrence: /sdfData/Other/maximum"),
+                "{uses}"
+            );
+            assert!(uses.contains("Effective value: 40"), "{uses}");
+        }
+        navigation(result.to_markdown());
+    }
+}
+
+#[test]
 fn use_navigation_remains_bounded_and_keeps_links_atomic() {
     let objects = (0..30).map(|i| format!(r#""Device{i}":{{"sdfProperty":{{"temperature":{{"sdfRef":"shared:#/sdfData/Temperature"}}}}}}"#)).collect::<Vec<_>>().join(",");
     let devices = format!(
