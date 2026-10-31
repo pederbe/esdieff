@@ -77,7 +77,8 @@ so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
 once, however many entries it holds, so each trace adds one
 `effective::compose_mode` call per round. A Recorded trace or generation
-request shares one pattern engine among all the values it matches, following
+request reuses a live pattern engine across matched values and can start another
+after a worker stops, following
 [ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md).
 Each other operation that matches a pattern starts its own. The previously documented
 profile count was 34 `Engine::new` starts per round. That count depends on the workload and

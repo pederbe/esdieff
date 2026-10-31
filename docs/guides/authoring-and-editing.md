@@ -5,9 +5,9 @@ This guide builds a new device description from reusable definitions and then ma
 ## Compose an sdfThing from reusable objects
 
 An `sdfObject` groups affordances and reusable definitions. An `sdfThing` can
-group Objects and other Things. `esdieff author` creates a new `sdfThing`
-document whose Object declarations reference supplied reusable Object
-definitions through `sdfRef`. The generated source keeps those references.
+contain `sdfObject` and `sdfThing` groupings. `esdieff author` creates a new
+`sdfThing` document whose `sdfObject` declarations reference supplied reusable
+`sdfObject` definitions through `sdfRef`. The generated source keeps those references.
 Effective inspection then composes the referenced content and local refinements.
 
 Save a reusable capabilities document as `capabilities.sdf.json`:
@@ -37,7 +37,7 @@ Save a reusable capabilities document as `capabilities.sdf.json`:
 ```
 
 Then write the recipe as `recipe.json`. It names the new `sdfThing`, binds the
-namespace prefixes the generated document will use, and declares each Object.
+namespace prefixes the generated document will use, and declares each `sdfObject`.
 Each entry names the declaration, the supplied source and pointer selecting its
 reusable definition, the output namespace prefix, a refinement patch and whether
 the declaration is required. The thermostat refinement lowers the maximum to
