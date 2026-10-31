@@ -12,7 +12,9 @@ for array counts and uniqueness,
 [Appendix C.5](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-C.5)
 for required map entries and described values, and
 [Section 4.7.2](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.7.2)
-for Full Choice alternatives. No RFC example text is copied.
+for `sdfChoice` alternatives. Full data description is Esdieff's role term, as
+defined in the [domain glossary](../../GLOSSARY.md#data-descriptions).
+No RFC example text is copied.
 
 The zone names, four-zone capacity, one-to-sixty duration range, percentage
 feedback and configuration results are authored demonstration constraints.

@@ -92,8 +92,8 @@ _Avoid_: sdfThing when referring to the physical item.
 A network interaction opportunity described by the model: a Property, Action, or Event.
 
 **Context**:
-A named data description of non-interactive metadata under an Object or Thing, such as a serial number, installation location or calibration offset. The [Context extension draft](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt) defines it separately from affordances.
-_Avoid_: Read-only Property, device interaction.
+A named data description of non-interactive metadata under an `sdfObject` or `sdfThing`, such as a serial number, installation location or calibration offset. The [Context extension draft](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt) defines it separately from affordances.
+_Avoid_: Read-only Property, device interaction, processing context.
 
 **Property**:
 An affordance for reading, writing, or observing state.
@@ -685,11 +685,7 @@ A companion document describing how abstract SDF concepts map to network interac
 
 ## Draft extension vocabulary
 
-These terms come from the named Internet-Drafts. Their inclusion does not imply implemented Esdieff support. See [the model coverage boundaries](docs/model-coverage-boundaries.md).
-
-**Context**:
-A definition of non-affordance information associated with an Object or Thing, introduced by `sdfContext` in [Non-Affordance Information, revision 06, Section 4](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-nonaffordance-06.txt).
-_Avoid_: Property affordance, processing context.
+These terms come from the named Internet-Drafts. Context is defined under [Things and interactions](#things-and-interactions); its recorded revision-06 support is described in [the Context contract](docs/context-contract.md). The remaining draft terms retain their own support limits in [the model coverage boundaries](docs/model-coverage-boundaries.md).
 
 **Supplement**:
 A companion document supplying amendments to an SDF model, proposed in the expired [SDF Supplements draft, revision 01](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-mapping-01.html#section-4).

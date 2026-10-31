@@ -1,4 +1,4 @@
-//! Fixed layout and charged Markdown presentation for a selected grouping.
+//! Fixed layout and charged Markdown presentation for a selected effective definition.
 use super::*;
 mod uses;
 use crate::allowance::charge;

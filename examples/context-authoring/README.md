@@ -10,7 +10,7 @@ esdieff author --source base examples/context-authoring/base.sdf.json --plan exa
 esdieff inspect --view effective --document context-output/installation.sdf.json --pointer /sdfThing/Installation/sdfObject/sensor --format json examples/context-authoring/base.sdf.json context-output/installation.sdf.json
 ```
 
-The generated Thing references the reusable Sensor Object. Its recipe narrows
+The generated sdfThing definition references the reusable Sensor sdfObject. Its recipe narrows
 the calibration maximum from 10 to `2.50`, removes its description and deletes
 the retired Context entry. The site name and temperature Property remain
 unchanged. Inspection shows the final constraints and the source of each change.
@@ -31,7 +31,7 @@ You can use the revised source with the same recipe:
 esdieff author --source base context-output/revised-base.sdf.json --plan examples/context-authoring/recipe.json --document-output context-output/revised-installation.sdf.json --check full-baseline
 ```
 
-Editing a Context inside the generated Object's `sdfRef` boundary is refused:
+Editing a Context inside the generated sdfObject's `sdfRef` boundary is refused:
 
 ```sh
 esdieff edit --source installation context-output/installation.sdf.json --plan examples/context-authoring/outside-boundary.json --document-output context-output/refused.sdf.json

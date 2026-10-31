@@ -1,6 +1,7 @@
 //! A Grouping array's `minItems` and `maxItems` bound its instance count inclusively. Things
 //! decide how many instances there are, so the range behaves like Thing-supplied data: a
-//! later range inside the earlier one is compatible and any other change is breaking,
+//! later range inside the earlier one is compatible and a widened range is breaking when
+//! both revisions establish valid grouping-array ranges. Other shapes stay unclassified,
 //! following ADR 0039: Client-side revision comparison. An absent minimum reads as 0 and an
 //! absent maximum as unbounded. Each end is judged on its own, so a change to both is
 //! compatible only when both narrow.

@@ -13,7 +13,7 @@ This follows [ADR 0030: Bounded numeric advice](adr/0030-bounded-numeric-advice.
 | `proof.step_interval_gap` | Established number/integer type, a positive ordinary numeric multipleOf, finite bounds and null exclusion leave no lattice point. Integer type intersects the step lattice with integers. |
 
 Conditions have Warning severity, Advice basis, their warning code as basis ID,
-and RFC 9880 Appendix C.1 as the constraint citation. Strict warnings changes
+and RFC 9880 Appendix C.1 as the constraint citation. Strict warnings change
 disposition while preserving severity, counts and completion. Failure to find a
 warning establishes no general satisfiability, sample admission or restrictive
 refinement. Initial, other expanded profiles and Full keep their existing scopes.

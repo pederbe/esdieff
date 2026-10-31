@@ -2,9 +2,10 @@
 
 Follow a model from supplied files to checks, comparisons and test values. Esdieff
 uses the same model operations in its command-line tool and Rust library. A
-**catalogue** is the set of files you supply. An **effective view** is the
-resulting definition after references, refinements and applicable defaults have
-been resolved.
+**catalogue** retains the documents you supply and their acquisition attempts.
+An **effective view** presents content after supported name-reference composition
+and refinements. Established implicit defaults remain separate explanations and
+typed characteristics. They are not inserted into the composed JSON.
 
 [Explore the interactive process map](https://esdieff.com/docs/guides/how-esdieff-works).
 Choose a workflow and an example. The address keeps your selection, so you can
@@ -32,7 +33,7 @@ See [supplied source documents](../source-workflow.md) and
 ## Check and inspect
 
 Choose the check's scope and assessment. The scope is either every supplied
-model or selected root models and their dependencies. The assessment selects the
+model document or selected root documents and their needed dependencies. The assessment selects the
 requested rules, from the initial checks to expanded profiles and the full
 recorded model baseline.
 

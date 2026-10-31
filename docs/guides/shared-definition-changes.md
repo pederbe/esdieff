@@ -2,8 +2,10 @@
 
 Use this walkthrough to find which Property declarations reuse a data definition,
 explain a local override, and compare the client-visible effects of changing the
-shared definition. It assumes Esdieff is [installed](../getting-started/README.md)
-and you are working from the repository root.
+shared definition. It uses a
+[current-checkout installation](../getting-started/README.md#direct-downloads-and-cargo)
+for `reference --uses`, which was added after release 0.2.0. Run the walkthrough
+from the repository root.
 
 ## Identify the definitions and qualities
 

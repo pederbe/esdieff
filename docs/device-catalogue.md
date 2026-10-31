@@ -165,7 +165,7 @@ potential capabilities. Sample areas use the existing
 | Irrigation and coffee machine, minimal and rich | Catalogue and selected-model cases named by each plan | Complete supported descriptions | Initial Catalogue and Full selected-model |
 | Irrigation and coffee machine, limited | Limited Catalogue, Limited model | Optional model description needs an unsupplied calibration definition | Initial Catalogue and Full selected-model, undetermined and incomplete |
 
-These families exercise all five selectors through Property, sdfData, Action
+These families exercise the five base selectors through Property, sdfData, Action
 input, Action output and Event output. Irrigation exercises Sample-array counts,
 text-element uniqueness and authored zone identifier patterns. These patterns
 are ordinary text constraints, rather than URI or UUID format checks. Repeated

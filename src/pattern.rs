@@ -128,9 +128,9 @@ impl MatchingWork {
         Some(index)
     }
     /// Lend this allowance's worker, with its engine, to `borrower`, a fresh allowance for
-    /// an independent check, so successive checks start one engine between them. Only the
-    /// worker moves. Each allowance keeps its own counters and pays its own worker stack
-    /// and engine heap.
+    /// an independent check, so successive checks can reuse a live engine. A stopped worker
+    /// is not lent, and the independent check may start another. Only the worker moves.
+    /// Each allowance keeps its own counters and pays its own worker stack and engine heap.
     pub(crate) fn lend_worker(&mut self, borrower: &mut Self) {
         if self.worker.as_ref().is_some_and(MatchWorker::running) {
             borrower.worker = self.worker.take();

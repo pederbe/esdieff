@@ -9,7 +9,7 @@ dated 27 October 2026, are saved here for offline checking and reuse.
 | 2 | [device-with-context.sdf.json](device-with-context.sdf.json) | Serial number, installation location and calibration offset beside a temperature Property |
 | 3 | [asset-container.sdf.json](asset-container.sdf.json) | Physical dimensions, load capacity and location |
 | 4 | [environmental-sensor.sdf.json](environmental-sensor.sdf.json) | Floor, mounting position and indoor/outdoor placement |
-| 5 | [device-metadata.sdf.json](device-metadata.sdf.json) | Identity and certification records under a Thing |
+| 5 | [device-metadata.sdf.json](device-metadata.sdf.json) | Identity and certification records under an sdfThing definition |
 | 6 | [device-with-links.sdf.json](device-with-links.sdf.json) | Datasheet, certification and digital twin links |
 
 Figure 2 is a complete document. The other four are the draft's definition

@@ -88,14 +88,15 @@ use of its meaning was checked.
 
 ## Outcomes and limits
 
-Completed documentation exits with 0. Missing definitions, unavailable collections
+Completed documentation exits with 0. Unavailable nested definitions or collections
 or presentation omissions can produce a partial reference, exiting with 3.
 Definite requested acquisition or composition failures exit with 1, including
 when the document also has omissions. These domain results still write usable
 Markdown, source attempts and processing conditions. Unsupported meaning or an
 unavailable illustrative example alone does not make documentation partial.
 
-Invalid invocation exits with 2 and emits no reference. Host or output failures
+Invalid invocation, including a definitely absent or wrong-class selection, exits
+with 2 and emits no reference. Host or output failures
 exit with 4. The report byte allowance, 8 MiB by default, keeps whole optional
 rows and sections and reports omissions. An allowance too small for the
 mandatory identity and source inventory is rejected before composition.

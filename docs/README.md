@@ -1,6 +1,9 @@
 # Esdieff documentation
 
-<p class="docs-lead">Esdieff is a command-line toolkit and Rust library for connected-device models written in <strong>Semantic Definition Format</strong>, the SDF of IETF RFC 9880. It checks models, shows what a composed interface contains, compares revisions and turns model rules into test values. Every operation runs offline on the files you supply.</p>
+<p class="docs-lead">Esdieff is a command-line toolkit and Rust library for connected-device models written in <strong>Semantic Definition Format</strong>, the SDF of IETF RFC 9880. It checks models, shows what a composed interface contains, compares revisions and turns model rules into test values. Model operations run offline on supplied documents. The separate acquisition command retrieves an explicitly pinned public file.</p>
+
+These pages describe the current repository checkout. Features and report
+identities added after the latest release require a build from that checkout.
 
 ## Start here
 
@@ -29,6 +32,7 @@ The reference pages are the contracts behind each command. They state what an op
 - [Repeatable catalogue checks](check-plans.md), [Check a local model collection](directory-discovery.md) and [Pinned document acquisition](acquisition-contract.md) describe the ways to bring documents in.
 - [Model meaning assessment](model-meaning-contract.md) and its subpages define what each assessment level checks.
 - [Selected samples](sample-contract.md), [Generated values](generation-contract.md) and [Recorded traces](trace-contract.md) cover value checking.
+- [Model references](model-reference.md) document effective definitions and shared uses. [JSON Schema export](json-schema.md) exports supported selected payload constraints.
 - [Composed sdfThing authoring](authoring-contract.md), [Authored-quality editing](editing-contract.md) and [Revision comparison](revision-comparison-contract.md) cover changing and comparing models.
 
 ## Design

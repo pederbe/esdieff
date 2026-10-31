@@ -1,6 +1,8 @@
 # Install and try a model
 
-This guide installs Esdieff and runs it on a supplied thermostat model. No device is needed, and nothing leaves your machine.
+This guide installs Esdieff and runs it on a supplied thermostat model. No
+device is needed. Installation and downloading the example use the network.
+The subsequent model operations run locally without sending your documents.
 
 ## Install Esdieff
 
@@ -70,6 +72,12 @@ From a checkout of the repository, install the same way with a path instead:
 cargo install --locked --path .
 ```
 
+The walkthrough output below describes the current repository checkout.
+Release 0.2.0 predates the `esdieff.generation/2` report and the new
+reference and schema commands. To reproduce the current output, use the checkout
+installation above. Released versions may print earlier report identities and
+different counts.
+
 Repeat the Cargo installation command to update. Use `cargo uninstall esdieff`
 to remove it.
 
@@ -128,11 +136,14 @@ The output is trimmed to the `targetTemperature` block. The full report lists 75
 
 Each line is one generated value. The middle column names the rule the value aims at, and the first column says what the model does with it:
 
-- `5` and `30` aim at the `minimum` and `maximum` and are **admitted**. They are the boundary values a device must accept.
+- `5` and `30` aim at the `minimum` and `maximum` and are **admitted** by this selected description. They are boundary values to include in a device or application test.
 - `31` aims just above the maximum and is **rejected**, with the condition code `sample.bound` naming the rule it breaks.
 - `5.25` is a quarter-degree value, so it is **rejected** by the half-degree step, `sample.multiple`.
 
-Admitted and rejected are not guesses. Esdieff checks every generated value against the model the same way it checks a sample you supply, so the labels are what the model actually says. A value nobody can settle would be listed as undetermined.
+Esdieff checks every generated value against the selected model description the
+same way it checks a sample you supply. The labels record that assessment,
+independently of the target the generator aimed at. A value whose admission
+Esdieff cannot establish is listed as undetermined.
 
 Next, check the model itself. `--assessment full-baseline` requests every model obligation Esdieff records from RFC 9880:
 
@@ -163,7 +174,14 @@ Next, check the model itself. `--assessment full-baseline` requests every model 
 <b>Diagnostic details omitted:</b> 0
 </code></pre>
 
-The first line is the verdict. `Complete: true` means nothing was left unfinished, and the coverage lines account for every one of the 54 recorded requirements as assessed or not applicable to this model. The unit lines show that the four `Cel` unit names were found in the recorded SenML units registry snapshot, so the check needed no network access. The command exits with status 0 for a passed check, 1 for findings, and 3 when something could not be settled.
+The first line is the verdict. `Complete: true` means the requested work
+finished, and the coverage lines account for every one of the 54 recorded
+requirements as assessed or not applicable to this model. The unit lines show
+that the four `Cel` unit names were found in the recorded SenML units registry
+snapshot, so the check needed no network access. The command exits with status
+0 for a passed check, 1 for an error or a warning under strict-warning policy,
+and 3 for unfinished work when no failing finding takes precedence. Notices
+and ordinary warnings do not by themselves fail the check.
 
 ## Next steps
 

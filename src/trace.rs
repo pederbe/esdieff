@@ -2,9 +2,10 @@
 //! trace is a JSON Lines file of Trace entries, each naming a Sample selector of one selected
 //! document, a value and optionally an Expected admission and a label. The document is
 //! composed once, each distinct selector is resolved once, and every entry is decoded and
-//! checked on its own, with the allowances one Sample-value checking request receives, so a
-//! malformed or heavy entry affects only itself. The file, line and entry ceilings keep the
-//! request finite under ADR 0009: Bounded processing and reporting, and the JSON input
+//! checked with its own Sample-value checking allowance. A live pattern worker may be
+//! reused under ADR 0045: One pattern engine per trace or generation request, while each
+//! entry retains its own counters. Malformed entries do not stop later entries.
+//! The file, line and entry ceilings keep the request finite under ADR 0009: Bounded processing and reporting, and the JSON input
 //! policies of ADR 0012: Exact numbers and JSON input policies apply to every line.
 mod entry;
 mod report;
@@ -19,7 +20,7 @@ use std::ops::Range;
 pub const TRACE_CONTRACT: &str = "esdieff.trace/1";
 
 /// The longest line of a Recorded trace, apart from its line ending. Generation writes no
-/// longer Trace entry, so its JSON Lines output always replays.
+/// longer Trace entry, so its JSON Lines output fits this line ceiling.
 pub(crate) const LINE_BYTES: usize = 1024 * 1024;
 /// The longest label a Trace entry may carry, which generation also respects.
 pub(crate) const LABEL_BYTES: usize = 256;

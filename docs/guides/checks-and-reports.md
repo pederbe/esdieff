@@ -88,7 +88,8 @@ Repeat `--directory` for several collections, add explicit files beside them, an
 
 ## Use JSON reports in automation
 
-`--format json` writes the same report as a JSON document with a stable schema, for every command. The `outcome` member is the summary a script needs:
+`check`, `inspect` and `sample` can write a versioned JSON report with
+`--format json`. Its `outcome` member is the summary a script needs:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --format json thermostat.sdf.json | jq '.outcome'
 {
@@ -108,7 +109,13 @@ Repeat `--directory` for several collections, add explicit files beside them, an
 {"admission_undetermined":0,"admitted":1,"complete":true,"complete_cases":4,"failed":1,"incomplete_cases":0,"omitted_reports":0,"passed":3,"rejected":1,"request_errors":0,"total":4,"undetermined":0,"verdict":"failed"}
 </code></pre>
 
-The [report contract](../report-contract.md) describes every member and how reports stay within their size limits. Additive fields can appear in later releases, so read the members you need rather than comparing whole documents.
+The [report contract](../report-contract.md) describes the shared envelope and
+how reports stay within their size limits. Other operations have their own
+versioned shapes and summary fields, including revision comparison and schema
+export. `reference` writes Markdown rather than accepting `--format json`.
+Check each operation's contract and identity before reading its fields. Additive
+fields can appear in later releases, so read the members you need rather than
+comparing whole documents.
 
 ## Show findings in code review with SARIF
 
@@ -138,8 +145,17 @@ Every command uses the same exit statuses, so a shell or CI step can act on them
 | --- | --- |
 | 0 | The requested work passed |
 | 1 | A finding failed it: an error, a rejected sample, a breaking change or a warning under `--strict-warnings` |
-| 2 | The invocation or plan was invalid, with the reason on standard error and nothing on standard output |
+| 2 | The invocation, plan or a case request was invalid |
 | 3 | Nothing failed, but some work could not be settled, such as a missing dependency or an undetermined difference |
-| 4 | The report could not be written |
+| 4 | A host or output operation failed, such as writing the report |
 
-`esdieff generate` never fails, so it exits 0 or 3. A status of 3 deserves attention in CI as much as 1 does: the model was not shown to be wrong, but it was not shown to be right either.
+An invalid invocation or undecodable plan writes its reason to standard error
+without a report. A valid plan whose individual case request is invalid still
+writes a check-run report, records that case's `request_error` and continues
+with the other cases, then exits 2.
+
+Generation has no failed domain disposition, so a valid `esdieff generate`
+request with successful output exits 0 or 3. Invalid invocation and host/output
+failures can still exit 2 or 4. A status of 3 deserves attention in CI because
+some requested work remains unsettled. Neither successful generation nor
+successful documentation establishes a passed model assessment.

@@ -1,6 +1,10 @@
 # Test values against a model
 
-This guide checks single values against a model, generates boundary and invalid values for tests, and checks a log of recorded values in one run. It uses the `thermostat.sdf.json` from [Install and try a model](../getting-started/README.md), whose `targetTemperature` accepts 5 to 30 °C in half-degree steps.
+This guide checks single values against a model, generates boundary and invalid
+values for tests, and checks a log of recorded values in one run. It uses the
+current-checkout command and `thermostat.sdf.json` from
+[Install and try a model](../getting-started/README.md), whose `targetTemperature`
+accepts 5 to 30 °C in half-degree steps.
 
 ## Check one sample
 
@@ -35,7 +39,7 @@ source 2 ""
 
 The reports are trimmed to the lines about the sample. A rejected sample is a failed check with exit status 1, and the finding names the rule it broke and where that rule is defined. The other kinds are `data` for an `sdfData` definition, `action_input`, `action_output` and `event_output`, which select the data an action or event carries, and `context` for non-interactive metadata under an Object or Thing. Follow the [Context value example](../context-contract.md#check-context-values) to check a simple asset tag and compound location data. Numbers compare exactly, so `30.0` and `30` are the same value and `0.1` is never rounded.
 
-## Generate values for every rule
+## Generate representative test values
 
 `esdieff generate` builds values from the model's rules, so your tests get expectations without hand-written payloads. Select one definition with `--kind` and `--pointer`, or leave them out to cover every property, action and event in the document:
 
@@ -61,7 +65,11 @@ Each value aims at one **target**, named in the middle column: the two bounds, a
 
 For non-interactive metadata, select `--kind context` and its `sdfContext` pointer. Context requires explicit selection and uses the same value-checking rules, including unresolved nullability when `nullable` is absent. The [Context round trip](../context-contract.md#generate-and-replay-context-vectors) shows generation and offline replay with inherited and refined constraints.
 
-Generation is deterministic. The same model and selection always give the same values in the same order, so the output can live under version control. Save the values as test vectors with `--format jsonl`, which writes one JSON object per line:
+Generation uses fixed target and candidate ordering within its supported meanings
+and processing limits. Pattern deadlines can leave work unfinished. Generated
+values are representative tests rather than exhaustive coverage of every rule
+or possible value. Save settled values as test vectors with `--format jsonl`,
+which writes one JSON object per line and omits undetermined candidates:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --format jsonl thermostat.sdf.json &gt; vectors.jsonl
 <span class="p">$</span> head -3 vectors.jsonl
@@ -99,13 +107,25 @@ line 4 action_input "/sdfObject/Thermostat/sdfAction/configure": <span class="r"
   error sample.bound at "/value/targetTemperature" bytes 459..461: Sample violates an exact numerical bound
 </code></pre>
 
-Only the failed lines are listed, each with its line number, the byte range of the offending part of the line and the rule it broke. Line 1 passed because 21.5 is admitted. Line 3 passed because the current temperature is nullable. Line 5 passed too: the alarm's temperature of 85 is above its maximum of 80, and the line said that rejection was expected, so an expected rejection counts as a pass. Lines 2 and 4 failed because nothing was expected and the values were rejected.
+Only the failed lines are listed here, each with its line number, the byte range
+in the trace file and the rule it broke. Line 1 passed because 21.5 is admitted.
+Line 3 passed because the current temperature is nullable. Line 5 passed too:
+the alarm's temperature of 85 is above its maximum of 80, and the line expected
+rejection. Lines 2 and 4 failed because their omitted `expected` members default
+to admitted, while the actual values were rejected. Undetermined entries are
+also listed when present.
 
-Each line is checked on its own, so one malformed line fails only itself and the rest of the file still runs. The model is composed once, which keeps a trace of a hundred thousand values fast. The [trace contract](../trace-contract.md) describes the line format and the limits.
+Each line is checked on its own, so one malformed line fails only itself. The
+model is composed once, and each entry has its own Sample-value checking
+allowance. File-size and entry-count limits bound the trace as a whole. The
+report keeps aggregate counts even when individual entry details do not fit.
+The [trace contract](../trace-contract.md) describes the line format and limits.
 
 ## Replay generated vectors against a new revision
 
-Generated vectors are a recorded trace, so `esdieff trace` replays them. Against the model they were generated from, every line passes:
+Generated vectors are a recorded trace, so `esdieff trace` replays them. With the
+same supported meanings and enough processing allowance, their settled
+admissions match the recorded expectations. This thermostat replay passes:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace vectors.jsonl thermostat.sdf.json
 <b>Recorded trace</b> esdieff.trace/1: <span class="g">passed</span>
@@ -113,7 +133,13 @@ Generated vectors are a recorded trace, so `esdieff trace` replays them. Against
 <b>Admissions:</b> 2 admitted, 8 rejected, 0 undetermined
 </code></pre>
 
-Against a revision that raised the maximum to 35 and dropped the half-degree step, exactly the vectors whose result changed fail:
+Create a revision that raises the maximum to 35 and drops the half-degree step:
+
+```sh
+sed 's/"maximum": 30/"maximum": 35/g; s/"multipleOf": 0.5, //g' thermostat.sdf.json > revised.sdf.json
+```
+
+Against this revision, the vectors whose settled admission changed fail:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document revised.sdf.json --trace vectors.jsonl revised.sdf.json
 <b>Recorded trace</b> esdieff.trace/1: <span class="r">failed</span>
