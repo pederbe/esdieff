@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Compare revision data changes from an existing device implementation's
+  perspective with `diff --perspective implementer`, the library's
+  `ComparisonRequest::perspective`, or a saved diff case's `perspective`.
+  Client comparison remains the default. Reports state the perspective.
+  Structural implementation obligations remain undetermined and Context
+  metadata compatibility remains outside scope. Diff JSON readers must accept
+  envelope `1.7` with `policy.perspective` and comparison contract `/5`.
+
 ### Fixed
 
 - Correct documentation and requirement descriptions for metadata absence,

@@ -19,6 +19,78 @@ const LOCK: &str = include_str!("../examples/door-lock-check/rich.sdf.json");
 const THERMOSTAT: &str = include_str!("../examples/thermostat-check/rich.sdf.json");
 
 #[test]
+fn implementer_perspective_flows_through_cli_reports_and_saved_plans() {
+    let tree = Tree::new();
+    let before = r#"{"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","maximum":10,"writable":true,"readable":false,"observable":false}}}}}"#;
+    let after = before.replace("maximum\":10", "maximum\":20");
+    let old = tree.write("old.json", before);
+    let new = tree.write("new.json", &after);
+    let options = ["--perspective", "implementer", "--format", "json"];
+    let wire = report(&diff(old.as_os_str(), new.as_os_str(), &options), 1);
+    assert_eq!(wire["policy"]["perspective"], "implementer");
+    let default = report(
+        &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+        0,
+    );
+    assert_eq!(default["policy"]["perspective"], "client");
+    for format in ["human", "markdown", "sarif"] {
+        let result = diff(
+            old.as_os_str(),
+            new.as_os_str(),
+            &["--perspective", "implementer", "--format", format],
+        );
+        assert_eq!(result.status.code(), Some(1));
+        let rendered = String::from_utf8(result.stdout).unwrap();
+        if format == "sarif" {
+            let log: Value = serde_json::from_str(&rendered).unwrap();
+            assert_eq!(log["runs"][0]["properties"]["perspective"], "implementer");
+        } else {
+            assert!(rendered.contains("Perspective: implementer."));
+        }
+    }
+    let plan = tree.write("plan.json", &json!({
+        "schema":"esdieff.check-plan","version":"1","sources":[{"key":"current","path":"new.json","role":"model"}],
+        "cases":[{"name":"device","operation":"diff","perspective":"implementer",
+            "earlier":{"model":"old.json"},"later":{"model":"new.json"}}]
+    }).to_string());
+    let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+        .args(["check", "--plan"])
+        .arg(&plan)
+        .args(["--format", "json"])
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let plan: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        plan["cases"][0]["report"]["policy"]["perspective"],
+        "implementer"
+    );
+}
+
+#[test]
+fn invalid_and_duplicate_perspectives_are_invocation_errors() {
+    for options in [
+        vec!["--perspective", "unknown"],
+        vec!["--perspective", "client", "--perspective", "implementer"],
+        vec!["--perspective"],
+    ] {
+        let output = diff(
+            OsStr::new("missing-old"),
+            OsStr::new("missing-new"),
+            &options,
+        );
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("cannot read"));
+    }
+}
+
+#[test]
 fn unavailable_context_scalars_preserve_independent_breaking_changes() {
     let before = r#"{"sdfObject":{"Device":{
         "sdfContext":{"metadata":{"const":1e1000001}},
@@ -566,7 +638,7 @@ fn help_lists_the_diff_command() {
     }
     let help = String::from_utf8(global.stdout).unwrap();
     assert!(help.contains(
-            "esdieff diff --old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]\n"
+            "esdieff diff --old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--perspective client|implementer] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]\n"
     ));
 }
 
@@ -683,7 +755,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
         ),
         0,
     );
-    assert_eq!(wire["version"], "1.6");
+    assert_eq!(wire["version"], "1.7");
     assert_eq!(wire["result"]["outcome"], "breaking");
     assert_eq!(wire["outcome"]["disposition"], "passed");
     assert_eq!(wire["outcome"]["errors"], 0);
@@ -693,7 +765,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/4: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/5: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -879,7 +951,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/4: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/5: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -1289,7 +1361,7 @@ fn a_breaking_revision_that_keeps_its_version_warns_in_every_format() {
     let later = switch("2019-11-14", &["on", "off"]);
     new.write("switch.sdf.json", &later);
     let wire = report(&diff(old.path(), new.path(), &["--format", "json"]), 1);
-    assert_eq!(wire["version"], "1.6");
+    assert_eq!(wire["version"], "1.7");
     assert_eq!(wire["result"]["summary"]["breaking"], 1);
     assert_eq!(wire["outcome"]["warnings"], 1);
     let condition = &wire["diagnostics"]["items"][0];

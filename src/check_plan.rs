@@ -74,6 +74,7 @@ enum Operation<'a> {
         sample: usize,
     },
     Diff {
+        perspective: esdieff::Perspective,
         /// The earlier and later revisions' documents, by source key.
         documents: [Vec<Source<'a>>; 2],
         acknowledged: Option<DifferenceAcknowledgements>,
@@ -119,6 +120,7 @@ impl Operation<'_> {
                 )
                 .map(Native::report),
             Self::Diff {
+                perspective,
                 documents: [earlier, later],
                 acknowledged,
             } => {
@@ -126,7 +128,7 @@ impl Operation<'_> {
                     Catalogue::take_inputs(documents.iter().map(Source::input).collect())
                 };
                 let [earlier, later] = &*revisions.insert([acquire(earlier)?, acquire(later)?]);
-                let mut request = ComparisonRequest::new(earlier, later);
+                let mut request = ComparisonRequest::new(earlier, later).perspective(*perspective);
                 if let Some(acknowledged) = acknowledged {
                     request = request.acknowledgements(acknowledged);
                 }
@@ -428,8 +430,18 @@ fn decode<'a>(root: JsonView<'a>, path: &Path) -> Result<Plan<'a>, Error> {
             "diff" => {
                 object(
                     row,
-                    &["name", "operation", "earlier", "later", "acknowledged"],
+                    &[
+                        "name",
+                        "operation",
+                        "earlier",
+                        "later",
+                        "acknowledged",
+                        "perspective",
+                    ],
                 )?;
+                if let Field::Present(value) = row.get("perspective") {
+                    crate::diff_cli::parse_perspective(value.text().require().map_err(usage)?)?;
+                }
                 for member in ["earlier", "later"] {
                     let side = row.get(member).require().map_err(usage)?;
                     for document in revision(side)?.children() {
@@ -495,6 +507,16 @@ fn decode<'a>(root: JsonView<'a>, path: &Path) -> Result<Plan<'a>, Error> {
                     };
                     let file = row.get("acknowledged").present();
                     Operation::Diff {
+                        perspective: row
+                            .get("perspective")
+                            .present()
+                            .map(|value| {
+                                crate::diff_cli::parse_perspective(
+                                    value.text().require().expect("validated perspective"),
+                                )
+                            })
+                            .transpose()?
+                            .unwrap_or_default(),
                         documents: [side("earlier"), side("later")],
                         acknowledged: file
                             .map(|file| {

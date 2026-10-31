@@ -135,6 +135,7 @@ fn check_place<'a>(catalogue: &'a Catalogue, location: &ReportLocation<'_>) -> P
 pub(crate) fn diff(comparison: &RevisionComparison<'_>, directory: &Path) -> String {
     let limit = comparison.catalogue(Revision::Earlier).limits.report_bytes;
     let mut log = Log::new(directory, limit, DIFF_HELP);
+    log.perspective = Some(comparison.perspective().as_str());
     // Version warnings come first, at most one per compared document pair. The later
     // document's version locates each, and the earlier version is related.
     for warning in comparison.version_warnings() {
@@ -166,13 +167,21 @@ pub(crate) fn diff(comparison: &RevisionComparison<'_>, directory: &Path) -> Str
         let (rule, description, level, label) = match difference.classification() {
             Classification::Breaking => (
                 "comparison.breaking",
-                "A breaking difference between two Model revisions, after which an interaction the earlier revision described can fail for a Client, or yield data the Client was not described to receive.".to_owned(),
+                format!(
+                    "A breaking difference between two Model revisions. Perspective: {}. {}",
+                    comparison.perspective().as_str(),
+                    comparison.perspective().scope_notice()
+                ),
                 "error",
                 "Breaking",
             ),
             Classification::Compatible => (
                 "comparison.compatible",
-                format!("A compatible difference between two Model revisions, which Esdieff established cannot break client interactions of the earlier revision. {}", crate::comparison::SCOPE_NOTICE),
+                format!(
+                    "A compatible difference between two Model revisions. Perspective: {}. {}",
+                    comparison.perspective().as_str(),
+                    comparison.perspective().scope_notice()
+                ),
                 "note",
                 "Compatible",
             ),
@@ -180,7 +189,9 @@ pub(crate) fn diff(comparison: &RevisionComparison<'_>, directory: &Path) -> Str
                 let code = difference.reason().map_or("", |reason| reason.code());
                 (
                     code,
-                    format!("An undetermined difference between two Model revisions, which Esdieff could not classify, with reason code {code}."),
+                    format!(
+                        "An undetermined difference between two Model revisions, which Esdieff could not classify, with reason code {code}."
+                    ),
                     "warning",
                     "Undetermined",
                 )
@@ -329,6 +340,7 @@ struct Item<'a> {
 }
 
 struct Log<'a, 'd> {
+    perspective: Option<&'static str>,
     directory: &'d Path,
     limit: usize,
     /// The help text of every descriptor.
@@ -339,6 +351,7 @@ struct Log<'a, 'd> {
 impl<'a, 'd> Log<'a, 'd> {
     fn new(directory: &'d Path, limit: usize, help: &'static str) -> Self {
         Self {
+            perspective: None,
             directory,
             limit,
             help,
@@ -428,6 +441,7 @@ impl<'a, 'd> Log<'a, 'd> {
         // its bytes, an array separator and any new descriptor it needs.
         let base = base_uri(self.directory);
         let reserve = Envelope {
+            perspective: self.perspective,
             disposition,
             base: base.as_deref(),
             omitted: Some((u64::MAX, u64::MAX)),
@@ -494,6 +508,7 @@ impl<'a, 'd> Log<'a, 'd> {
             incomplete.saturating_sub(notifications.len() as u64),
         );
         let log = Envelope {
+            perspective: self.perspective,
             disposition,
             base: base.as_deref(),
             rules: rules.0,
@@ -514,6 +529,7 @@ impl<'a, 'd> Log<'a, 'd> {
 /// The whole log.
 #[derive(Default)]
 struct Envelope<'e> {
+    perspective: Option<&'static str>,
     disposition: &'e str,
     /// The invocation directory's `file` URI, when it is known.
     base: Option<&'e str>,
@@ -543,6 +559,9 @@ impl Envelope<'_> {
             "results":self.results});
         if let Some(base) = self.base {
             run["originalUriBaseIds"] = json!({(BASE):{"uri":base}});
+        }
+        if let Some(perspective) = self.perspective {
+            run["properties"]["perspective"] = json!(perspective);
         }
         json!({"$schema":SCHEMA,"version":"2.1.0","runs":[run]})
     }

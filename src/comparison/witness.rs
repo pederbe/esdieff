@@ -43,14 +43,17 @@ impl Witness {
     pub fn value(&self) -> &str {
         &self.value
     }
-    /// Client-supplied when the earlier revision admits the value and the later one rejects
-    /// it, and Thing-supplied for the reverse.
+    /// The interaction direction. Admissions are chronological and depend on the selected
+    /// comparison perspective.
     pub fn direction(&self) -> Direction {
         self.direction
     }
     /// Sample-value checking's admission of the value in one revision.
     pub fn admission(&self, revision: Revision) -> Admission {
         self.admissions[revision.index()]
+    }
+    pub(super) fn reverse_revisions(&mut self) {
+        self.admissions.swap(0, 1);
     }
 }
 

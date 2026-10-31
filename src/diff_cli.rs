@@ -2,7 +2,7 @@
 //! ADR 0039: Client-side revision comparison, ADR 0040: Acknowledged revision differences, and
 //! ADR 0004: Supplied catalogues and checking scope.
 use crate::{Format, cli_style::ColorMode, directory_discovery, usage};
-use esdieff::{Catalogue, ComparisonRequest, DifferenceAcknowledgements, SourceInput};
+use esdieff::{Catalogue, ComparisonRequest, DifferenceAcknowledgements, Perspective, SourceInput};
 use std::{
     ffi::{OsStr, OsString},
     fs,
@@ -18,6 +18,7 @@ const ACCEPTED: &[Format] = &[Format::Human, Format::Json, Format::Sarif, Format
 const FILE_KEY: &str = "document";
 
 struct Options<'a> {
+    perspective: Perspective,
     /// The earlier revision, given as `--old`.
     earlier: &'a OsStr,
     /// The later revision, given as `--new`.
@@ -55,7 +56,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         .transpose()?;
     let earlier = catalogue(&earlier)?;
     let later = catalogue(&later)?;
-    let mut request = ComparisonRequest::new(&earlier, &later);
+    let mut request = ComparisonRequest::new(&earlier, &later).perspective(options.perspective);
     if let Some(acknowledgements) = &acknowledgements {
         request = request.acknowledgements(acknowledgements);
     }
@@ -93,6 +94,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
 
 fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Options<'a>>, Error> {
     let mut earlier = None;
+    let mut perspective = None;
     let mut later = None;
     let mut recursive = false;
     let mut exclusions = Vec::new();
@@ -120,6 +122,7 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
                 | "--exclude"
                 | "--acknowledged"
                 | "--format"
+                | "--perspective"
                 | "--acknowledgements-output"),
             ) => {
                 let value = args
@@ -130,6 +133,13 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
                     .checked_add(value.as_encoded_bytes().len())
                     .ok_or_else(|| usage("input metadata overflow"))?;
                 match flag {
+                    "--perspective" if perspective.is_none() => {
+                        perspective = Some(parse_perspective(
+                            value
+                                .to_str()
+                                .ok_or_else(|| usage("invalid comparison perspective"))?,
+                        )?);
+                    }
                     "--old" if earlier.is_none() => earlier = Some(value.as_os_str()),
                     "--new" if later.is_none() => later = Some(value.as_os_str()),
                     "--acknowledged" if acknowledged.is_none() => {
@@ -176,6 +186,7 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
         ));
     }
     Ok(Some(Options {
+        perspective: perspective.unwrap_or_default(),
         earlier,
         later,
         recursive,
@@ -185,6 +196,14 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
         replace_acknowledgements,
         format,
     }))
+}
+
+pub(crate) fn parse_perspective(value: &str) -> Result<Perspective, Error> {
+    match value {
+        "client" => Ok(Perspective::Client),
+        "implementer" => Ok(Perspective::Implementer),
+        _ => Err(usage("perspective must be client or implementer")),
+    }
 }
 
 /// Read and decode the acknowledgement file. Every failure is an invocation error.
