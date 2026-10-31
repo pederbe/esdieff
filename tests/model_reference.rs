@@ -125,6 +125,42 @@ fn effective_only_selection_does_not_silently_query_its_donor() {
 }
 
 #[test]
+fn locally_refined_inherited_definition_is_an_authored_selection() {
+    let model = br##"{"sdfObject":{"Base":{"sdfProperty":{"p":{"type":"number","maximum":100}}},"Copy":{"sdfRef":"#/sdfObject/Base","sdfProperty":{"p":{"maximum":40}}},"User":{"sdfRef":"#/sdfObject/Copy"}}}"##;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = catalogue
+        .reference(
+            ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfObject/Copy/sdfProperty/p",
+            )
+            .with_uses(),
+        )
+        .unwrap();
+    assert_eq!(
+        result.disposition(),
+        Disposition::Passed,
+        "{}",
+        result.to_markdown()
+    );
+    let uses = result
+        .to_markdown()
+        .split("## Shared definition uses")
+        .nth(1)
+        .unwrap();
+    assert!(
+        uses.contains("Effective occurrence: /sdfObject/User/sdfProperty/p/maximum"),
+        "{uses}"
+    );
+    assert!(uses.contains("Effective value: 40"), "{uses}");
+    assert!(
+        !uses.contains("Effective occurrence: /sdfObject/Copy/sdfProperty/p"),
+        "{uses}"
+    );
+    navigation(result.to_markdown());
+}
+
+#[test]
 fn authored_alias_is_not_its_own_use_but_keeps_other_consumers() {
     for consumer in ["", r##", "Other":{"sdfRef":"#/sdfData/T"}"##] {
         let model = format!(

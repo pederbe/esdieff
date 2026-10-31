@@ -26,7 +26,6 @@ fn within(
 pub(super) fn render(
     writer: &mut Writer<'_>,
     request: &ReferenceRequest<'_>,
-    root: EffectiveJson<'_>,
 ) -> Result<(), Exhausted> {
     if !writer.row(&[
         "\n## Shared definition uses\n\n",
@@ -38,24 +37,35 @@ pub(super) fn render(
         writer.omissions.unknown_remainder = true;
         return Ok(());
     }
-    let selected = root.n().declaration_source;
-    // An effective-only selection has no authored subtree at the requested coordinate.
-    // Do not silently substitute its donor as the reverse-navigation query.
+    let catalogue = writer.catalogue;
+    // Declaration provenance can remain at a donor after an ancestor import is
+    // refined locally. Select authored content independently, at the requested coordinate.
     budgeted::work(&mut writer.budget, request.pointer.len() + 1)?;
-    if !charge(&mut writer.budget.allocation, request.pointer.len() + 1) {
+    if !charge(&mut writer.budget.allocation, request.pointer.len() * 2 + 1) {
         return Err(Exhausted::Allocation);
     }
-    if selected.source_id() != request.document
-        || selected
-            .pointer(request.pointer.len() as u32)
-            .present()
-            .as_deref()
-            != Some(request.pointer)
-    {
+    let Some(authored) = catalogue
+        .source(request.document)
+        .and_then(|s| s.json().present())
+    else {
         writer.unavailable("Use navigation requires a selected authored definition.")?;
         return Ok(());
-    }
-    let catalogue = writer.catalogue;
+    };
+    let selected =
+        match crate::report::select_with_budget(authored, request.pointer, &mut writer.budget.work)
+        {
+            Ok(Some(selected)) => selected,
+            Ok(None) => {
+                writer.unavailable(
+                    "Authored definition selection unavailable within processing allowance.",
+                )?;
+                return Ok(());
+            }
+            Err(_) => {
+                writer.unavailable("Use navigation requires a selected authored definition.")?;
+                return Ok(());
+            }
+        };
     let mut occurrences = 0usize;
     for source in catalogue
         .sources()

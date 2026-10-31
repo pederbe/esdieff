@@ -783,7 +783,7 @@ pub(super) fn render<'a>(
             }
         }
         if request.uses {
-            uses::render(&mut writer, &request, root)?;
+            uses::render(&mut writer, &request)?;
         }
         Ok(())
     })();
