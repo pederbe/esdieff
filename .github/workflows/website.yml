@@ -69,7 +69,7 @@ jobs:
           path: target/site
       - uses: actions/setup-node@v7.1.0
         with:
-          node-version: '26.12.1'
+          node-version: '26.13.0'
           cache: npm
           cache-dependency-path: tools/site/package-lock.json
       - name: Verify the release is current and deploy
