@@ -401,3 +401,84 @@ fn unrelated_failed_source_does_not_spoil_available_selection() {
     assert!(result.to_markdown().contains("unused"));
     assert!(result.to_markdown().contains("Acquisition: failed"));
 }
+
+#[test]
+fn unavailable_nested_names_are_inert_and_unsupported_declarations_are_retained() {
+    let model = r##"{"sdfObject":{"Device":{"sdfInputData":{"description":"unsupported-grouping-input"},"sdfProperty":{"p":{"type":"object","properties":{"<img src=x>":{"sdfRef":"#/sdfData/Missing"}}}},"sdfAction":{"call":{"minItems":77}},"sdfEvent":{"event":{"sdfInputData":{"description":"unsupported-event-input"}}}}}}"##;
+    let (_, markdown) = reference(model, "/sdfObject/Device");
+    assert!(!markdown.contains("<img src=x>"));
+    for text in [
+        "unsupported\\-grouping\\-input",
+        "unsupported\\-event\\-input",
+        "77",
+        "&lt;img src=x&gt;",
+    ] {
+        assert!(markdown.contains(text), "missing {text}");
+    }
+    let (disposition, markdown) = reference(
+        r#"{"sdfObject":{"Device":{"sdfContext":{"metadata":{"type":"string","sdfRequired":[true]}}}}}"#,
+        "/sdfObject/Device",
+    );
+    assert_eq!(disposition, Disposition::Passed, "{markdown}");
+    assert!(markdown.contains("meaning is not established under the recorded draft"));
+}
+
+#[test]
+fn atomic_navigation_and_mandatory_identity_survive_reduced_allowances() {
+    use esdieff::Limits;
+    let model = br#"{"sdfObject":{"Device":{"sdfProperty":{"p":{"type":"integer","minimum":1}}}}}"#;
+    for bytes in (10000..30000).step_by(251) {
+        let catalogue = Catalogue::with_limits(
+            &[SourceInput::supplied("model", model)],
+            Limits::default().effective_allocation_bytes(bytes),
+        )
+        .unwrap();
+        let result = catalogue
+            .reference(ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfObject/Device",
+            ))
+            .unwrap();
+        navigation(result.to_markdown());
+    }
+    let name = "!".repeat(3500);
+    let model = format!("{{\"sdfObject\":{{\"{name}\":{{}}}}}}");
+    let pointer = format!("/sdfObject/{name}");
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied("model", model.as_bytes())],
+        Limits::default().report_bytes(32768),
+    )
+    .unwrap();
+    let result = catalogue
+        .reference(ReferenceRequest::new(
+            catalogue.source_id("model").unwrap(),
+            &pointer,
+        ))
+        .unwrap();
+    assert!(result.to_markdown().len() <= 32768);
+    navigation(result.to_markdown());
+}
+
+#[test]
+fn unavailable_content_does_not_hide_established_wrong_target_class() {
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", br##"{"namespace":{"missing":"https://example.invalid/missing"},"sdfProperty":{"p":{"sdfRef":"missing:#/sdfData/X"}}}"##)]).unwrap();
+    assert!(
+        catalogue
+            .reference(ReferenceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                "/sdfProperty/p"
+            ))
+            .is_err()
+    );
+}
+
+#[test]
+fn unsupported_context_requiredness_shapes_are_documentary() {
+    for declaration in ["\"anything\"", "7", "true", "{}", "[true]"] {
+        let model = r#"{"sdfObject":{"Device":{"sdfContext":{"metadata":{"type":"string","sdfRequired":DECLARATION}}}}}"#.replace("DECLARATION", declaration);
+        let (disposition, markdown) = reference(&model, "/sdfObject/Device");
+        assert_eq!(disposition, Disposition::Passed, "{markdown}");
+        assert!(markdown.contains("meaning is not established under the recorded draft"));
+        assert!(markdown.contains("sdfRequired"));
+    }
+}

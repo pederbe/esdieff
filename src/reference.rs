@@ -125,16 +125,19 @@ impl Catalogue {
         // before composition. Even a failed selection retains that envelope.
         let envelope = render::Envelope::new(self, &request)?;
         let mut budget = OperationBudget::new(&self.limits);
+        budget.allocation -= envelope.allocation_reserve;
         let (model, required) = self.compose_gated_required(
             EffectiveRequest::new(request.document).pointer(request.pointer),
             &mut budget,
         )?;
-        if let Some(json) = model.json().present()
-            && !matches!(
-                json.n().role,
-                Some(crate::role::Role::Definition(Class::Thing | Class::Object))
-            )
-        {
+        if model.selected.is_some_and(|node| {
+            model.nodes[node].role.is_some_and(|role| {
+                !matches!(
+                    role,
+                    crate::role::Role::Definition(Class::Thing | Class::Object)
+                )
+            })
+        }) {
             return Err("reference pointer must select an sdfThing or sdfObject");
         }
         render::render(self, request, envelope, &model, required.as_ref(), budget)

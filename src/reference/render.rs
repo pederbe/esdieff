@@ -14,7 +14,8 @@ use crate::{
 pub(super) struct Envelope {
     identity: String,
     attempts: String,
-    reserve: usize,
+    pub(super) reserve: usize,
+    pub(super) allocation_reserve: usize,
 }
 fn escaped_size(text: &str) -> usize {
     text.chars()
@@ -58,7 +59,11 @@ impl Envelope {
         catalogue: &Catalogue,
         request: &ReferenceRequest<'_>,
     ) -> Result<Self, &'static str> {
-        let identity_size = escaped_size(request.pointer).saturating_add(256);
+        // The selected Given Name also appears in the title. Its decoded spelling
+        // cannot exceed the pointer's escaped size, including imported positions.
+        let identity_size = escaped_size(request.pointer)
+            .saturating_mul(2)
+            .saturating_add(256);
         let attempt_size = catalogue
             .retained_sources()
             .try_fold(0usize, |size, source| {
@@ -68,8 +73,9 @@ impl Envelope {
         let reserve = identity_size
             .saturating_add(attempt_size)
             .saturating_add(2048);
+        let allocation_reserve = reserve.saturating_mul(3);
         if reserve > catalogue.limits.report_bytes
-            || reserve > catalogue.limits.effective_allocation
+            || allocation_reserve > catalogue.limits.effective_allocation
         {
             return Err(
                 "report cannot retain mandatory reference identity, source attempts and omission summary",
@@ -113,6 +119,7 @@ impl Envelope {
             ),
             attempts,
             reserve,
+            allocation_reserve,
         })
     }
 }
@@ -120,6 +127,7 @@ impl Envelope {
 struct Writer<'a> {
     catalogue: &'a Catalogue,
     body: String,
+    metadata: String,
     contents: String,
     sources: String,
     room: usize,
@@ -148,13 +156,14 @@ impl Writer<'_> {
         Ok(Some(escape(raw)))
     }
     fn row(&mut self, pieces: &[&str]) -> Result<bool, Exhausted> {
-        let size = pieces.iter().map(|p| p.len()).sum();
+        let size: usize = pieces.iter().map(|p| p.len()).sum();
         budgeted::work(&mut self.budget, size + 1)?;
         if size > self.room {
             self.omissions.bytes += 1;
             return Ok(false);
         }
-        if !charge(&mut self.budget.allocation, size) {
+        // Retained String capacity and final Markdown assembly are both bounded.
+        if !charge(&mut self.budget.allocation, size.saturating_mul(4)) {
             return Err(Exhausted::Allocation);
         }
         self.room -= size;
@@ -196,14 +205,24 @@ impl Writer<'_> {
     }
     fn pointer(&mut self, json: EffectiveJson<'_>) -> Result<Option<String>, Exhausted> {
         budgeted::work(&mut self.budget, 1)?;
-        let pointer =
-            json.pointer(self.catalogue.limits.pointer_bytes.min(u32::MAX as usize) as u32);
+        let cap = self
+            .catalogue
+            .limits
+            .pointer_bytes
+            .min(self.pointers)
+            .min(8192);
+        if !charge(&mut self.budget.allocation, cap) {
+            return Err(Exhausted::Allocation);
+        }
+        let pointer = json.pointer(cap as u32);
+        self.budget.allocation += cap
+            - match &pointer {
+                Field::Present(p) => p.len(),
+                _ => 0,
+            };
         match pointer {
             Field::Present(pointer) if pointer.len() <= self.pointers => {
                 self.pointers -= pointer.len();
-                if !charge(&mut self.budget.allocation, pointer.len()) {
-                    return Err(Exhausted::Allocation);
-                }
                 Ok(Some(pointer))
             }
             _ => {
@@ -226,6 +245,12 @@ impl Writer<'_> {
         };
         let id = self.next_definition;
         self.next_definition += 1;
+        if !charge(
+            &mut self.budget.allocation,
+            name.len().saturating_mul(2) + class.len().saturating_mul(2) + 200,
+        ) {
+            return Err(Exhausted::Allocation);
+        }
         let anchor = format!("definition-{id}");
         let heading = format!("\n<a id=\"{anchor}\"></a>\n\n## {name} ({class})\n\n");
         let toc = if named {
@@ -238,12 +263,14 @@ impl Writer<'_> {
             self.omissions.entries += 1;
             return Ok(false);
         }
-        self.room -= toc.len();
-        if !charge(&mut self.budget.allocation, toc.len()) {
+        let size = heading.len() + toc.len();
+        budgeted::work(&mut self.budget, size + 1)?;
+        if !charge(&mut self.budget.allocation, size.saturating_mul(4)) {
             return Err(Exhausted::Allocation);
         }
+        self.room -= size;
         self.contents.push_str(&toc);
-        self.row(&[&heading])?;
+        self.body.push_str(&heading);
         if let Some(pointer) = self.pointer(json)?
             && let Some(pointer) = self.text(&pointer)?
         {
@@ -264,10 +291,18 @@ impl Writer<'_> {
             .catalogue
             .source(json.source_id())
             .expect("origin source");
-        let Some(pointer) = json
-            .pointer(self.catalogue.limits.pointer_bytes.min(u32::MAX as usize) as u32)
-            .present()
-        else {
+        let cap = self
+            .catalogue
+            .limits
+            .pointer_bytes
+            .min(self.pointers)
+            .min(8192);
+        if !charge(&mut self.budget.allocation, cap) {
+            return Err(Exhausted::Allocation);
+        }
+        let pointer = json.pointer(cap as u32).present();
+        self.budget.allocation += cap - pointer.as_ref().map_or(0, String::len);
+        let Some(pointer) = pointer else {
             self.omissions.pointers += 1;
             return Ok(None);
         };
@@ -282,6 +317,9 @@ impl Writer<'_> {
         let Some(pointer) = self.text(&pointer)? else {
             return Ok(None);
         };
+        if !charge(&mut self.budget.allocation, 64) {
+            return Err(Exhausted::Allocation);
+        }
         let span = json.span();
         let position = if source.has_original_bytes() && span.start <= source.raw_bytes().len() {
             if !self.lines.iter().any(|(id, _)| *id == source.id()) {
@@ -307,6 +345,12 @@ impl Writer<'_> {
         } else {
             "source position unavailable".to_owned()
         };
+        if !charge(
+            &mut self.budget.allocation,
+            label.len() + pointer.len() + 256,
+        ) {
+            return Err(Exhausted::Allocation);
+        }
         let id = self.next_source;
         self.next_source += 1;
         Ok(Some((
@@ -339,7 +383,7 @@ impl Writer<'_> {
         // Admit links and their destination entries together. An exhausted allowance
         // must never retain a link whose source-index entry was lost.
         budgeted::work(&mut self.budget, size + 1)?;
-        if !charge(&mut self.budget.allocation, size) {
+        if !charge(&mut self.budget.allocation, size.saturating_mul(4)) {
             return Err(Exhausted::Allocation);
         }
         let before = self.body.len() + self.sources.len();
@@ -443,13 +487,12 @@ pub(super) fn render<'a>(
     envelope: Envelope,
     model: &EffectiveModel<'a>,
     required: Option<&Collection<'a>>,
-    mut budget: OperationBudget,
+    budget: OperationBudget,
 ) -> Result<ReferenceResult<'a>, &'static str> {
-    // Mandatory storage remains reserved even if composition consumed its allowance.
-    budget.allocation = budget.allocation.saturating_sub(envelope.reserve);
     let mut writer = Writer {
         catalogue,
         body: String::new(),
+        metadata: String::new(),
         contents: String::new(),
         sources: String::new(),
         room: catalogue.limits.report_bytes - envelope.reserve,
@@ -504,6 +547,7 @@ pub(super) fn render<'a>(
                 true,
             )?;
         }
+        let conditions = std::mem::take(&mut writer.body);
         for key in ["title", "version"] {
             if let Some(value) = selected_source
                 .json()
@@ -516,6 +560,7 @@ pub(super) fn render<'a>(
                 writer.row(&["Document ", key, ": ", &value, "\n\n"])?;
             }
         }
+        writer.metadata = std::mem::replace(&mut writer.body, conditions);
         let root = match model.json() {
             Field::Present(root) => root,
             Field::Unavailable(reason) => {
@@ -694,16 +739,20 @@ pub(super) fn render<'a>(
                     let description = match field {
                         Field::Present(description) => description,
                         Field::Absent => {
-                            writer.row(&["\n", name, ": No data description.\n\n"])?;
+                            if let Some(name) = writer.text(name)? {
+                                writer.row(&["\n", &name, ": No data description.\n\n"])?;
+                            }
                             continue;
                         }
                         Field::Unavailable(reason) => {
-                            writer.row(&["\n", name, ": data description unavailable.\n"])?;
+                            if let Some(name) = writer.text(name)? {
+                                writer.row(&["\n", &name, ": data description unavailable.\n"])?;
+                            }
                             writer.unavailable(reason)?;
                             continue;
                         }
                     };
-                    if !writer.heading(name, "data description", description.json(), false)? {
+                    if !writer.heading(name, "data description", description.json(), true)? {
                         writer.omissions.unknown_remainder = true;
                         continue;
                     }
@@ -752,6 +801,7 @@ pub(super) fn render<'a>(
     };
     use std::fmt::Write;
     writeln!(markdown, "Documentation status: {status}.\n\nRFC 9880. This reference documents the effective interface. It is not a Full model assessment, compatibility verdict, satisfiability proof or device test. Run `esdieff check` separately. Format, unit and pattern spellings do not establish that every use of their meaning was checked.\n").expect("String write");
+    markdown.push_str(&writer.metadata);
     markdown.push_str("## Contents\n\n");
     markdown.push_str(&writer.contents);
     markdown.push_str(&writer.body);
@@ -798,6 +848,13 @@ fn requiredness(
         collection,
         model: Some(model),
     };
+    if let Field::Present(value) = json.get("sdfRequired") {
+        writer.quality(
+            "sdfRequired",
+            value,
+            " (declaration syntax, relationships inspected below)",
+        )?;
+    }
     let mut found = false;
     for owner in view.owners() {
         budgeted::work(&mut writer.budget, 1)?;
@@ -815,7 +872,19 @@ fn requiredness(
             ".\n\n",
         ])?;
         if !owner.complete() {
-            writer.unavailable("Required declaration relationships incomplete.")?;
+            if matches!(
+                json.n().role,
+                Some(crate::role::Role::Definition(Class::Context))
+            ) && collection.traversed
+            {
+                writer.row(&["Context declaration-requiredness meaning is not established under the recorded draft.\n\n"])?;
+                // The complete declaration spelling above documents this unsupported
+                // draft use, including malformed scalar syntax. It has no established
+                // declaration targets to enumerate.
+                continue;
+            } else {
+                writer.unavailable("Required declaration relationships incomplete.")?;
+            }
         }
         match owner.references() {
             Field::Present(references) => {
@@ -872,27 +941,22 @@ fn retained_definition_content(
             writer.unavailable("Quality identity unavailable.")?;
             continue;
         };
-        if matches!(
-            key,
-            "label"
-                | "description"
-                | "sdfRef"
-                | "sdfRequired"
-                | "sdfInputData"
-                | "sdfOutputData"
-                | "minItems"
-                | "maxItems"
-        ) || [
-            Class::Property,
-            Class::Action,
-            Class::Event,
-            Class::Context,
-            Class::Data,
-            Class::Object,
-            Class::Thing,
-        ]
-        .iter()
-        .any(|c| c.keyword() == key && class.allows_child(*c))
+        if matches!(key, "label" | "description" | "sdfRef" | "sdfRequired")
+            || [
+                Class::Property,
+                Class::Action,
+                Class::Event,
+                Class::Context,
+                Class::Data,
+                Class::Object,
+                Class::Thing,
+            ]
+            .iter()
+            .any(|c| c.keyword() == key && class.allows_child(*c))
+            || key == "sdfInputData" && class == Class::Action
+            || key == "sdfOutputData" && matches!(class, Class::Action | Class::Event)
+            || matches!(key, "minItems" | "maxItems")
+                && matches!(class, Class::Thing | Class::Object)
         {
             continue;
         }

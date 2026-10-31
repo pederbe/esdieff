@@ -37,6 +37,7 @@
   - [Civil date and time samples](civil-time-contract.md)
   - [URI and UUID samples](uri-uuid-sample-contract.md)
 - [Generated values](generation-contract.md)
+- [Generate a model reference](model-reference.md)
 - [Recorded traces](trace-contract.md)
 - [Composed sdfThing authoring](authoring-contract.md)
 - [Authored-quality editing](editing-contract.md)
@@ -97,3 +98,4 @@
 - [0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md)
 - [0048: Additive selectors in value workflows](adr/0048-additive-selectors-in-value-workflows.md)
 - [0049: Context revision comparison](adr/0049-context-revision-comparison.md)
+- [0050: Selected Markdown model reference](adr/0050-selected-markdown-model-reference.md)
