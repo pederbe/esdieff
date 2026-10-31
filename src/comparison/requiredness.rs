@@ -1,6 +1,7 @@
 //! The declarations mandatory in each grouping of one revision, read from its Required
 //! declaration relationships under ADR 0026: Required declaration relationships and source
-//! evidence, for the requiredness rule of ADR 0039: Client-side revision comparison.
+//! evidence, for ADR 0039: Client-side revision comparison and ADR 0054: Implementer
+//! declaration requiredness.
 //!
 //! An `sdfRequired` entry makes the declaration it selects mandatory in a grouping. The
 //! entries of a grouping belong to that grouping. The entries of an affordance, and a

@@ -230,6 +230,9 @@ An established implicit semantic value when a quality is absent, without an auth
 **Required declaration relationship**:
 An `sdfRequired` occurrence's relationship to the affordance or grouping declarations it selects, including all directly contained classes sharing a Given Name. An array entry `true` identifies its carrying affordance or grouping.
 
+**Mandatory declaration closure**:
+The declarations required in a grouping, including the groupings needed to represent nested targets and declarations required through mandatory groupings. A requirement within an optional grouping is conditional on representing that grouping.
+
 **Declaration contribution**:
 The authored definition contribution from which a surviving declaration originates, independently of later content refinements or reused data descriptions. Reinsertion after deletion introduces a new contribution.
 

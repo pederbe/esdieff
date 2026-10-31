@@ -19,6 +19,109 @@ const LOCK: &str = include_str!("../examples/door-lock-check/rich.sdf.json");
 const THERMOSTAT: &str = include_str!("../examples/thermostat-check/rich.sdf.json");
 
 #[test]
+fn declaration_obligations_share_classifications_across_reports_and_saved_plans() {
+    let tree = Tree::new();
+    let optional = r#"{"info":{"version":"1"},"sdfObject":{"Oven":{"sdfProperty":{"temp":{"type":"number"}}}}}"#;
+    let mandatory = optional.replace("\"Oven\":{", "\"Oven\":{\"sdfRequired\":[\"temp\"],");
+    let old = tree.write("optional.json", optional);
+    let new = tree.write("mandatory.json", &mandatory);
+    for (earlier, later, expected, exit) in
+        [(&old, &new, "breaking", 1), (&new, &old, "compatible", 0)]
+    {
+        let output = diff(
+            earlier.as_os_str(),
+            later.as_os_str(),
+            &["--perspective", "implementer", "--format", "json"],
+        );
+        let wire = report(&output, exit);
+        assert_eq!(wire["version"], "1.7");
+        assert_eq!(
+            wire["request"]["comparison"],
+            "esdieff.revision-comparison/6"
+        );
+        assert_eq!(wire["policy"]["perspective"], "implementer");
+        assert_eq!(wire["result"]["differences"][0]["quality"], "sdfRequired");
+        assert_eq!(wire["result"]["differences"][0]["classification"], expected);
+        assert_eq!(wire["result"]["differences"][0]["directions"], json!([]));
+        for format in ["human", "markdown", "sarif"] {
+            let output = diff(
+                earlier.as_os_str(),
+                later.as_os_str(),
+                &["--perspective", "implementer", "--format", format],
+            );
+            assert_eq!(output.status.code(), Some(exit));
+            let rendered = String::from_utf8(output.stdout).unwrap();
+            if format == "sarif" {
+                let log: Value = serde_json::from_str(&rendered).unwrap();
+                assert_eq!(log["runs"][0]["properties"]["perspective"], "implementer");
+                assert!(rendered.contains("sdfRequired"));
+                assert!(rendered.contains(expected));
+            } else {
+                assert!(rendered.contains("Perspective: implementer."));
+                assert!(rendered.contains(expected));
+                assert!(rendered.contains("sdfRequired"));
+            }
+        }
+        let plan = tree.write(
+            "requiredness-plan.json",
+            &json!({
+                "schema":"esdieff.check-plan","version":"1",
+                "sources":[{"key":"current","path":"mandatory.json","role":"model"}],
+                "cases":[{"name":"obligations","operation":"diff","perspective":"implementer",
+                    "earlier":{"model":earlier.file_name().unwrap().to_str().unwrap()},
+                    "later":{"model":later.file_name().unwrap().to_str().unwrap()}}]
+            })
+            .to_string(),
+        );
+        let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+            .args(["check", "--plan"])
+            .arg(&plan)
+            .args(["--format", "json"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(exit),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let plan: Value = serde_json::from_slice(&output.stdout).unwrap();
+        let result = &plan["cases"][0]["report"]["result"];
+        assert_eq!(result["summary"], wire["result"]["summary"]);
+        assert_eq!(result["outcome"], expected);
+        assert_eq!(result["differences"].as_array().unwrap().len(), 1);
+        for field in [
+            "kind",
+            "subject",
+            "quality",
+            "classification",
+            "directions",
+            "earlier",
+            "later",
+        ] {
+            assert_eq!(
+                result["differences"][0][field],
+                wire["result"]["differences"][0][field]
+            );
+        }
+        assert_eq!(
+            plan["cases"][0]["report"]["policy"]["perspective"],
+            "implementer"
+        );
+    }
+    // Client remains the default, with the opposite classification for new obligations.
+    let client = report(
+        &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+        0,
+    );
+    assert_eq!(client["policy"]["perspective"], "client");
+    assert_eq!(
+        client["result"]["differences"][0]["classification"],
+        "compatible"
+    );
+}
+
+#[test]
 fn implementer_perspective_flows_through_cli_reports_and_saved_plans() {
     let tree = Tree::new();
     let before = r#"{"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","maximum":10,"writable":true,"readable":false,"observable":false}}}}}"#;
@@ -765,7 +868,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/5: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/6: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -951,7 +1054,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/5: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/6: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );

@@ -105,3 +105,4 @@
   - [0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md)
   - [0052: Selected JSON Schema export](adr/0052-selected-json-schema-export.md)
   - [0053: Implementer revision comparison](adr/0053-implementer-revision-comparison.md)
+  - [0054: Implementer declaration requiredness](adr/0054-implementer-declaration-requiredness.md)
