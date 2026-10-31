@@ -112,21 +112,23 @@ Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/t
 <b>Generated values</b> esdieff.generation/2: <span class="g">passed</span>
 <b>Values:</b> 15 <span class="g">admitted</span>, 60 <span class="r">rejected</span>, 0 <span class="y">undetermined</span>
 <b>Descriptions:</b> 4
+Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
 <b>property /sdfObject/Thermostat/sdfProperty/currentTemperature</b>: <span class="g">complete</span>
   ...
 
 <b>property /sdfObject/Thermostat/sdfProperty/targetTemperature</b>: <span class="g">complete</span>
-  <span class="r">rejected    </span> null          null (sample.null)
-  <span class="g">admitted    </span> minimum       5
-  <span class="g">admitted    </span> maximum       30
-  <span class="r">rejected    </span> below_minimum 4 (sample.bound)
-  <span class="r">rejected    </span> above_maximum 31 (sample.bound)
-  <span class="r">rejected    </span> not_multiple  5.25 (sample.multiple)
-  <span class="r">rejected    </span> wrong_type    "" (sample.type)
-  <span class="r">rejected    </span> wrong_type    true (sample.type)
-  <span class="r">rejected    </span> wrong_type    {} (sample.type)
-  <span class="r">rejected    </span> wrong_type    [] (sample.type)
+  Corpus evidence: 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
+  <span class="r">rejected    </span> null          null (sample.null) [rejected_candidate]
+  <span class="g">admitted    </span> minimum       5 [admitted_boundary]
+  <span class="g">admitted    </span> maximum       30 [admitted_boundary]
+  <span class="r">rejected    </span> below_minimum 4 (sample.bound) [rejected_outside]
+  <span class="r">rejected    </span> above_maximum 31 (sample.bound) [rejected_outside]
+  <span class="r">rejected    </span> not_multiple  5.25 (sample.multiple) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    "" (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    true (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    {} (sample.type) [rejected_outside]
+  <span class="r">rejected    </span> wrong_type    [] (sample.type) [rejected_outside]
 
 <b>action_input /sdfObject/Thermostat/sdfAction/configure</b>: <span class="g">complete</span>
   ...

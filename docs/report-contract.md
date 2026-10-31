@@ -342,6 +342,13 @@ Operation `diff` uses version `1.6` under [ADR 0039: Client-side revision compar
 
 ## Generated values report 1.5
 
+Generated descriptions and values may include optional `evidence` fields,
+described under [corpus evidence](generation-contract.md#corpus-evidence).
+They explain retained candidates and count values, separately from requested
+description coverage, RFC assessment coverage and operation completeness.
+Missing evidence fields in earlier reports mean unavailable observations,
+not zero coverage.
+
 Operation `generate` uses version `1.5` under [ADR 0041: Generated values settled by Sample-value checking](adr/0041-generated-values-settled-by-sample-value-checking.md). It reports the Generated values of one selected model document and their admissions. Composition spends the request's allowance, each description's values are built on an allowance of their own, and each value is checked with the allowance one `sample` request receives, so running out leaves only the affected description partial. The 64-value and 1024-description ceilings keep the request finite, and every description and kept value is charged the report bytes its largest rendering needs, so every output format fits `report_bytes`. Values and descriptions that do not fit are counted with `byte_limit` and `report_limit` records and leave the operation undetermined. The shared source, outcome and diagnostic meanings remain intact, and the [generation contract](generation-contract.md#report-15) specifies every field.
 
 | Object | Required fields and types | Meaning |

@@ -9,8 +9,11 @@
 //! generation request, while each checked value retains its own counters. The value and
 //! description ceilings keep the request finite under ADR 0009: Bounded processing and
 //! reporting and ADR 0013: Shared workflow and report guarantees.
+mod evidence;
 mod report;
 mod targets;
+
+pub use evidence::GenerationEvidence;
 
 use crate::allowance::OperationBudget;
 use crate::budgeted::{self, Exhausted, failure, kept};
@@ -128,6 +131,13 @@ impl<'a> GeneratedDescription<'a> {
     pub fn values_omitted(self) -> u32 {
         self.0.omitted + self.0.oversized
     }
+    /// Count retained values with this evidence. These five categories partition
+    /// kept values, not constraints. Duplicate targets and omitted values are not counted.
+    pub fn count_evidence(self, evidence: GenerationEvidence) -> u32 {
+        self.values()
+            .filter(|value| value.evidence() == evidence)
+            .count() as u32
+    }
 }
 
 /// A Generated value, the Generation target it aims at and its settled admission.
@@ -145,6 +155,11 @@ impl<'a> GeneratedValue<'a> {
     /// What Sample-value checking established, whatever the target suggests.
     pub fn admission(self) -> Admission {
         self.0.admission
+    }
+    /// The construction aim combined with admission of the whole selected description.
+    /// A rejected boundary candidate never establishes an admitted boundary.
+    pub fn evidence(self) -> GenerationEvidence {
+        self.0.aim.evidence(self.0.admission)
     }
     /// The condition codes behind a rejection, at most eight.
     pub fn codes(self) -> impl ExactSizeIterator<Item = &'static str> + 'a {

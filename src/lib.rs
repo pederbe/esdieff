@@ -71,8 +71,8 @@ pub use effective::{
 };
 pub use formats::FormatKnowledgeView;
 pub use generation::{
-    GENERATION_CONTRACT, GeneratedDescription, GeneratedValue, GenerationRequest, GenerationResult,
-    GenerationState,
+    GENERATION_CONTRACT, GeneratedDescription, GeneratedValue, GenerationEvidence,
+    GenerationRequest, GenerationResult, GenerationState,
 };
 pub use human::HumanStyle;
 pub use inventory::RequirementDescriptor;

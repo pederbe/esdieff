@@ -2,8 +2,8 @@
 //! each one with Sample-value checking. Follows ADR 0041: Generated values settled by
 //! Sample-value checking.
 use esdieff::{
-    Admission, Catalogue, Disposition, GenerationRequest, GenerationState, Limits, SampleKind,
-    SourceInput,
+    Admission, Catalogue, Disposition, GenerationEvidence, GenerationRequest, GenerationState,
+    Limits, SampleKind, SourceInput,
 };
 
 /// Each value generated for the one selected description, as target, JSON text and admission.
@@ -51,6 +51,115 @@ fn a_minimum_gives_an_admitted_bound_and_a_rejected_value_below_it() {
     let values = property(r#"{"type":"integer","minimum":10}"#);
     has(&values, "minimum", "10", Admission::Admitted);
     has(&values, "below_minimum", "9", Admission::Rejected);
+}
+
+#[test]
+fn corpus_evidence_distinguishes_admitted_boundaries_from_rejected_candidates() {
+    let model = br#"{"sdfProperty":{
+        "level":{"type":"integer","nullable":false,"minimum":10,"maximum":20},
+        "identifier":{"type":"string","nullable":false,"pattern":"^(foo|bar)$","minLength":3,"maxLength":3},
+        "settings":{"type":"object","nullable":false,"required":["mode"],"properties":{"mode":{"const":"on"}}}
+    }}"#;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = whole(&catalogue).unwrap();
+    let descriptions: Vec<_> = result.descriptions().collect();
+    // Generation can finish without constructing even one admitted identifier.
+    assert!(result.complete());
+    let level = descriptions[0];
+    assert_eq!(
+        level.count_evidence(GenerationEvidence::AdmittedBoundary),
+        2
+    );
+    assert_eq!(level.count_evidence(GenerationEvidence::RejectedOutside), 6);
+    assert_eq!(
+        level.count_evidence(GenerationEvidence::RejectedCandidate),
+        1
+    );
+    assert_eq!(level.count_evidence(GenerationEvidence::AdmittedExample), 0);
+    // The representative 10 yields to the minimum target during deduplication.
+    let minimum = level
+        .values()
+        .find(|value| value.to_json() == "10")
+        .unwrap();
+    assert_eq!(minimum.target(), "minimum");
+    assert_eq!(minimum.evidence(), GenerationEvidence::AdmittedBoundary);
+
+    let identifier = descriptions[1];
+    assert_eq!(
+        identifier.count_evidence(GenerationEvidence::AdmittedBoundary),
+        0
+    );
+    assert_eq!(
+        identifier.count_evidence(GenerationEvidence::AdmittedExample),
+        0
+    );
+    let boundary = identifier
+        .values()
+        .find(|value| value.target() == "min_length")
+        .unwrap();
+    assert_eq!(boundary.to_json(), r#""aaa""#);
+    assert_eq!(boundary.evidence(), GenerationEvidence::RejectedCandidate);
+    assert_eq!(boundary.codes().collect::<Vec<_>>(), ["sample.pattern"]);
+
+    let missing = descriptions[2]
+        .values()
+        .find(|value| value.target() == "missing_entry")
+        .unwrap();
+    assert_eq!(missing.to_json(), "{}");
+    assert_eq!(missing.evidence(), GenerationEvidence::RejectedOutside);
+    assert!(missing.codes().any(|code| code == "sample.required"));
+}
+
+#[test]
+fn evidence_counts_values_without_claiming_choice_branch_coverage() {
+    let model = br#"{"sdfProperty":{"mode":{"nullable":false,"sdfChoice":{
+        "first":{"const":1},"same":{"const":1},"other":{"const":9}
+    }}}}"#;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = whole(&catalogue).unwrap();
+    let mode = result.descriptions().next().unwrap();
+    assert_eq!(mode.count_evidence(GenerationEvidence::AdmittedExample), 2);
+    assert_eq!(
+        mode.values()
+            .filter(|value| value.target() == "alternative")
+            .count(),
+        2
+    );
+    assert!(
+        result
+            .to_human()
+            .contains("not constraints or individual Choice alternatives")
+    );
+}
+
+#[test]
+fn nested_evidence_uses_the_construction_aim_and_keeps_unsettled_values_distinct() {
+    let model = br#"{"sdfProperty":{
+        "nested":{"type":"object","required":["items.minimum"],"properties":{
+            "items.minimum":{"type":"integer","minimum":10}}},
+        "unknown":{"type":"string","nullable":false,"pattern":"(?i)a"}
+    }}"#;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let result = whole(&catalogue).unwrap();
+    let mut descriptions = result.descriptions();
+    let nested = descriptions.next().unwrap();
+    let minimum = nested
+        .values()
+        .find(|value| value.target() == "items.minimum.minimum")
+        .unwrap();
+    assert_eq!(minimum.evidence(), GenerationEvidence::AdmittedBoundary);
+    let below = nested
+        .values()
+        .find(|value| value.target() == "items.minimum.below_minimum")
+        .unwrap();
+    assert_eq!(below.evidence(), GenerationEvidence::RejectedOutside);
+    let unknown = descriptions.next().unwrap();
+    assert_eq!(unknown.state(), GenerationState::Partial);
+    assert!(unknown.count_evidence(GenerationEvidence::Undetermined) > 0);
+    assert_eq!(
+        unknown.count_evidence(GenerationEvidence::AdmittedExample),
+        0
+    );
 }
 
 #[test]
