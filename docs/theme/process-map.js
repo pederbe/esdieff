@@ -59,7 +59,7 @@
         [node('report','Results with evidence','Outcome · scope · coverage where applicable · findings + locations')]
       ],
       edges:[edge('local','catalogue'),edge('catalogue','source'),edge('catalogue','effective'),edge('effective','check'),edge('effective','compare'),edge('effective','values'),edge('source','report'),edge('check','report'),edge('compare','report'),edge('values','report')],
-      detail:'Acquisition verifies file bytes. The subsequent model operations run offline and resolve references only within supplied files.',
+      detail:'Model operations read supplied local files and resolve references only within those files. They run offline.',
       command:'CLI and Rust library share these model operations. Author and edit produce new SDF documents that can enter the same flow.'
     };
     if (flow === 'check') {
