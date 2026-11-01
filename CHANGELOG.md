@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Replace the door-lock simulator example with a short library example that
+  checks the model and eight sample values. Run `cargo run --example lock-demo`
+  without a seed argument. The example no longer simulates device behavior.
+
 - Remove `esdieff acquire` and its network transport. Obtain model files with
   your preferred tools, then pass the local files to Esdieff. Acquisition
   receipts are no longer produced. Ordinary local inputs, source metadata and
