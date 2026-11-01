@@ -171,6 +171,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
 
 [[package]]
+name = "corvus-regex-ecma262"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be72de82781404398482a431a88c1d03b82d474a5fad3003cac18f5893fc71ee"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -289,11 +299,10 @@ name = "esdieff"
 version = "0.1.0"
 dependencies = [
  "cap-std",
+ "corvus-regex-ecma262",
  "curl",
  "hotpath",
  "jsonschema",
- "regress",
- "rquickjs",
  "same-file",
  "serde_json",
  "sha2",
@@ -980,53 +989,6 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
-
-[[package]]
-name = "regress"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32eef8b209c3c1c15dbad02c1f30f9539f00dc7253e0cbcdaae442a50a09d7c1"
-dependencies = [
- "memchr",
-]
-
-[[package]]
-name = "relative-path"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2a073568cd8b9c4825429d3e9fc5f52851b4f97cc1348800689408921e6b8f8"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "rquickjs"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0a22bf72f515cc4189dd7c63d016f6de92a11eee98ddf7dd64794198f6eb34e"
-dependencies = [
- "rquickjs-core",
-]
-
-[[package]]
-name = "rquickjs-core"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6657979a24d543e5fc66f32cef2f47ca82ce8eb55cec5f7d59a12b7b570bbf24"
-dependencies = [
- "hashbrown",
- "relative-path",
- "rquickjs-sys",
-]
-
-[[package]]
-name = "rquickjs-sys"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cee271d0eeba64f0915b846cb7ae02e16faf3dfdffdca91731101d9d30fe3423"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "rustix"

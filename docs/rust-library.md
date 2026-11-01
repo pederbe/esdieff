@@ -128,13 +128,27 @@ A few things to notice. Operations return `Err(&'static str)` only for an invali
 
 ## Keep the memory and work bounded
 
-Operations use `Limits` to bound input size, decoding depth, charged work and
-retained report size. The defaults suit ordinary models.
-`Catalogue::take_inputs_with_limits` or `Catalogue::with_limits` selects other
-allowances. An exhausted processing allowance leaves affected work explicitly
-unfinished. A request that cannot reserve its mandatory output can instead
-return a request error before processing. [ADR 0009](adr/0009-bounded-processing-and-reporting.md)
-explains the approach.
+Operations apply fixed internal safeguards for input size, decoding depth,
+reference expansion, processing work and retained report size. Ordinary callers
+use the defaults through `Catalogue::from_inputs`, `Catalogue::take_inputs` and
+`JsonBuilder::new`. Exhaustion leaves affected work explicitly unfinished.
+A request that cannot retain its mandatory report envelope is a request error.
+[ADR 0056](adr/0056-fixed-internal-safeguards-and-rust-patterns.md) explains the
+fixed policy and the cooperative pattern timeout.
+
+## Migrate resource configuration
+
+The public `Limits` type and processing-budget setters have been removed.
+Replace `Catalogue::with_limits(inputs, limits)` with
+`Catalogue::from_inputs(inputs)`, and `Catalogue::take_inputs_with_limits(inputs, limits)`
+with `Catalogue::take_inputs(inputs)`. Replace `JsonBuilder::with_limits(limits)`
+with `JsonBuilder::new()`, which needs no configuration validation.
+Use `DifferenceAcknowledgements::from_json(bytes)` without a limits argument.
+`NumberWork` is also internal. Call `ExactNumber::compare(other)` to obtain an
+`Ordering` directly from admitted exact values. Location accessors use
+`pointer()` with the fixed internal 8 KiB ceiling, without a byte-budget argument.
+Semantic request options, including selectors, assessments and strict warnings,
+are unchanged. No removed budget is silently ignored.
 
 ## Where the contracts are
 

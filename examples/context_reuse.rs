@@ -36,14 +36,14 @@ fn main() -> Result<(), &'static str> {
     let source = maximum.sources().next().ok_or("maximum origin")?;
     assert_eq!(source.source_id(), id);
     assert_eq!(
-        source.pointer(8192).require()?,
+        source.pointer().require()?,
         "/sdfThing/Installation/sdfObject/sensor/sdfData/Offset/maximum"
     );
     assert_eq!(
         maximum
             .consumer()
             .ok_or("importing reference")?
-            .pointer(8192)
+            .pointer()
             .require()?,
         "/sdfObject/Sensor/sdfContext/calibration/sdfRef"
     );

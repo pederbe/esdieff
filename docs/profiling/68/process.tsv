@@ -1,0 +1,13 @@
+variant	run	wall_s	user_s	system_s	peak_rss_kib
+baseline	1	2.90	2.66	0.21	18360
+baseline	2	2.90	2.64	0.23	18360
+baseline	3	2.97	2.73	0.21	18432
+baseline	4	2.92	2.60	0.28	20572
+baseline	5	2.93	2.62	0.27	20048
+baseline	6	2.93	2.66	0.24	20188
+candidate	1	1.82	1.81	0.00	20776
+candidate	2	1.90	1.90	0.00	21224
+candidate	3	1.83	1.83	0.00	21364
+candidate	4	1.82	1.82	0.00	20856
+candidate	5	1.82	1.82	0.00	19268
+candidate	6	1.82	1.82	0.00	20620

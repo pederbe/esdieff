@@ -55,7 +55,7 @@ fn a_narrowed_nested_bound_breaks_with_a_witness_map_holding_the_candidate_at_it
     assert_eq!(witness(&end), client_witness(r#"{"window":{"end":23}}"#));
     for revision in [Revision::Earlier, Revision::Later] {
         assert_eq!(
-            end.side(revision).unwrap().pointer(8192).require().unwrap(),
+            end.side(revision).unwrap().pointer().require().unwrap(),
             format!("{schedule}/properties/window/properties/end/maximum")
         );
     }
@@ -102,7 +102,7 @@ fn a_nested_change_through_a_shared_definition_names_its_content_origins() {
             .unwrap()
             .key();
         assert_eq!(
-            (key, source.pointer(8192).require().unwrap().as_str()),
+            (key, source.pointer().require().unwrap().as_str()),
             ("window", "/sdfData/Window/properties/end/maximum")
         );
     }

@@ -439,7 +439,7 @@ fn reverse_reason(verdict: Verdict) -> Verdict {
 
 use crate::budgeted::failure;
 
-/// Compares an earlier and a later Catalogue. Both share one `Limits` configuration,
+/// Compares an earlier and a later Catalogue. Both use the fixed internal safeguards,
 /// which sets the single allowance covering both revisions.
 pub struct ComparisonRequest<'a> {
     perspective: Perspective,
@@ -904,7 +904,10 @@ impl<'r> DifferenceSide<'r> {
         self.side.root
     }
     /// The effective location. An absent quality's location names where it would be.
-    pub fn pointer(&self, limit: u32) -> Field<String> {
+    pub fn pointer(&self) -> Field<String> {
+        self.pointer_with_limit(8192)
+    }
+    pub(crate) fn pointer_with_limit(&self, limit: u32) -> Field<String> {
         if limit == 0 || limit > 8192 {
             return Field::Unavailable("unsupported pointer output budget");
         }

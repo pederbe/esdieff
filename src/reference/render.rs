@@ -215,7 +215,7 @@ impl Writer<'_> {
         if !charge(&mut self.budget.allocation, cap) {
             return Err(Exhausted::Allocation);
         }
-        let pointer = json.pointer(cap as u32);
+        let pointer = json.pointer_with_limit(cap as u32);
         self.budget.allocation += cap
             - match &pointer {
                 Field::Present(p) => p.len(),
@@ -301,7 +301,7 @@ impl Writer<'_> {
         if !charge(&mut self.budget.allocation, cap) {
             return Err(Exhausted::Allocation);
         }
-        let pointer = json.pointer(cap as u32).present();
+        let pointer = json.pointer_with_limit(cap as u32).present();
         self.budget.allocation += cap - pointer.as_ref().map_or(0, String::len);
         let Some(pointer) = pointer else {
             self.omissions.pointers += 1;
@@ -1164,7 +1164,7 @@ fn example(
     if !kind.suffix().is_empty() {
         pointer.truncate(pointer.len().saturating_sub(kind.suffix().len()));
     }
-    let example = examples.search(kind, pointer, json, &mut writer.budget.patterns);
+    let example = examples.search(kind, pointer, json);
     writer.row(&["\n", example.status, ".\n\n"])?;
     if let Some(value) = example.value {
         // The delimiter cannot be closed by any line within supplied JSON string content.

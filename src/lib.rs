@@ -77,8 +77,9 @@ pub use generation::{
 };
 pub use human::HumanStyle;
 pub use inventory::RequirementDescriptor;
-pub use json::{Children, ExactNumber, Field, JsonKind, JsonView, NumberWork};
-pub use limits::Limits;
+pub(crate) use json::NumberWork;
+pub use json::{Children, ExactNumber, Field, JsonKind, JsonView};
+pub(crate) use limits::Limits;
 pub use reference::{ReferenceCondition, ReferenceOmissions, ReferenceRequest, ReferenceResult};
 pub use registry::{RecordedRegistryPolicy, RegistryKnowledgeView};
 pub use report::{
@@ -99,3 +100,11 @@ pub use units::{UnitGuidance, UnitRegistrySourceEditionView};
 pub use value::{
     JsonBuilder, JsonValue, JsonValueView, SampleChildren, SampleValueView, ValueChildren,
 };
+
+#[cfg(test)]
+extern crate self as esdieff;
+#[cfg(test)]
+// External-facing matches retain fallback arms for non-exhaustive enums.
+#[allow(unreachable_patterns)]
+#[path = "../tests/internal/mod.rs"]
+mod internal_tests;

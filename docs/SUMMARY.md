@@ -107,3 +107,4 @@
   - [0053: Implementer revision comparison](adr/0053-implementer-revision-comparison.md)
   - [0054: Implementer declaration requiredness](adr/0054-implementer-declaration-requiredness.md)
   - [0055: Implementer declaration presence](adr/0055-implementer-declaration-presence.md)
+  - [0056: Fixed internal safeguards and Rust patterns](adr/0056-fixed-internal-safeguards-and-rust-patterns.md)

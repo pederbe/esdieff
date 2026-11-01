@@ -91,7 +91,7 @@ fn a_breaking_revision_that_keeps_its_version_warns_once() {
     assert_eq!(
         version
             .location(Revision::Later)
-            .pointer(64)
+            .pointer()
             .require()
             .unwrap(),
         "/info/version"
@@ -103,7 +103,7 @@ fn a_breaking_revision_that_keeps_its_version_warns_once() {
     assert_eq!(
         version
             .location(Revision::Earlier)
-            .pointer(64)
+            .pointer()
             .require()
             .unwrap(),
         "/info/version"
@@ -209,7 +209,7 @@ fn a_missing_or_lower_later_version_warns_at_the_nearest_member() {
         assert_eq!(
             version
                 .location(Revision::Later)
-                .pointer(64)
+                .pointer()
                 .require()
                 .unwrap(),
             pointer

@@ -128,7 +128,7 @@ impl ExactNumber<'_> {
             Ordering::Greater
         }
     }
-    pub fn compare(
+    pub(crate) fn compare_with_work(
         &self,
         other: ExactNumber<'_>,
         work: &mut NumberWork,
@@ -140,13 +140,17 @@ impl ExactNumber<'_> {
                 .max(other.decimal.coefficient.len())
                 + 1,
         )?;
+        Ok(self.compare(other))
+    }
+    /// Compare admitted exact values using their bounded decimal representation.
+    pub fn compare(&self, other: ExactNumber<'_>) -> Ordering {
         let a = self.decimal;
         let b = other.decimal;
         if self.sign() != other.sign() {
-            return Ok(self.sign().cmp(&other.sign()));
+            return self.sign().cmp(&other.sign());
         }
         if self.sign() == Ordering::Equal {
-            return Ok(Ordering::Equal);
+            return Ordering::Equal;
         }
         let mut order = (a.coefficient.len() as i128 + i128::from(a.power))
             .cmp(&(b.coefficient.len() as i128 + i128::from(b.power)));
@@ -164,7 +168,7 @@ impl ExactNumber<'_> {
                 }
             }
         }
-        Ok(if a.negative { order.reverse() } else { order })
+        if a.negative { order.reverse() } else { order }
     }
     pub fn to_i64(&self) -> Result<i64, &'static str> {
         if !self.is_integer() || self.decimal.power > 19 {
@@ -189,7 +193,7 @@ impl ExactNumber<'_> {
         Ok(number)
     }
 }
-pub struct NumberWork {
+pub(crate) struct NumberWork {
     remaining: usize,
     // A refused debit leaves the remainder for smaller debits, so record the refusal itself.
     exhausted: bool,
@@ -215,7 +219,8 @@ impl NumberWork {
         self.remaining = remaining;
         Ok(())
     }
-    pub fn new(units: u32) -> Result<Self, &'static str> {
+    #[cfg(test)]
+    pub(crate) fn new(units: u32) -> Result<Self, &'static str> {
         if units == 0 {
             Err("finite positive work required")
         } else {
@@ -437,8 +442,11 @@ impl<'a> JsonView<'a> {
         }
         Ok(PointerSize { bytes: size, depth })
     }
-    /// Render a source pointer only after its escaped size fits the finite caller budget.
-    pub fn pointer(self, byte_limit: u32) -> Field<String> {
+    /// Render a source pointer only after its escaped size fits the fixed internal byte ceiling.
+    pub fn pointer(self) -> Field<String> {
+        self.pointer_with_limit(8192)
+    }
+    pub(crate) fn pointer_with_limit(self, byte_limit: u32) -> Field<String> {
         if byte_limit == 0 || byte_limit > 8192 {
             return Field::Unavailable("unsupported pointer output budget");
         }

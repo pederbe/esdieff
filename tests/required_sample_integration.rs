@@ -97,13 +97,13 @@ fn inherited_required_target_keeps_source_refinement_and_consumer_alongside_samp
     let source = target.source_definition().require().unwrap();
     assert_eq!(source.json().source_id(), model);
     assert_eq!(
-        source.json().pointer(8192).require().unwrap(),
+        source.json().pointer().require().unwrap(),
         "/sdfObject/Sensor/sdfProperty/temperature"
     );
     assert_eq!(target.capability(), RequiredTargetCapability::Established);
     let effective = target.effective_definition().require().unwrap();
     assert_eq!(
-        effective.json().location().pointer(8192).require().unwrap(),
+        effective.json().location().pointer().require().unwrap(),
         TEMPERATURE
     );
     assert_eq!(
@@ -125,7 +125,7 @@ fn inherited_required_target_keeps_source_refinement_and_consumer_alongside_samp
             .explanation()
             .consumer()
             .unwrap()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         format!("{OBJECT}/sdfRef")

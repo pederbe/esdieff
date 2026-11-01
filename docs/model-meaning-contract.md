@@ -106,7 +106,7 @@ properties can retain distinct compatible meanings. Known time or URI
 names do not establish complete comparison capability for every representation;
 generic Unix-time equality retains the negative-coordinate gap. This is model
 capability assessment, not a theorem that
-every possible pair can be decided within any configured allowance.
+every possible pair can be decided within the fixed internal safeguards.
 
 UUID, Gregorian-date and dated date-time comparator capability require an established Full interpretation with
 known effective nullability in every relevant alternative. Known absence uses
@@ -149,9 +149,9 @@ the surviving effective pattern with the adopted matching implementation. It
 supplies no subject and invokes no match. M047 owns syntax independently; a
 matching-only capacity can leave M048 unfinished with syntax assessed. A
 pattern admitting no text, such as `(?!)`, still has known matching meaning.
-Original worker, allocation, engine, interrupt and duration allowances remain
-shared. Compilation does not guarantee runtime capacity for arbitrary future
-subjects, following [ADR 0014: Bounded partial ECMAScript pattern capability](adr/0014-bounded-pattern-capability.md).
+Pattern compilation uses Corvus and the fixed safeguards of ADR 0056.
+Successful compilation does not guarantee completion for every future subject.
+There is no JavaScript worker or caller-configurable engine quota.
 
 M026 and M027 establish the known byte-string and Unix-time model
 interpretations, and M049 establishes the six known base format interpretations.

@@ -1219,7 +1219,7 @@ mod comparison {
                 _ => return Verdict::Unavailable,
             },
             JsonKind::Number => match (left.number(), right.number()) {
-                (Field::Present(a), Field::Present(b)) => match a.compare(b, work) {
+                (Field::Present(a), Field::Present(b)) => match a.compare_with_work(b, work) {
                     Ok(order) => order.is_eq(),
                     Err(_) => {
                         *limitations |= 1 << 4;

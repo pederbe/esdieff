@@ -11,7 +11,7 @@ use crate::{
 use esdieff::{
     Admission, Assessment, Catalogue, CheckRequest, Classification, ComparisonRequest,
     DifferenceAcknowledgements, Disposition, Field, HumanStyle, InspectRequest, JsonKind, JsonView,
-    Limits, Report, RevisionComparison, SampleKind, SampleRequest, SourceId, SourceInput, View,
+    Report, RevisionComparison, SampleKind, SampleRequest, SourceId, SourceInput, View,
 };
 use serde_json::{json, value::RawValue};
 use std::{
@@ -684,10 +684,17 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
     // parent of a symlink rather than switching to the target's directory.
     let path =
         std::path::absolute(path).map_err(|e| usage(&format!("cannot resolve plan path: {e}")))?;
-    let configuration = Catalogue::take_inputs_with_limits(
-        vec![SourceInput::file("plan", &path).omit_label().sample()],
-        Limits::default().document_bytes(PLAN_BYTES),
-    )
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    std::fs::File::open(&path)
+        .and_then(|file| file.take(PLAN_BYTES as u64 + 1).read_to_end(&mut bytes))
+        .map_err(|_| usage("plan unreadable or exceeds 1 MiB"))?;
+    if bytes.len() > PLAN_BYTES {
+        return Err(usage("plan unreadable or exceeds 1 MiB"));
+    }
+    let configuration = Catalogue::take_inputs(vec![
+        SourceInput::supplied("plan", &bytes).omit_label().sample(),
+    ])
     .map_err(usage)?;
     let source = configuration.sources().next().expect("plan source");
     if !source.content_complete() {

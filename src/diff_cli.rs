@@ -77,7 +77,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         .expect("acknowledgement JSON");
         bytes.push(b'\n');
         // Refuse an export the reader cannot accept, before committing a destination.
-        DifferenceAcknowledgements::from_json(&bytes, &esdieff::Limits::default())
+        DifferenceAcknowledgements::from_json(&bytes)
             .map_err(|reason| usage(&format!("cannot export acknowledgements: {reason}")))?;
         output.emit(&bytes)?;
     }

@@ -16,8 +16,7 @@ include = ["src/**", "examples/**", "tests/**", "Cargo.toml", "Cargo.lock", "REA
 cap-std = "=4.0.3"
 curl = { version = "=0.4.51", features = ["static-curl", "static-ssl"] }
 sha2 = "=0.11.1"
-regress = "=0.12.0"
-rquickjs = "=0.14.0"
+corvus-regex-ecma262 = "=0.2.7"
 serde_json = { version = "=1.0.154", features = ["raw_value"] }
 same-file = "=1.0.6"
 hotpath = { version = "=0.30.3", optional = true }

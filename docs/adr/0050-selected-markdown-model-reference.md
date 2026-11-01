@@ -1,5 +1,10 @@
 # 0050: Selected Markdown model reference
 
+The pattern-worker implementation detail is superseded by
+[ADR 0056: Fixed internal safeguards and Rust patterns](0056-fixed-internal-safeguards-and-rust-patterns.md).
+The text below retains the historical decision. Effective scopes, semantic
+results and report-detail distinctions continue where not superseded.
+
 ## Context
 
 A reader needs the effective interface of one Thing or Object, including nested

@@ -3542,7 +3542,10 @@ impl EffectiveLocation<'_> {
     pub fn root_document(self) -> SourceId {
         self.json.root_document()
     }
-    pub fn pointer(self, limit: u32) -> Field<String> {
+    pub fn pointer(self) -> Field<String> {
+        self.pointer_with_limit(8192)
+    }
+    pub(crate) fn pointer_with_limit(self, limit: u32) -> Field<String> {
         if limit == 0 || limit > 8192 {
             return Field::Unavailable("unsupported pointer output budget");
         }
@@ -3718,8 +3721,11 @@ impl<'a> EffectiveJson<'a> {
             trailing: None,
         }
     }
-    pub fn pointer(self, limit: u32) -> Field<String> {
-        self.location().pointer(limit)
+    pub fn pointer(self) -> Field<String> {
+        self.pointer_with_limit(8192)
+    }
+    pub(crate) fn pointer_with_limit(self, limit: u32) -> Field<String> {
+        self.location().pointer_with_limit(limit)
     }
 }
 impl EffectiveModel<'_> {

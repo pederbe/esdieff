@@ -6,7 +6,6 @@ use std::{fs, path::Path, process::Command};
 const NATIVE: &[(&str, &str)] = &[
     ("curl-sys", "curl/COPYING"),
     ("libz-sys", "src/zlib/LICENSE"),
-    ("rquickjs-sys", "quickjs/LICENSE"),
     ("openssl-src", "openssl/LICENSE.txt"),
 ];
 

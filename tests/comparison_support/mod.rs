@@ -29,7 +29,7 @@ pub fn pointer(difference: &Difference<'_>, revision: Revision) -> String {
     difference
         .side(revision)
         .expect("revision has the difference")
-        .pointer(8192)
+        .pointer()
         .require()
         .unwrap()
 }
@@ -39,7 +39,7 @@ pub fn at<'r>(comparison: &'r RevisionComparison<'r>, suffix: &str) -> Differenc
     let mut found = comparison.differences().filter(|difference| {
         [Revision::Later, Revision::Earlier].iter().any(|revision| {
             difference.side(*revision).is_some_and(|side| {
-                side.pointer(8192)
+                side.pointer()
                     .present()
                     .is_some_and(|pointer| pointer.ends_with(suffix))
             })

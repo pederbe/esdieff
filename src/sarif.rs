@@ -278,16 +278,24 @@ fn diff_place<'a>(
         .origin()
         .and_then(|origin| origin.sources().next())
         .and_then(|origin| {
-            source_place(catalogue, revision, origin, origin.pointer(limit).present())
+            source_place(
+                catalogue,
+                revision,
+                origin,
+                origin.pointer_with_limit(limit).present(),
+            )
         });
-    let effective = side.pointer(limit).present().map(|pointer| Logical {
-        pointer,
-        view: "effective",
-        document: catalogue
-            .source(side.root_document())
-            .map_or_else(String::new, document),
-        revision: Some(revision.as_str()),
-    });
+    let effective = side
+        .pointer_with_limit(limit)
+        .present()
+        .map(|pointer| Logical {
+            pointer,
+            view: "effective",
+            document: catalogue
+                .source(side.root_document())
+                .map_or_else(String::new, document),
+            revision: Some(revision.as_str()),
+        });
     Place {
         source,
         effective,

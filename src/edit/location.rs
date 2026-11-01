@@ -123,7 +123,8 @@ impl EditResult {
         if source.source_id() != self.generated {
             return Field::Absent;
         }
-        let pointer = match source.pointer(self.catalogue().limits.pointer_bytes as u32) {
+        let pointer = match source.pointer_with_limit(self.catalogue().limits.pointer_bytes as u32)
+        {
             Field::Present(pointer) => pointer,
             Field::Unavailable(reason) => return Field::Unavailable(reason),
             Field::Absent => return Field::Absent,

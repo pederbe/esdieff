@@ -229,9 +229,11 @@ impl DifferenceAcknowledgements {
         Ok(Self { entries })
     }
     /// Decode an acknowledgement file of at most 1 MiB under the ordinary JSON input
-    /// policies, which refuse duplicate members, within the decoding limits of `limits`,
-    /// normally those of the revisions it acknowledges. Limits a Catalogue refuses are refused.
-    pub fn from_json(bytes: &[u8], limits: &Limits) -> Result<Self, &'static str> {
+    /// safeguards, including refusal of duplicate members and excessive size or depth.
+    pub fn from_json(bytes: &[u8]) -> Result<Self, &'static str> {
+        Self::decode(bytes, &Limits::default())
+    }
+    pub(crate) fn decode(bytes: &[u8], limits: &Limits) -> Result<Self, &'static str> {
         limits.validate()?;
         if bytes.len() > Self::FILE_BYTES {
             return Err("acknowledgement file exceeds 1 MiB");

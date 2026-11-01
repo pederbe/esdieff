@@ -5,8 +5,7 @@
 //! Composition and selection spend the request's allowance, the values of each description
 //! are built on an allowance of the description's own, and each value is checked with the
 //! ordinary allowance one Sample-value checking request receives, as ADR 0041 states.
-//! A live pattern worker may be reused under ADR 0045: One pattern engine per trace or
-//! generation request, while each checked value retains its own counters. The value and
+//! Each checked value retains independent fixed safeguards. The value and
 //! description ceilings keep the request finite under ADR 0009: Bounded processing and
 //! reporting and ADR 0013: Shared workflow and report guarantees.
 pub(crate) mod choice;
@@ -21,7 +20,6 @@ pub use evidence::GenerationEvidence;
 
 use crate::allowance::OperationBudget;
 use crate::budgeted::{self, Exhausted, failure, kept};
-use crate::pattern::MatchingWork;
 use crate::report::selected::SelectedScope;
 use crate::sample::{SELECTOR_BYTES, ValueAllowance, description_root};
 use crate::{
@@ -324,8 +322,7 @@ impl Catalogue {
                 result.unselected += 1;
                 continue;
             }
-            let patterns = &mut allowance.budget.patterns;
-            if let Some(description) = settle(kind, pointer, json, &mut result, patterns) {
+            if let Some(description) = settle(kind, pointer, json, &mut result) {
                 result.descriptions.push(description);
             }
         }
@@ -447,13 +444,11 @@ fn pointer(prefix: &str, keyword: &str, name: &str) -> String {
 /// own, and each check spends one of its own, each the allowance one Sample-value checking
 /// request receives. Request-wide selection and report limits can still omit later
 /// descriptions or values. Each value is charged the report bytes it needs, so the values a request retains fit the report.
-/// Each allowance can reuse the live pattern worker that `patterns` holds for the request.
 fn settle(
     kind: SampleKind,
     pointer: String,
     json: Option<EffectiveJson<'_>>,
     result: &mut GenerationResult<'_>,
-    patterns: &mut MatchingWork,
 ) -> Option<Description> {
     let overhead = report::description_bytes(result.scope.document(), kind, &pointer);
     if overhead > result.room {
@@ -483,10 +478,8 @@ fn settle(
         size: &size,
         line: &line,
     };
-    patterns.lend_worker(&mut allowance.budget.patterns);
     let mut choices = choice::Collection::new(Some(json), &result.catalogue.limits);
     let generated = targets::generate(json, VALUES, &mut allowance, room, &mut choices);
-    patterns.reclaim_worker(&mut allowance.budget.patterns);
     result.scope.interpretations |= generated.interpretations;
     result.scope.set_aside |= allowance.budget.set_aside;
     result.scope.set_aside |= generated.set_aside;
@@ -513,7 +506,7 @@ fn settle(
 }
 
 /// Reference examples reuse settlement without recomposing each selected description.
-/// The caller supplies the one request's pattern worker and effective views.
+/// The caller supplies the effective views.
 pub(crate) struct ReferenceExamples<'a> {
     result: GenerationResult<'a>,
     searched: usize,
@@ -543,7 +536,6 @@ impl<'a> ReferenceExamples<'a> {
         kind: SampleKind,
         pointer: String,
         json: EffectiveJson<'_>,
-        patterns: &mut MatchingWork,
     ) -> ReferenceExample {
         if self.searched >= DESCRIPTIONS {
             return ReferenceExample {
@@ -555,7 +547,7 @@ impl<'a> ReferenceExamples<'a> {
         // Candidate retention is transient for one description. Presentation of the selected
         // example is charged independently by the reference renderer.
         self.result.room = self.result.catalogue.limits.report_bytes;
-        let description = settle(kind, pointer, Some(json), &mut self.result, patterns);
+        let description = settle(kind, pointer, Some(json), &mut self.result);
         let value = description.as_ref().and_then(|description| {
             description
                 .values

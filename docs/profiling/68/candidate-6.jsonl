@@ -1,0 +1,13 @@
+{"elapsed_ns":1880461,"generation_complete":true,"model":"thermostat","model_errors":0,"sample_checks":75,"trace_passed":75,"workload":"consumer-reference"}
+{"elapsed_ns":2108361,"generation_complete":true,"model":"rgb-lamp","model_errors":0,"sample_checks":86,"trace_passed":86,"workload":"consumer-reference"}
+{"elapsed_ns":2634195,"generation_complete":true,"model":"door-lock","model_errors":0,"sample_checks":83,"trace_passed":83,"workload":"consumer-reference"}
+{"elapsed_ns":634017,"generation_complete":true,"model":"power-strip","model_errors":0,"sample_checks":34,"trace_passed":34,"workload":"consumer-reference"}
+{"elapsed_ns":3882252,"generation_complete":true,"model":"irrigation","model_errors":0,"sample_checks":46,"trace_passed":46,"workload":"consumer-reference"}
+{"elapsed_ns":2722471,"generation_complete":true,"model":"coffee-machine","model_errors":0,"sample_checks":90,"trace_passed":90,"workload":"consumer-reference"}
+{"elapsed_ns":241265,"generation_complete":true,"model":"context-reuse","model_errors":0,"sample_checks":6,"trace_passed":6,"workload":"consumer-reference"}
+{"elapsed_ns":419622,"generation_complete":true,"model":"/var/tmp/esdieff-68/door.sdf.json","model_errors":0,"sample_checks":20,"trace_passed":20,"workload":"consumer-reference"}
+{"elapsed_ns":1077735,"generation_complete":true,"model":"/var/tmp/esdieff-68/operational-state.sdf.json","model_errors":0,"sample_checks":55,"trace_passed":55,"workload":"consumer-reference"}
+{"elapsed_ns":11478848,"entries":1000,"failed":10,"kind":"credential","passed":990,"undetermined":0,"workload":"independent-trace"}
+{"elapsed_ns":5722737,"entries":1000,"failed":10,"kind":"lookbehind","passed":990,"undetermined":0,"workload":"independent-trace"}
+{"elapsed_ns":1163820352,"entries":100000,"failed":1000,"kind":"credential","passed":99000,"undetermined":0,"workload":"independent-trace"}
+{"elapsed_ns":580554386,"entries":100000,"failed":1000,"kind":"lookbehind","passed":99000,"undetermined":0,"workload":"independent-trace"}

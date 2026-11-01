@@ -25,12 +25,6 @@ path = "src/zlib/LICENSE"
 license = "Zlib"
 checksum = "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
 
-[rquickjs-sys.clarify]
-license = "MIT"
-[[rquickjs-sys.clarify.files]]
-path = "quickjs/LICENSE"
-checksum = "96f73f9d2a16c21a36b418f06073be26e7d6d5e7c1bc99756b21a4f2c74ef171"
-
 [openssl-src.clarify]
 license = "Apache-2.0"
 [[openssl-src.clarify.files]]

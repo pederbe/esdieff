@@ -4,7 +4,7 @@
 //! Pattern reducers follow ADR0028: Bounded effective model pattern syntax.
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Limits {
+pub(crate) struct Limits {
     pub(crate) document_bytes: usize,
     pub(crate) catalogue_bytes: usize,
     pub(crate) documents: usize,
@@ -30,10 +30,6 @@ pub struct Limits {
     pub(crate) pattern_nesting: usize,
     pub(crate) pattern_alternatives: usize,
     pub(crate) pattern_subject: usize,
-    pub(crate) pattern_heap: usize,
-    pub(crate) pattern_stack: usize,
-    pub(crate) pattern_interrupts: usize,
-    pub(crate) pattern_deadline: std::time::Duration,
     pub(crate) equality_pairs: usize,
 }
 impl Default for Limits {
@@ -64,146 +60,143 @@ impl Default for Limits {
             pattern_nesting: 64,
             pattern_alternatives: 512,
             pattern_subject: 1024 * 1024,
-            pattern_heap: 16 * 1024 * 1024,
-            pattern_stack: 256 * 1024,
-            pattern_interrupts: 100,
-            pattern_deadline: std::time::Duration::from_millis(25),
             equality_pairs: 100_000,
         }
     }
 }
 impl Limits {
-    pub fn document_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn document_bytes(mut self, value: usize) -> Self {
         self.document_bytes = value;
         self
     }
-    pub fn catalogue_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn catalogue_bytes(mut self, value: usize) -> Self {
         self.catalogue_bytes = value;
         self
     }
-    pub fn documents(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn documents(mut self, value: usize) -> Self {
         self.documents = value;
         self
     }
-    pub fn depth(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn depth(mut self, value: usize) -> Self {
         self.depth = value;
         self
     }
-    pub fn document_nodes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn document_nodes(mut self, value: usize) -> Self {
         self.document_nodes = value;
         self
     }
-    pub fn parsed_nodes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn parsed_nodes(mut self, value: usize) -> Self {
         self.nodes = value;
         self
     }
-    pub fn parsed_allocation_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn parsed_allocation_bytes(mut self, value: usize) -> Self {
         self.allocation = value;
         self
     }
-    pub fn decoding_work(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn decoding_work(mut self, value: usize) -> Self {
         self.work = value;
         self
     }
-    pub fn numeric_work(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn numeric_work(mut self, value: usize) -> Self {
         self.number_work = value;
         self
     }
-    pub fn number_token_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn number_token_bytes(mut self, value: usize) -> Self {
         self.number_token = value;
         self
     }
-    pub fn coefficient_digits(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn coefficient_digits(mut self, value: usize) -> Self {
         self.coefficient = value;
         self
     }
-    pub fn exponent_magnitude(mut self, value: i64) -> Self {
+    #[cfg(test)]
+    pub(crate) fn exponent_magnitude(mut self, value: i64) -> Self {
         self.exponent = value;
         self
     }
-    pub fn conditions(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn conditions(mut self, value: usize) -> Self {
         self.conditions = value;
         self
     }
-    pub fn diagnostic_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn diagnostic_bytes(mut self, value: usize) -> Self {
         self.detail_bytes = value;
         self
     }
-    pub fn report_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn report_bytes(mut self, value: usize) -> Self {
         self.report_bytes = value;
         self
     }
-    pub fn pointer_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pointer_bytes(mut self, value: usize) -> Self {
         self.pointer_bytes = value;
         self
     }
-    pub fn pointer_output_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pointer_output_bytes(mut self, value: usize) -> Self {
         self.pointer_total = value;
         self
     }
-    pub fn effective_nodes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn effective_nodes(mut self, value: usize) -> Self {
         self.effective_nodes = value;
         self
     }
-    pub fn effective_allocation_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn effective_allocation_bytes(mut self, value: usize) -> Self {
         self.effective_allocation = value;
         self
     }
-    pub fn reference_applications(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn reference_applications(mut self, value: usize) -> Self {
         self.references = value;
         self
     }
-    pub fn reference_depth(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn reference_depth(mut self, value: usize) -> Self {
         self.reference_depth = value;
         self
     }
     /// Reduce the UTF-8 byte ceiling for an effective pattern string.
-    pub fn pattern_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pattern_bytes(mut self, value: usize) -> Self {
         self.pattern_bytes = value;
         self
     }
     /// Reduce the group nesting ceiling for pattern syntax.
-    pub fn pattern_nesting(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pattern_nesting(mut self, value: usize) -> Self {
         self.pattern_nesting = value;
         self
     }
     /// Reduce the total alternative ceiling for pattern syntax.
-    pub fn pattern_alternatives(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pattern_alternatives(mut self, value: usize) -> Self {
         self.pattern_alternatives = value;
         self
     }
     /// Reduce the UTF-8 subject byte ceiling for each pattern match.
-    pub fn pattern_subject_bytes(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn pattern_subject_bytes(mut self, value: usize) -> Self {
         self.pattern_subject = value;
         self
     }
-    /// Reduce the engine's configured allocation limit. Allocator rounding,
-    /// bookkeeping overhead and resident memory are outside this limit.
-    pub fn pattern_heap_bytes(mut self, value: usize) -> Self {
-        self.pattern_heap = value;
-        self
-    }
-    /// Reduce the JavaScript stack ceiling within the joined worker's Rust stack.
-    pub fn pattern_stack_bytes(mut self, value: usize) -> Self {
-        self.pattern_stack = value;
-        self
-    }
-    /// Set the request-wide polling allowance, at most 10,000.
-    /// Each engine call spends an entry poll. Engine interrupt callbacks also
-    /// spend this allowance, shared across all patterns and values.
-    /// Zero leaves matching unfinished without starting an engine.
-    pub fn pattern_interrupts(mut self, value: usize) -> Self {
-        self.pattern_interrupts = value;
-        self
-    }
-    /// Set the request-wide cooperative engine duration, at most one second.
-    /// This does not enforce a hard deadline during parsing or compilation.
-    pub fn pattern_deadline(mut self, value: std::time::Duration) -> Self {
-        self.pattern_deadline = value;
-        self
-    }
     /// Reduce the request-wide ceiling for constant and uniqueness comparisons.
-    pub fn equality_pairs(mut self, value: usize) -> Self {
+    #[cfg(test)]
+    pub(crate) fn equality_pairs(mut self, value: usize) -> Self {
         self.equality_pairs = value;
         self
     }
@@ -238,8 +231,6 @@ impl Limits {
             self.pattern_nesting,
             self.pattern_alternatives,
             self.pattern_subject,
-            self.pattern_heap,
-            self.pattern_stack,
             self.equality_pairs,
         ];
         if counts.iter().any(|n| *n == 0 || *n > u32::MAX as usize)
@@ -255,10 +246,6 @@ impl Limits {
             || self.pattern_nesting > 64
             || self.pattern_alternatives > 512
             || self.pattern_subject > 1024 * 1024
-            || self.pattern_heap > 16 * 1024 * 1024
-            || self.pattern_stack > 256 * 1024
-            || self.pattern_interrupts > 10_000
-            || self.pattern_deadline > std::time::Duration::from_secs(1)
             || self.equality_pairs > 100_000
         {
             return Err("configuration exceeds supported finite ceilings");

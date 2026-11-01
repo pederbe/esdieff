@@ -1581,7 +1581,7 @@ fn evaluate_leaf<'a>(
                             {
                                 state.admission_unfinished(2, Status::Undetermined, 2);
                             }
-                            Field::Present(bound) => match number.compare(bound, work) {
+                            Field::Present(bound) => match number.compare_with_work(bound, work) {
                                 Ok(order)
                                     if if lower {
                                         order.is_lt() || exclusive && order.is_eq()

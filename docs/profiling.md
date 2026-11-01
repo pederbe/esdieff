@@ -68,29 +68,25 @@ the current workload and code. Report rendering is not part of the workload.
 | `comparison::compare` | Revision comparison |
 | `trace::check_trace` | Recorded trace checking |
 | `generation::generate` | Generation of test values |
-| `pattern::match_inner` | One pattern syntax, compilation or matching request to the pattern worker |
-| `Engine::new` | Start of a pattern engine |
+| `pattern::compile` | Qualified guards and Corvus compilation for syntax or matching |
+| `pattern::matches` | One Corvus match, including compilation |
 
 Times include nested calls. Model checking, Sample-value checking, Revision
 comparison and Recorded trace checking each compose the documents they need,
 so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
 once, however many entries it holds, so each trace adds one
-`effective::compose_mode` call per round. A Recorded trace or generation
-request reuses a live pattern engine across matched values and can start another
-after a worker stops, following
-[ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md).
-Each other operation that matches a pattern starts its own. The previously documented
-profile count was 34 `Engine::new` starts per round. That count depends on the workload and
-code. Allocation figures count each
-operation's own allocations, so composition allocations appear only under
-`effective::compose_mode`. Other programs built with the feature record
+`effective::compose_mode` call per round. Pattern operations run directly through Corvus. There is no toolkit pattern
+worker or JavaScript engine-start span. Each match compiles its expression with
+the fixed internal timeout. Corvus may reuse thread-local scratch according to
+its own capacity policy. The `pattern::compile` span also includes compile-only
+Model checking. Other programs built with the feature record
 nothing, because only the workload starts the profiler.
 
 ## Live view and JSON reports
 
 The hotpath CLI shows the same measurements live. Install the matching version
-with `cargo install hotpath --version 0.30.2 --features tui`. Start
+with `cargo install hotpath --version 0.30.3 --features tui`. Start
 `hotpath console` in one terminal, then run the workload with the `hotpath`
 feature and enough rounds to watch, such as `-- 20000`, in another.
 
@@ -98,3 +94,27 @@ For a machine-readable report, set `HOTPATH_OUTPUT_FORMAT=json` and
 `HOTPATH_OUTPUT_PATH` to a file before running the workload. The
 [configuration reference](https://hotpath.rs/configuration) lists the other
 settings.
+
+## Pattern migration workload
+
+Run `cargo run --profile dist --example pattern_qualification_consumers` from
+the repository root to check all six rich device families, Context reuse and
+independently expected 1,000/100,000-entry credential and lookbehind traces.
+Optional positional arguments name pinned public model files, including the
+OneDM [Door](https://raw.githubusercontent.com/one-data-model/playground/41be1e0e564ad39f4d5a1c41fcccef435e388ee9/sdfObject/sdfobject-door.sdf.json)
+and [Operational state](https://raw.githubusercontent.com/one-data-model/playground/41be1e0e564ad39f4d5a1c41fcccef435e388ee9/sdfObject/sdfobject-operational_state.sdf.json)
+models. Each model is checked, its settled
+generated values are checked individually, and their trace replay must pass.
+Generation/replay consistency is separate from the independently authored
+pattern trace expectations.
+
+Build without features for ordinary timing and whole-process CPU/RSS captures.
+Add `--features hotpath-alloc` for diagnostic allocation traffic, and set
+`HOTPATH_OUTPUT_FORMAT=json` with `HOTPATH_OUTPUT_PATH` to retain the report.
+Allocation traffic, peak memory and internal safeguard counters have different
+meanings. The fixed 100 ms pattern timeout is cooperative, so the workload does
+not establish a hard deadline or exact memory ceiling.
+
+The [migration receipt](profiling/68/receipt.txt) retains the ordinary paired
+counts, process observations and separate allocation capture. Its measurements
+support only the named workload and recorded host conditions.
