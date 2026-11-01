@@ -13,7 +13,6 @@ use std::{
     path::Path,
     process::ExitCode,
 };
-mod acquire_cli;
 mod author_cli;
 mod check_plan;
 mod cli_style;
@@ -74,12 +73,12 @@ fn parse<'a>(
 ) -> Result<Option<Options<'a>>, (u8, String)> {
     let command = args.first().and_then(|v| v.to_str()).ok_or_else(|| {
         usage(
-            "expected check, inspect, sample, generate, reference, trace, author, edit, diff or acquire and explicit inputs",
+            "expected check, inspect, sample, generate, schema, reference, trace, author, edit or diff and explicit inputs",
         )
     })?;
     if !matches!(command, "check" | "inspect" | "sample") {
         return Err(usage(
-            "unknown command; use check, inspect, sample, generate, reference, trace, author, edit, diff or acquire",
+            "unknown command; use check, inspect, sample, generate, schema, reference, trace, author, edit or diff",
         ));
     }
     let mut options = Options {
@@ -448,9 +447,6 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
         return emit_help(*color);
     }
     let args = &args[index..];
-    if args.first().is_some_and(|arg| arg == "acquire") {
-        return acquire_cli::run(args, color);
-    }
     if args.first().is_some_and(|arg| arg == "author") {
         return author_cli::run(args, color);
     }

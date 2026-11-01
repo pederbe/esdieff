@@ -86,7 +86,6 @@ to remove it.
 <pre class="terminal"><code><span class="p">$</span> esdieff --help
 <b>Usage:</b>
 <span class="c">esdieff</span> <span class="c">check</span> <span class="c">--plan</span> PLAN [<span class="c">--format</span> human|json]
-<span class="c">esdieff</span> <span class="c">acquire</span> <span class="c">--github</span> OWNER/REPOSITORY <span class="c">--commit</span> COMMIT <span class="c">--path</span> REPOSITORY_PATH <span class="c">--sha256</span> DIGEST <span class="c">--document-output</span> DEST [<span class="c">--report-output</span> DEST] [<span class="c">--format</span> human|json]
 <span class="c">esdieff</span> <span class="c">check</span> [<span class="c">--directory</span> DIR] [<span class="c">--recursive</span>] [<span class="c">--exclude</span> RELATIVE_PATH] [<span class="c">--root</span> INPUT] [<span class="c">--assessment</span> initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [<span class="c">--registry-knowledge</span> recorded|withheld] [<span class="c">--strict-warnings</span>] [<span class="c">--format</span> human|json|sarif] [INPUT...]
 </code></pre>
 

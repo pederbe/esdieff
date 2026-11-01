@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Remove `esdieff acquire` and its network transport. Obtain model files with
+  your preferred tools, then pass the local files to Esdieff. Acquisition
+  receipts are no longer produced. Ordinary local inputs, source metadata and
+  model operations keep their existing behavior.
+
 - Replace the JavaScript pattern runtime with the Rust Corvus engine. Pattern
   matching uses fixed internal capacity safeguards and a cooperative backtracking
   timeout. Remove the public `Limits` type and quota-selecting constructors.

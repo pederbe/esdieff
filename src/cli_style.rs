@@ -74,15 +74,10 @@ pub(crate) struct Style(bool);
 pub(crate) enum Role {
     Heading,
     Syntax,
-    Notice,
-    Passed,
-    Incomplete,
     Failure,
 }
 
 impl Style {
-    pub(crate) const PLAIN: Self = Self(false);
-
     pub(crate) fn enabled(self) -> bool {
         self.0
     }
@@ -93,9 +88,7 @@ impl Style {
         }
         let sequence = match role {
             Role::Heading => "\x1b[1m",
-            Role::Syntax | Role::Notice => "\x1b[36m",
-            Role::Passed => "\x1b[32m",
-            Role::Incomplete => "\x1b[33m",
+            Role::Syntax => "\x1b[36m",
             Role::Failure => "\x1b[31m",
         };
         Cow::Owned(format!("{sequence}{text}\x1b[0m"))
@@ -133,10 +126,6 @@ pub(crate) fn help(style: Style) -> String {
     help.push_str("Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.\n");
     for (command, options) in [
         ("check", "--plan PLAN [--format human|json]"),
-        (
-            "acquire",
-            "--github OWNER/REPOSITORY --commit COMMIT --path REPOSITORY_PATH --sha256 DIGEST --document-output DEST [--report-output DEST] [--format human|json]",
-        ),
         (
             "check",
             "[--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--registry-knowledge recorded|withheld] [--strict-warnings] [--format human|json|sarif] [INPUT...]",
@@ -189,17 +178,6 @@ pub(crate) fn help(style: Style) -> String {
     help.push_str(&global_options(style));
     help.push_str("\nUse - once across model, sample and trace standard input.\n");
     help
-}
-
-pub(crate) fn acquire_help(style: Style) -> String {
-    format!(
-        "{}\n{} {} {}\n{}",
-        style.span(Role::Heading, "Usage:"),
-        style.span(Role::Syntax, "esdieff"),
-        style.span(Role::Syntax, "acquire"),
-        style.syntax("--github OWNER/REPOSITORY --commit COMMIT --path REPOSITORY_PATH --sha256 DIGEST --document-output DESTINATION [--report-output DESTINATION] [--format human|json]"),
-        global_options(style)
-    )
 }
 
 fn global_options(style: Style) -> String {

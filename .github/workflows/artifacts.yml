@@ -131,12 +131,6 @@ jobs:
           fi
           cd ../..
           cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke "$RUNNER_TEMP/esdieff-install/esdieff${{ matrix.ext }}"
-          "$RUNNER_TEMP/esdieff-install/esdieff${{ matrix.ext }}" acquire \
-            --github one-data-model/playground --commit 41be1e0e564ad39f4d5a1c41fcccef435e388ee9 \
-            --path sdfObject/sdfobject-switch_binary.sdf.json \
-            --sha256 6fe5a1538da0b5f48898e367f0f03b6b70fa38b6ebaa67117e408ab87fb0b61a \
-            --document-output "$RUNNER_TEMP/acquired.sdf.json" --format json
-          cmp examples/pinned-acquisition/original.sdf.json "$RUNNER_TEMP/acquired.sdf.json"
           if [[ "$TARGET" == *linux* ]]; then
             ldd "$RUNNER_TEMP/esdieff-install/esdieff" | tee "$RUNNER_TEMP/linkage.txt"
             if grep -Ei 'not found|libssl|libcrypto|libcurl' "$RUNNER_TEMP/linkage.txt"; then exit 1; fi

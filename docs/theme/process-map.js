@@ -50,15 +50,15 @@
   function data() {
     if (flow === 'overview') return {
       title:'From supplied documents to useful evidence',
-      summary:'Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checking, revision comparison and value checking use the resulting meaning and produce located evidence.',
+      summary:'Local SDF files form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checking, revision comparison and value checking use the resulting meaning and produce located evidence.',
       rows:[
-        [node('local','Local SDF files','Models + shared definitions'),node('acquire','Optional: acquire','GitHub commit + expected SHA-256 → local bytes')],
+        [node('local','Local SDF files','Models + shared definitions')],
         [node('catalogue','Catalogue','Explicit inputs · retained content · exact numbers · source locations')],
         [node('source','Source inspection','Inspect retained source JSON'),node('effective','Effective view','Compose references + refinements · report defaults separately · retain origins')],
         [node('check','Check models','Assess the requested model rules'),node('compare','Compare revisions','Earlier + later effective interfaces'),node('values','Test values','Check samples · generate · check traces')],
         [node('report','Results with evidence','Outcome · scope · coverage where applicable · findings + locations')]
       ],
-      edges:[edge('local','catalogue'),edge('acquire','catalogue'),edge('catalogue','source'),edge('catalogue','effective'),edge('effective','check'),edge('effective','compare'),edge('effective','values'),edge('source','report'),edge('check','report'),edge('compare','report'),edge('values','report')],
+      edges:[edge('local','catalogue'),edge('catalogue','source'),edge('catalogue','effective'),edge('effective','check'),edge('effective','compare'),edge('effective','values'),edge('source','report'),edge('check','report'),edge('compare','report'),edge('values','report')],
       detail:'Acquisition verifies file bytes. The subsequent model operations run offline and resolve references only within supplied files.',
       command:'CLI and Rust library share these model operations. Author and edit produce new SDF documents that can enter the same flow.'
     };

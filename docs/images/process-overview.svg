@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="674" viewBox="0 0 760 674" role="img" aria-labelledby="title desc">
   <title id="title">Esdieff process overview</title>
-  <desc id="desc">Local SDF files or explicitly acquired snapshots form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checks, revision comparison and value testing produce results with evidence.</desc>
+  <desc id="desc">Local SDF files form a catalogue. Source inspection reads retained content. Effective views resolve supplied definitions and report implicit defaults separately. Model checks, revision comparison and value testing produce results with evidence.</desc>
   <style>
     svg { --bg: #fdf0d5; --fg: #003049; --panel: #f6e4c2; --line: #669bbc; background: var(--bg); color: var(--fg); font: 15px system-ui, sans-serif; }
     rect { fill: var(--panel); stroke: var(--line); }
@@ -11,8 +11,7 @@
     @media (prefers-color-scheme: dark) { svg { --bg: #003049; --fg: #fdf0d5; --panel: #001c2b; --line: #85afc9; } }
   </style>
   <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="var(--line)"/></marker></defs>
-  <path class="wire" d="M196 98 V120 H380 V140"/>
-  <path class="wire" d="M564 98 V120 H380 V140"/>
+  <path class="wire" d="M380 98 V140"/>
   <path class="wire" d="M380 220 V242 H196 V264"/>
   <path class="wire" d="M380 220 V242 H564 V264"/>
   <path class="wire" d="M564 362 V387 H138 V412"/>
@@ -22,12 +21,9 @@
   <path class="wire" d="M380 506 V558"/>
   <path class="wire" d="M622 506 V532 H380 V558"/>
   <path class="wire" d="M24 313 H8 V602 H22"/>
-  <rect x="24" y="18" width="344" height="80" rx="8"/>
-  <text class="heading" x="196" y="49">Local SDF files</text>
-  <text class="detail" x="196" y="74">Models + shared definitions</text>
-  <rect x="392" y="18" width="344" height="80" rx="8"/>
-  <text class="heading" x="564" y="49">Optional: acquire</text>
-  <text class="detail" x="564" y="74">Pinned GitHub bytes + expected SHA-256</text>
+  <rect x="24" y="18" width="712" height="80" rx="8"/>
+  <text class="heading" x="380" y="49">Local SDF files</text>
+  <text class="detail" x="380" y="74">Models + shared definitions</text>
   <rect x="24" y="142" width="712" height="78" rx="8"/>
   <text class="heading" x="380" y="172">Catalogue</text>
   <text class="detail" x="380" y="197">Explicit inputs · retained content · exact numbers · source locations</text>

@@ -29,7 +29,7 @@ The reference pages are the contracts behind each command. They state what an op
 
 - [Workflow and report contract](report-contract.md) covers the shared report envelope, exit statuses and the command-line rules.
 - [Supplied source documents](source-workflow.md) explains how supplied files become a catalogue and how source and effective views differ.
-- [Repeatable catalogue checks](check-plans.md), [Check a local model collection](directory-discovery.md) and [Pinned document acquisition](acquisition-contract.md) describe the ways to bring documents in.
+- [Repeatable catalogue checks](check-plans.md) and [Check a local model collection](directory-discovery.md) describe how to select local inputs.
 - [Model meaning assessment](model-meaning-contract.md) and its subpages define what each assessment level checks.
 - [Selected samples](sample-contract.md), [Generated values](generation-contract.md) and [Recorded traces](trace-contract.md) cover value checking.
 - [Model references](model-reference.md) document effective definitions and shared uses. [JSON Schema export](json-schema.md) exports supported selected payload constraints.
