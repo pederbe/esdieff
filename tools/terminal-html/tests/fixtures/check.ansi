@@ -1,0 +1,13 @@
+[1mEsdieff:[0m [32mpassed[0m
+[1mComplete:[0m true
+[1mErrors:[0m 0; [1mwarnings:[0m 0; [1mnotices:[0m 0; [1mincomplete checks:[0m 0
+[1mScope:[0m catalogue
+[1mBroader RFC coverage:[0m partial
+[1mRequested assessment:[0m esdieff.initial/1
+[1mBaseline:[0m rfc9880/base-1 (RFC 9880)
+[1mAcceptance restrictions:[0m A001, A002; [1mstrict warnings:[0m false
+[1mRequested sources:[0m [1]
+[1mRequested inventory:[0m esdieff.initial/1
+[1mRequested coverage (assessment_area):[0m total 8; assessed 8; not applicable 0; unassessed 0; undetermined 0
+[1mSource[0m 1 ["input1"]: acquired / usable (425 retained bytes, content complete: true)
+[1mDiagnostic details omitted:[0m 0

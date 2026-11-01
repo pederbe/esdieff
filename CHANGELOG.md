@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Render captured documentation terminal examples with a Rust helper instead of
+  Perl. The existing `scripts/ansi-to-html.sh` pipeline and terminal colours stay
+  the same, with correctly balanced markup for combined styles and resets.
+  Documentation authors need the repository's Rust toolchain to run the helper.
+
 - Replace the door-lock simulator example with a short library example that
   checks the model and eight sample values. Run `cargo run --example lock-demo`
   without a seed argument. The example no longer simulates device behavior.

@@ -74,7 +74,7 @@ jobs:
                   docs=true
                   website=true
                   ;;
-                *.md|scripts/ansi-to-html.sh)
+                *.md)
                   docs=true
                   ;;
                 .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml)
@@ -112,6 +112,7 @@ jobs:
           workspaces: |
             . -> target
             tools/release -> target
+            tools/terminal-html -> target
           key: checks-${{ matrix.os }}
       - name: Run maintained checks
         run: bash scripts/check.sh
