@@ -1,0 +1,3 @@
+[1mUsage:[0m
+[36mesdieff[0m [36m--version[0m
+Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.

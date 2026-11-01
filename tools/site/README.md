@@ -96,6 +96,24 @@ syntax and notices, green passed, yellow unfinished, red failed) to readable
 colours in the light and dark docs themes. Plain ```` ```console ```` fences remain
 fine for output without colour.
 
+The launcher builds the unpublished Rust helper in `tools/terminal-html` on its
+first run using the repository's Rust toolchain. Cargo caches it in
+`tools/terminal-html/target` and reuses the build on later runs. Perl is not
+needed. This is an authoring tool, with no extra runtime requirement for
+Esdieff users or site visitors. It handles bold and the four foreground colours
+above, including combined styles and resets. Unsupported SGR styles and other
+CSI controls are discarded. It does not emulate cursor movement.
+
+For example, from the repository root after building Esdieff:
+
+```sh
+{ printf '$ esdieff check examples/thermostat-check/thermostat.sdf.json\n'; \
+  target/debug/esdieff --color=always check examples/thermostat-check/thermostat.sdf.json; } \
+  | scripts/ansi-to-html.sh
+```
+
+`bash scripts/check.sh` includes the helper's format, lint and pipeline tests.
+
 The build needs mdBook 0.5 (`MDBOOK` can select an installed binary). It stages
 `docs/` so that links to the repository root (the domain language and the
 examples) resolve on the site, and it never deploys. `wrangler.jsonc` describes
