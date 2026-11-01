@@ -1,0 +1,36 @@
+Corvus migration consumer check, 2026-11-01
+Baseline application: 9dce6b6667b498f6f94b5d119c0af32a39b78e0b
+Candidate application: 3eaeaff
+Shared workload: examples/pattern_qualification_consumers.rs
+Build: cargo build --profile dist --example pattern_qualification_consumers
+Ordinary binaries: profiling disabled. Separate hotpath-alloc capture retained.
+
+Linux x86_64, Rust 1.99.1. Protected measure-lock admission excludes builds.
+Default desktop policy records outside activity rather than requiring silence.
+Six alternating fresh-process pairs after two warmups per binary, one 180-second
+measurement admission. Outside CPU reached 1.683 cores. Single-host observations
+are not a universal speedup or exact memory promise.
+
+Nine model references: six bundled rich families, Context reuse, OneDM Door and
+Operational state at playground41be1e0e564ad39f4d5a1c41fcccef435e388ee9.
+All Model checks complete with zero errors. 495 settled generated vectors keep
+their admission in individual Sample checks and pass Trace replay. Independent
+credential/lookbehind traces at 1000 entries each give990 passed/10 failed;
+at100000 entries each give99000 passed/1000 failed. No undetermined entries.
+Normalized semantic/count rows match byte-for-byte for every measured pair.
+Generation/replay consistency is separate from the authored trace expectations.
+
+Whole-process median wall/user/system seconds and peak RSS KiB:
+baseline  2.925 / 2.650 / 0.235 / 19240
+candidate 1.820 / 1.820 / 0.000 / 20816
+RSS rises1576KiB on this workload. Zero CPU means below the output resolution.
+Internal elapsed_ns fields measure the documented call scopes; process.tsv also
+includes fixture loading, input assembly, output and disposal. The Hotpath
+allocation capture has instrumentation overhead and records cumulative traffic,
+not peak memory or a byte-accounted engine allocation ceiling.
+
+Public fixture SHA256:
+bb07c45802faf664bd471d5822d29dc28b22184d4c74dedd5ac9425b654a80d0 door.sdf.json
+154a20b8482c3cb1a95aa64c34c5aa2d1d367a94f34008001f1496dbb726152d operational-state.sdf.json
+URLs and reproduction are in docs/profiling.md. The optional public inputs were
+fetched into disk-backed temporary storage and preserve their original notices.

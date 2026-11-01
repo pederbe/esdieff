@@ -1,0 +1,2 @@
+measure-lock: recording background activity as observations (--strict waits for a quiet host and counts it as disturbance)
+measure-lock: desktop activity observed: unattributed CPU outside the measurement slice reached 1.683132531 cores > 1.0; diagnostics and busiest processes in /home/peder/.local/state/measure-lock/disturbance-20261101T165454-1943326.log

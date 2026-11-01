@@ -113,3 +113,7 @@ Add `--features hotpath-alloc` for diagnostic allocation traffic, and set
 Allocation traffic, peak memory and internal safeguard counters have different
 meanings. The fixed 100 ms pattern timeout is cooperative, so the workload does
 not establish a hard deadline or exact memory ceiling.
+
+The [migration receipt](profiling/68/receipt.txt) retains the ordinary paired
+counts, process observations and separate allocation capture. Its measurements
+support only the named workload and recorded host conditions.
