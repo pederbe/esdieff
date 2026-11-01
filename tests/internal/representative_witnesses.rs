@@ -469,10 +469,10 @@ fn both_reports_show_representative_witnesses_alike() {
     let wire: Value = serde_json::from_str(&comparison.to_json()).unwrap();
     assert_eq!(
         wire["request"]["comparison"],
-        "esdieff.revision-comparison/8"
+        "esdieff.revision-comparison/9"
     );
     let human = comparison.to_human();
-    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/8: breaking\n"));
+    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/9: breaking\n"));
     let valve = "/sdfObject/Valve/sdfProperty";
     for (quality, raw, direction, earlier, later, absent) in [
         ("mode/type", "\"\"", "client", "admitted", "rejected", ""),
