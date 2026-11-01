@@ -13,9 +13,10 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/7`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/8`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/7` adds implementer
+This page describes the current checkout. Contract `/8` adds implementer grouping
+count classifications. Contract `/7` added implementer
 declaration-presence classifications to `/6`, which classified changes to
 corresponding declarations' requiredness. Contract `/5` introduced the
 implementer perspective.
@@ -67,8 +68,12 @@ Implementer comparison also classifies [declaration presence](#declaration-prese
 inside corresponding groupings. A new mandatory obligation is breaking,
 optional additions and established removals are compatible.
 
+Implementer comparison also classifies [grouping instance counts](#grouping-instance-counts).
+Every earlier permitted modeled count must remain permitted. Narrowing is
+breaking and widening is compatible.
+
 The implementer perspective leaves one-sided top-level groupings,
-grouping counts, Property capability changes and whole
+Property capability changes and whole
 Action/Event input or output additions and removals undetermined. These need
 separate obligation rules rather than reversal of the client rules. Documentary
 changes remain compatible. Context metadata compatibility remains outside scope
@@ -505,6 +510,46 @@ Property capabilities, whole Action/Event input/output presence, map-data
 
 `minItems` and `maxItems` make an `sdfObject` or `sdfThing` a Grouping array and bound its instance count inclusively. Things decide how many instances they have, so the range behaves like Thing-supplied data, following [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md). When both revisions are arrays, a raised minimum, a lowered maximum or an added maximum narrows the range and is compatible, and a lowered or removed minimum or a raised or removed maximum widens it and is breaking. An absent minimum reads as 0 and an absent maximum as unbounded, so an added `minItems` of `0` leaves the range as it is and is compatible. Counts compare as exact numbers, each change is judged at its own end of the range, and none has a witness or a data direction. A grouping that becomes or stops being an array changes how its instances are addressed, so its count changes are undetermined with `comparison.not_classified`, and so are counts that are not exact nonnegative integers or a minimum above the maximum.
 
+For implementers, every count permitted by the earlier revision must remain
+permitted by the later revision, following
+[ADR 0058: Implementer grouping counts](adr/0058-implementer-grouping-counts.md).
+Both revisions must establish complete, nonempty valid array ranges before
+either changed bound is classified.
+
+| Changed bound | Implementer perspective | Client perspective |
+| --- | --- | --- |
+| Raised minimum or lowered maximum | Breaking | Compatible |
+| Lowered minimum or raised maximum | Compatible | Breaking |
+| Absent minimum versus explicit zero, with a maximum retained | Compatible | Compatible |
+
+Each changed quality keeps its own row. A shift from [2,4] to [3,6] has a
+breaking minimum and compatible maximum for implementers, with the opposite
+client classifications. Both overall results are breaking. Overlap is
+insufficient because an earlier two-instance implementation loses conformance.
+Equal exact numeric spellings produce no difference.
+
+The rule applies to top-level and nested corresponding Objects and Things,
+including optional groupings and optional ancestors. A positive minimum does
+not make a declaration mandatory. Zero instances and an absent optional
+declaration are distinct. Presence and requiredness keep their independent
+rules, and unchanged unresolved requirements do not hide established count facts.
+Extra physical capabilities retained outside the model do not count as modeled
+instances. Reducing a maximum from four to three excludes an implementation
+exposing four modeled instances, even if it could be changed to hide one.
+
+Comparison uses effective composed bounds, including inherited qualities,
+local overrides and removal of one bound while the other retains an array.
+Rows keep chronological locations and nearest origins, including absent
+locations and deletion origins. Adding or removing a whole grouping retains
+its maximal declaration row without descendant count rows. Unavailable facts
+and exhausted allowances retain their existing causes. Neither partially read
+ranges nor whole-model realizability establish count compatibility.
+
+Contract `/8` retains diff envelope `1.7` and acknowledgement format `1`.
+Old undetermined acknowledgements do not match newly breaking or compatible
+count classifications. Review intended differences and regenerate
+acknowledgements where needed using the selected perspective.
+
 ## Units
 
 A changed `unit` in a data description follows the unit rule of [ADR 0039: Client-side revision comparison](adr/0039-client-side-revision-comparison.md) and the recorded evidence of [ADR 0027: Unit names and recorded registry guidance](adr/0027-unit-names-and-recorded-registry-guidance.md), described in the [unit contract](unit-contract.md). A change between two different current names breaks every Client direction the data carries, because Clients would misread its values. A current name has a nonlegacy entry in the recorded SenML evidence, from either its SenML Units or its Secondary Units section. So `Cel` to `K`, `ms` to `s` and `Wh` to `kWh` are all breaking.
@@ -578,7 +623,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.7`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/7"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/8"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; policy.perspective:`"client"|"implementer"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |

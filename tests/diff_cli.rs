@@ -37,7 +37,7 @@ fn declaration_obligations_share_classifications_across_reports_and_saved_plans(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/7"
+            "esdieff.revision-comparison/8"
         );
         assert_eq!(wire["policy"]["perspective"], "implementer");
         assert_eq!(wire["result"]["differences"][0]["quality"], "sdfRequired");
@@ -868,7 +868,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/7: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/8: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -1054,7 +1054,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/7: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/8: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -1586,7 +1586,7 @@ fn declaration_presence_agrees_across_formats_plans_and_acknowledgement_exports(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/7"
+            "esdieff.revision-comparison/8"
         );
         let differences = wire["result"]["differences"].as_array().unwrap();
         assert_eq!(differences.len(), 1);
@@ -1691,5 +1691,183 @@ fn declaration_presence_agrees_across_formats_plans_and_acknowledgement_exports(
         let client_exit = if kind == "added" { 0 } else { 1 };
         let client = report(&output, client_exit);
         assert_eq!(client["policy"]["perspective"], "client");
+    }
+}
+
+#[test]
+fn grouping_counts_share_perspective_exits_reports_plans_and_acknowledgements() {
+    let tree = Tree::new();
+    let before = r#"{"info":{"version":"1"},"sdfObject":{"Sockets":{"minItems":2,"maxItems":4}}}"#;
+    let old = tree.write("old.json", before);
+    for (after, expected, exit, client_exit) in [
+        (
+            before.replace("maxItems\":4", "maxItems\":3"),
+            "breaking",
+            1,
+            0,
+        ),
+        (
+            before.replace("maxItems\":4", "maxItems\":6"),
+            "compatible",
+            0,
+            1,
+        ),
+        (
+            before.replace("maxItems\":4", "maxItems\":1"),
+            "undetermined",
+            3,
+            3,
+        ),
+    ] {
+        let new = tree.write("new.json", &after);
+        let options = ["--perspective", "implementer", "--format", "json"];
+        let wire = report(&diff(old.as_os_str(), new.as_os_str(), &options), exit);
+        assert_eq!(
+            wire["request"]["comparison"],
+            "esdieff.revision-comparison/8"
+        );
+        assert_eq!(wire["version"], "1.7");
+        assert_eq!(wire["policy"]["perspective"], "implementer");
+        let row = &wire["result"]["differences"][0];
+        assert_eq!(row["classification"], expected);
+        assert_eq!(row["quality"], "maxItems");
+        assert_eq!(row["directions"], json!([]));
+        assert!(row.get("witness").is_none());
+        for revision in ["earlier", "later"] {
+            assert_eq!(
+                row[revision]["location"]["pointer"],
+                "/sdfObject/Sockets/maxItems"
+            );
+        }
+        let client = report(
+            &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+            client_exit,
+        );
+        assert_eq!(client["policy"]["perspective"], "client");
+        for format in ["human", "markdown", "sarif"] {
+            let output = diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &["--perspective", "implementer", "--format", format],
+            );
+            assert_eq!(output.status.code(), Some(exit));
+            let rendered = String::from_utf8(output.stdout).unwrap();
+            assert!(rendered.contains("maxItems"));
+            assert!(rendered.contains(expected));
+            if format == "sarif" {
+                let log: Value = serde_json::from_str(&rendered).unwrap();
+                assert_eq!(log["runs"][0]["properties"]["perspective"], "implementer");
+            } else {
+                assert!(rendered.contains("Perspective: implementer."));
+            }
+        }
+        for perspective in [None, Some("implementer")] {
+            let mut case = json!({"name":"counts","operation":"diff", "earlier":{"model":"old.json"},"later":{"model":"new.json"}});
+            if let Some(perspective) = perspective {
+                case["perspective"] = json!(perspective);
+            }
+            let plan = tree.write(
+                "counts-plan.json",
+                &json!({
+                    "schema":"esdieff.check-plan","version":"1",
+                    "sources":[{"key":"current","path":"new.json","role":"model"}],"cases":[case]
+                })
+                .to_string(),
+            );
+            let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+                .args(["check", "--plan"])
+                .arg(&plan)
+                .args(["--format", "json"])
+                .output()
+                .unwrap();
+            assert_eq!(
+                output.status.code(),
+                Some(if perspective.is_some() {
+                    exit
+                } else {
+                    client_exit
+                })
+            );
+            let plan: Value = serde_json::from_slice(&output.stdout).unwrap();
+            let expected_report = if perspective.is_some() {
+                &wire
+            } else {
+                &client
+            };
+            assert_eq!(
+                plan["cases"][0]["report"]["result"]["summary"],
+                expected_report["result"]["summary"]
+            );
+            assert_eq!(
+                plan["cases"][0]["report"]["result"]["differences"][0]["classification"],
+                expected_report["result"]["differences"][0]["classification"]
+            );
+        }
+        // Format 1 acknowledgements from /7 no longer match a reclassified count.
+        let old_entry = json!({"kind":"changed","subject":"quality","quality":"maxItems","classification":"undetermined",
+            "earlier":{"document":"document","pointer":"/sdfObject/Sockets/maxItems"},
+            "later":{"document":"document","pointer":"/sdfObject/Sockets/maxItems"}});
+        let acknowledged = tree.write("old-ack.json", &json!({"schema":"esdieff.acknowledged-differences","version":"1","differences":[old_entry]}).to_string());
+        let result = report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledged",
+                    acknowledged.to_str().unwrap(),
+                ],
+            ),
+            if exit == 3 { 0 } else { exit },
+        );
+        assert_eq!(
+            result["result"]["differences"][0]["acknowledged"],
+            exit == 3
+        );
+        let exported = tree.0.join("counts-export.json");
+        // Each iteration writes a new reviewable acknowledgement export.
+        if exported.exists() {
+            fs::remove_file(&exported).unwrap();
+        }
+        report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledgements-output",
+                    exported.to_str().unwrap(),
+                ],
+            ),
+            exit,
+        );
+        let entries: Value = serde_json::from_slice(&fs::read(&exported).unwrap()).unwrap();
+        assert_eq!(entries["version"], "1");
+        assert_eq!(
+            entries["differences"].as_array().unwrap().len(),
+            usize::from(exit != 0)
+        );
+        let accepted = report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledged",
+                    exported.to_str().unwrap(),
+                ],
+            ),
+            0,
+        );
+        assert_eq!(accepted["result"]["outcome"], expected);
     }
 }

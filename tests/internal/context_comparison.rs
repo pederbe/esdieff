@@ -135,7 +135,7 @@ fn reports_limit_compatibility_to_client_interactions() {
     assert_eq!(wire["version"], "1.7");
     assert_eq!(
         wire["request"]["comparison"],
-        "esdieff.revision-comparison/7"
+        "esdieff.revision-comparison/8"
     );
     assert_eq!(wire["policy"]["compatibility_scope"], "client_interactions");
     assert_eq!(

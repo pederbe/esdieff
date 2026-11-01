@@ -108,3 +108,4 @@
   - [0055: Implementer declaration presence](adr/0055-implementer-declaration-presence.md)
   - [0056: Fixed internal safeguards and Rust patterns](adr/0056-fixed-internal-safeguards-and-rust-patterns.md)
   - [0057: Supplied models without network acquisition](adr/0057-supplied-models-without-network-acquisition.md)
+  - [0058: Implementer grouping counts](adr/0058-implementer-grouping-counts.md)

@@ -1,10 +1,10 @@
-//! A Grouping array's `minItems` and `maxItems` bound its instance count inclusively. Things
-//! decide how many instances there are, so the range behaves like Thing-supplied data: a
-//! later range inside the earlier one is compatible and a widened range is breaking when
-//! both revisions establish valid grouping-array ranges. Other shapes stay unclassified,
-//! following ADR 0039: Client-side revision comparison. An absent minimum reads as 0 and an
-//! absent maximum as unbounded. Each end is judged on its own, so a change to both is
-//! compatible only when both narrow.
+//! A Grouping array's `minItems` and `maxItems` bound its instance count inclusively.
+//! For clients, a narrower later range is compatible and widening is breaking, following
+//! ADR 0039: Client-side revision comparison. Implementer comparison reverses the internal
+//! revision order, preserving every earlier count by accepting widening and rejecting
+//! narrowing, following ADR 0058: Implementer grouping counts. Both revisions must establish
+//! valid grouping-array ranges; other shapes stay unclassified. An absent minimum reads
+//! as 0 and an absent maximum as unbounded. Each changed end is judged on its own.
 use super::bounds::End;
 use super::counts::{bound, relation};
 use super::{Descriptions, Relation};

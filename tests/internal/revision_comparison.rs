@@ -439,9 +439,9 @@ fn the_json_report_agrees_with_the_typed_differences() {
     assert_eq!(wire["operation"], "diff");
     assert_eq!(
         wire["request"]["comparison"],
-        "esdieff.revision-comparison/7"
+        "esdieff.revision-comparison/8"
     );
-    assert_eq!(comparison.contract(), "esdieff.revision-comparison/7");
+    assert_eq!(comparison.contract(), "esdieff.revision-comparison/8");
     assert_eq!(wire["result"]["kind"], "diff");
     assert_eq!(wire["result"]["outcome"], "breaking");
     assert_eq!(wire["outcome"]["disposition"], "failed");
@@ -562,7 +562,7 @@ fn the_human_report_orders_breaking_undetermined_and_compatible_differences() {
             .find(text)
             .unwrap_or_else(|| panic!("{text} in {human}"))
     };
-    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/7: breaking\n"));
+    assert!(human.starts_with("Revision comparison esdieff.revision-comparison/8: breaking\n"));
     assert!(human.contains("Documents: 1 compared, 1 removed, 1 added\n"));
     assert!(human.contains("Removed documents: thermostat\n"));
     assert!(human.contains("Added documents: moved/thermostat\n"));

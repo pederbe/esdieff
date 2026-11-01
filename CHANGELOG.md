@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Classify grouping-array count changes with `--perspective implementer`.
+  Narrowing the permitted counts is breaking, widening is compatible, and
+  client comparison remains the default with its existing classifications.
+  Comparison contract `/8` replaces `/7`, retaining diff envelope `1.7` and
+  acknowledgement format `1`. Review intended differences and regenerate old
+  undetermined count acknowledgements where needed.
+
 - Render captured documentation terminal examples with a Rust helper instead of
   Perl. The existing `scripts/ansi-to-html.sh` pipeline and terminal colours stay
   the same, with correctly balanced markup for combined styles and resets.

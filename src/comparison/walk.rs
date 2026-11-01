@@ -1206,6 +1206,8 @@ impl<'c, 'a> Walk<'c, 'a> {
             // Documentary changes retain their existing perspective-independent meaning.
             let verdict = if self.outcome.perspective == Perspective::Implementer
                 && !matches!(verdict, Verdict::Undetermined(_))
+                && !(matches!(context, Context::Grouping)
+                    && matches!(subject, DifferenceSubject::Quality("minItems" | "maxItems")))
                 && !matches!(
                     subject,
                     DifferenceSubject::Quality("description" | "label" | "$comment" | "default")
