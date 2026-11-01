@@ -144,7 +144,7 @@ fn malformed_required_override_points_to_offending_bytes_without_losing_declarat
                 .source_owner()
                 .require()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Base/sdfProperty/p"
@@ -164,7 +164,7 @@ fn malformed_required_override_points_to_offending_bytes_without_losing_declarat
                 .require()
                 .unwrap()
                 .json()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Base/sdfProperty/p"
@@ -175,7 +175,7 @@ fn malformed_required_override_points_to_offending_bytes_without_losing_declarat
         );
         let syntax = property.effective_syntax().require().unwrap();
         assert_eq!(
-            syntax.location().pointer(8192).require().unwrap(),
+            syntax.location().pointer().require().unwrap(),
             "/sdfObject/Copy/sdfProperty/p/sdfRequired"
         );
         assert_eq!(syntax.source_json().raw_json(), "false");
@@ -184,7 +184,7 @@ fn malformed_required_override_points_to_offending_bytes_without_losing_declarat
                 .explanation()
                 .consumer()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Copy/sdfRef"
@@ -254,7 +254,7 @@ fn sensor_relationship_retains_declaration_and_refined_content_together() {
             .require()
             .unwrap()
             .json()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfObject/Sensor/sdfProperty/temperature"
@@ -262,7 +262,7 @@ fn sensor_relationship_retains_declaration_and_refined_content_together() {
     let effective = target.effective_definition().require().unwrap();
     assert_eq!(target.capability(), RequiredTargetCapability::Established);
     assert_eq!(
-        effective.json().location().pointer(8192).require().unwrap(),
+        effective.json().location().pointer().require().unwrap(),
         "/sdfThing/Device/sdfObject/ambient/sdfProperty/temperature"
     );
     assert_eq!(
@@ -283,7 +283,7 @@ fn sensor_relationship_retains_declaration_and_refined_content_together() {
             .require()
             .unwrap()
             .source_json()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfData/Temperature/minimum"
@@ -296,7 +296,7 @@ fn sensor_relationship_retains_declaration_and_refined_content_together() {
             .explanation()
             .consumer()
             .unwrap()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfThing/Device/sdfObject/ambient/sdfRef"
@@ -330,14 +330,14 @@ fn inherited_declaration_survives_alternative_copy_and_nullable_deletion() {
                     .require()
                     .unwrap()
                     .json()
-                    .pointer(8192)
+                    .pointer()
                     .require()
                     .unwrap(),
                 "/sdfObject/Sensor/sdfProperty/mode"
             );
             let effective = target.effective_definition().require().unwrap();
             assert_eq!(
-                effective.json().location().pointer(8192).require().unwrap(),
+                effective.json().location().pointer().require().unwrap(),
                 "/sdfThing/Device/sdfObject/Use/sdfProperty/mode"
             );
             let data = effective.data_description().require().unwrap();
@@ -359,7 +359,7 @@ fn inherited_declaration_survives_alternative_copy_and_nullable_deletion() {
                         .sources()
                         .next()
                         .unwrap()
-                        .pointer(8192)
+                        .pointer()
                         .require()
                         .unwrap(),
                     format!("/sdfData/Modes/enum/{index}")
@@ -382,7 +382,7 @@ fn inherited_declaration_survives_alternative_copy_and_nullable_deletion() {
                     .explanation()
                     .consumer()
                     .unwrap()
-                    .pointer(8192)
+                    .pointer()
                     .require()
                     .unwrap(),
                 "/sdfThing/Device/sdfObject/Use/sdfRef"
@@ -759,7 +759,7 @@ fn deleted_declaration_is_missing_and_reinsertion_gets_its_new_introducing_sourc
                 .require()
                 .unwrap()
                 .json()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Reinserted/sdfProperty/p"
@@ -1108,7 +1108,7 @@ fn authored_pointer_coordinates_distinguish_original_donor_from_current_refined_
                             .require()
                             .unwrap()
                             .json()
-                            .pointer(8192)
+                            .pointer()
                             .require()
                             .unwrap(),
                         "/sdfObject/Sensor/sdfProperty/p"

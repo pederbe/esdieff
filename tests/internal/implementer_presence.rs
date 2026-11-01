@@ -364,7 +364,7 @@ fn copied_refined_and_reinserted_presence_uses_consumer_coordinates_and_nearest_
                 .sources()
                 .next()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             if refined {

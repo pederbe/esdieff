@@ -247,7 +247,7 @@ fn caller_inspects_refined_ranges_deletion_and_nearest_source_and_request_origin
         result.generated_source()
     );
     assert_eq!(
-        maximum.effective().pointer(8192).require().unwrap(),
+        maximum.effective().pointer().require().unwrap(),
         format!("{TEMPERATURE}/maximum")
     );
     let origins: Vec<_> = maximum.sources().collect();

@@ -360,7 +360,7 @@ fn copied_requirements_follow_effective_coordinates_and_keep_nearest_origins() {
             .sources()
             .next()
             .unwrap()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfObject/Base/sdfRequired"

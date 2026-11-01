@@ -383,7 +383,7 @@ pub(crate) fn evaluate<'a>(
             result.scope.unknown = true;
             return result;
         }
-        match low.compare(high, numeric) {
+        match low.compare_with_work(high, numeric) {
             Ok(order) if order.is_gt() => {
                 result.findings[0] = Some((class.warning_rule(), witness))
             }
@@ -444,7 +444,7 @@ pub(crate) fn evaluate<'a>(
             ) else {
                 continue;
             };
-            match a_number.compare(b_number, numeric) {
+            match a_number.compare_with_work(b_number, numeric) {
                 Ok(order)
                     if order.is_gt() || (order.is_eq() && (exclusive_low || exclusive_high)) =>
                 {
@@ -754,7 +754,7 @@ pub(crate) fn evaluate_numeric<'a>(
                     model.nodes[bound].source.number(),
                 ) {
                     (Field::Present(value), Field::Present(bound)) => {
-                        Some(value.compare(bound, numeric))
+                        Some(value.compare_with_work(bound, numeric))
                     }
                     _ => None,
                 }
@@ -934,7 +934,7 @@ fn strongest_bound<'a>(
         );
         let replace = match selected {
             None => true,
-            Some((_, previous)) => match value.compare(previous.value, numeric) {
+            Some((_, previous)) => match value.compare_with_work(previous.value, numeric) {
                 Ok(order) => {
                     (if lower { order.is_gt() } else { order.is_lt() })
                         || order.is_eq() && candidate.1.exclusive && !previous.exclusive

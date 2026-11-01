@@ -222,7 +222,7 @@ fn advice_and_required_inspection_keep_their_own_evidence_and_omissions() {
                 .require()
                 .unwrap()
                 .json()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Base/sdfProperty/reading"
@@ -234,7 +234,7 @@ fn advice_and_required_inspection_keep_their_own_evidence_and_omissions() {
                 .unwrap()
                 .json()
                 .location()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Copy/sdfProperty/reading"
@@ -247,7 +247,7 @@ fn advice_and_required_inspection_keep_their_own_evidence_and_omissions() {
                 .explanation()
                 .consumer()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfObject/Copy/sdfRef"

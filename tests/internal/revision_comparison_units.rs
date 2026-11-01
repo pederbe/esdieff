@@ -110,10 +110,7 @@ fn secondary_units_names_are_current_names() {
     let origin = unit.side(Revision::Later).unwrap().origin().unwrap();
     let source = origin.sources().next().unwrap();
     assert_eq!(later.source(source.source_id()).unwrap().key(), "meter");
-    assert_eq!(
-        source.pointer(8192).require().unwrap(),
-        "/sdfData/Energy/unit"
-    );
+    assert_eq!(source.pointer().require().unwrap(), "/sdfData/Energy/unit");
 
     // A Secondary Units name and a SenML Units name are different current names too.
     let earlier = catalogue(&[("monitor", &monitor(&[("latency", Some("ms"))]))]);

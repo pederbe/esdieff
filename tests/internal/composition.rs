@@ -220,11 +220,11 @@ fn deletion_and_implicit_default_are_both_observable_without_json_insertion() {
     assert_eq!(deleted.kind(), OriginKind::Deleted);
     let sources: Vec<_> = deleted.sources().collect();
     assert_eq!(
-        sources[0].pointer(8192).require().unwrap(),
+        sources[0].pointer().require().unwrap(),
         "/sdfProperty/Use/writable"
     );
     assert_eq!(
-        sources[1].pointer(8192).require().unwrap(),
+        sources[1].pointer().require().unwrap(),
         "/sdfProperty/Base/writable"
     );
     let default = model
@@ -234,7 +234,7 @@ fn deletion_and_implicit_default_are_both_observable_without_json_insertion() {
     assert_eq!(default.kind(), OriginKind::Default);
     assert_eq!(default.sources().count(), 0);
     assert_eq!(
-        default.effective().pointer(8192).require().unwrap(),
+        default.effective().pointer().require().unwrap(),
         "/sdfProperty/Use/writable"
     );
     assert_eq!(
@@ -972,7 +972,7 @@ fn same_document_fragment_decoding_preserves_escaped_name_identity() {
             .sources()
             .next()
             .unwrap()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfData/A~1B~0C/maximum"

@@ -104,7 +104,7 @@ fn widening_client_supplied_data_and_narrowing_thing_supplied_data_are_compatibl
             );
             assert!(difference.reason().is_none() && difference.witness().is_none());
             let side = difference.side(Revision::Later).unwrap();
-            side.pointer(8192).require().unwrap()
+            side.pointer().require().unwrap()
         })
         .collect();
     changed.sort();
@@ -209,7 +209,7 @@ fn a_lowered_shared_minimum_breaks_the_power_strip_reading_at_its_shared_origin(
             .unwrap()
             .key();
         assert_eq!(
-            (key, source.pointer(8192).require().unwrap().as_str()),
+            (key, source.pointer().require().unwrap().as_str()),
             ("meter", "/sdfData/Power/minimum")
         );
     }
@@ -489,7 +489,7 @@ fn within_work(
             .find(|difference| {
                 [Revision::Earlier, Revision::Later].iter().any(|revision| {
                     difference.side(*revision).is_some_and(|side| {
-                        side.pointer(8192)
+                        side.pointer()
                             .present()
                             .is_some_and(|pointer| pointer.ends_with(suffix))
                     })

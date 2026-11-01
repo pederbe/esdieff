@@ -46,11 +46,11 @@ fn imported_enum_chain_preserves_scalar_sources_outer_consumers_and_dependency_k
             let source = constant.sources().next().unwrap();
             assert_eq!(source.source_id(), leaf_id);
             assert_eq!(
-                source.pointer(8192).require().unwrap(),
+                source.pointer().require().unwrap(),
                 format!("/sdfData/Base/enum/{index}")
             );
             assert_eq!(
-                constant.effective().pointer(8192).require().unwrap(),
+                constant.effective().pointer().require().unwrap(),
                 format!("/sdfProperty/Use/enum/{index}/const")
             );
             for origin in [
@@ -68,7 +68,7 @@ fn imported_enum_chain_preserves_scalar_sources_outer_consumers_and_dependency_k
                 let consumer = origin.consumer().unwrap();
                 assert_eq!(consumer.source_id(), root);
                 assert_eq!(
-                    consumer.pointer(8192).require().unwrap(),
+                    consumer.pointer().require().unwrap(),
                     "/sdfProperty/Use/sdfRef"
                 );
             }
@@ -163,7 +163,7 @@ fn imported_named_alternatives_preserve_nested_consumer_and_default_annotations_
         let nested_consumer = minimum.consumer().unwrap();
         assert_eq!(nested_consumer.source_id(), base_id);
         assert_eq!(
-            nested_consumer.pointer(8192).require().unwrap(),
+            nested_consumer.pointer().require().unwrap(),
             "/sdfData/Base/properties/field/sdfRef"
         );
         let default = branch
@@ -308,7 +308,7 @@ fn ambiguous_shared_fields_keep_unavailable_copied_views_and_related_contributor
                     .sources()
                     .next()
                     .unwrap()
-                    .pointer(8192)
+                    .pointer()
                     .require()
                     .unwrap(),
                 "/sdfData/Mode/properties/field"

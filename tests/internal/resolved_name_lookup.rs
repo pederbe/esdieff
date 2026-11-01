@@ -36,7 +36,7 @@ fn location(json: esdieff::JsonView<'_>, catalogue: &Catalogue) -> (String, Stri
         .into_iter()
         .find(|key| catalogue.source_id(key) == Some(json.source_id()))
         .unwrap();
-    (key.to_owned(), json.pointer(8192).require().unwrap())
+    (key.to_owned(), json.pointer().require().unwrap())
 }
 
 fn wire(report: &Report<'_>) -> Value {
@@ -538,7 +538,7 @@ fn required_inspection_resolves_importer_pointer_in_both_views() {
         let source = target.source_definition().require().unwrap().json();
         assert_eq!(source.source_id(), catalogue.source_id("alarm").unwrap());
         assert_eq!(
-            source.pointer(8192).require().unwrap(),
+            source.pointer().require().unwrap(),
             "/sdfObject/alarm/sdfProperty/status"
         );
         assert!(

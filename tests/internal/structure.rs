@@ -28,11 +28,7 @@ fn given_names_are_case_sensitive_and_colon_findings_have_escaped_source_locatio
         .unwrap();
     assert!(view.outcome().complete());
     assert_eq!(
-        view.inspection_json()
-            .unwrap()
-            .pointer(8192)
-            .require()
-            .unwrap(),
+        view.inspection_json().unwrap().pointer().require().unwrap(),
         "/sdfData/Room ~1~0 Count"
     );
     let report = catalogue.check(CheckRequest::new()).unwrap();
@@ -321,7 +317,7 @@ fn unavailable_member_identity_preserves_its_location_omission_cause() {
         .next()
         .unwrap();
     assert_eq!(unknown.raw_json(), "1");
-    assert!(matches!(unknown.pointer(8192), Field::Unavailable(_)));
+    assert!(matches!(unknown.pointer(), Field::Unavailable(_)));
     let diagnostics = report.diagnostics();
     let condition = diagnostics
         .conditions()
@@ -408,7 +404,10 @@ fn rejected_long_locations_spend_shared_work_before_later_short_locations() {
             .get("x:y")
             .require()
             .unwrap();
-        assert_eq!(short.pointer(30).require().unwrap(), "/sdfData/x:y");
+        assert_eq!(
+            short.pointer_with_limit(30).require().unwrap(),
+            "/sdfData/x:y"
+        );
         let report = catalogue.check(CheckRequest::new()).unwrap();
         assert_eq!(report.outcome().errors(), 13);
         coverage_support::assert_requested_counts(&report);

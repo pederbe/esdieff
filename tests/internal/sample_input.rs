@@ -138,7 +138,7 @@ fn typed_constructors_reject_duplicate_names_and_precharge_aggregate_limits() {
         .get("a/b~c")
         .require()
         .unwrap();
-    assert_eq!(value.pointer(8192).require().unwrap(), "/a~1b~0c");
+    assert_eq!(value.pointer().require().unwrap(), "/a~1b~0c");
     assert_eq!(value.span(), None);
     assert_eq!(
         value.number().require().unwrap().lexeme(),

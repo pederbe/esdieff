@@ -349,7 +349,7 @@ fn handle_identity_ignores_presentation_and_old_owner_storage_allowances() {
     };
     let handle = property.data_description().require().unwrap();
     assert!(matches!(
-        handle.json().location().pointer(8192),
+        handle.json().location().pointer(),
         Field::Unavailable(_)
     ));
     let report = catalogue
@@ -393,10 +393,7 @@ fn handle_identity_ignores_presentation_and_old_owner_storage_allowances() {
         let Some(handle) = property.data_description().present() else {
             continue;
         };
-        if !matches!(
-            handle.json().location().pointer(8192),
-            Field::Unavailable(_)
-        ) {
+        if !matches!(handle.json().location().pointer(), Field::Unavailable(_)) {
             continue;
         }
         let from_pointer = catalogue

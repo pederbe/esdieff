@@ -45,14 +45,14 @@ fn controller_level_composes_supplied_data_and_preserves_source_origins() {
             assert_eq!(explanation.kind(), kind);
             let sources: Vec<_> = explanation
                 .sources()
-                .map(|json| (json.source_id(), json.pointer(8192).require().unwrap()))
+                .map(|json| (json.source_id(), json.pointer().require().unwrap()))
                 .collect();
             assert!(sources.contains(&(contributor, format!("/sdfData/Level/{quality}"))));
             if quality != "minimum" {
                 assert!(sources.contains(&(root, format!("{path}/{quality}"))));
             }
             assert_eq!(
-                explanation.effective().pointer(8192).require().unwrap(),
+                explanation.effective().pointer().require().unwrap(),
                 format!("{path}/{quality}")
             );
         }
@@ -873,10 +873,7 @@ fn mandatory_chains_keep_outer_consumers_while_nested_composition_starts_its_own
         .unwrap();
     let consumer = outer.consumer().unwrap();
     assert_eq!(consumer.source_id(), root);
-    assert_eq!(
-        consumer.pointer(8192).require().unwrap(),
-        "/sdfData/Use/sdfRef"
-    );
+    assert_eq!(consumer.pointer().require().unwrap(), "/sdfData/Use/sdfRef");
     let nested = model
         .explanation("/sdfData/Use/properties/field/minimum")
         .require()
@@ -884,7 +881,7 @@ fn mandatory_chains_keep_outer_consumers_while_nested_composition_starts_its_own
     let consumer = nested.consumer().unwrap();
     assert_eq!(consumer.source_id(), base_id);
     assert_eq!(
-        consumer.pointer(8192).require().unwrap(),
+        consumer.pointer().require().unwrap(),
         "/sdfData/Base/properties/field/sdfRef"
     );
     assert_eq!(
@@ -892,7 +889,7 @@ fn mandatory_chains_keep_outer_consumers_while_nested_composition_starts_its_own
             .sources()
             .next()
             .unwrap()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfData/Leaf/minimum"
@@ -1191,7 +1188,7 @@ fn imported_specified_defaults_keep_consumer_locations_and_empty_authored_origin
             let consumer = explanation.consumer().unwrap();
             assert_eq!(consumer.source_id(), root);
             assert_eq!(
-                consumer.pointer(8192).require().unwrap(),
+                consumer.pointer().require().unwrap(),
                 "/sdfProperty/Use/sdfRef"
             );
         }

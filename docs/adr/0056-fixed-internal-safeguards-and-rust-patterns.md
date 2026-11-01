@@ -10,6 +10,11 @@ remain public. This supersedes the configurability requirement in
 Its distinction between unfinished work, invalid models and omitted report
 details remains in force.
 
+Numeric comparison of admitted exact values uses their bounded representation
+directly. `NumberWork` remains an internal operation counter, and public
+comparison needs no caller-owned work allowance. Location accessors also use
+the fixed internal pointer ceiling without requiring callers to supply bytes.
+
 Use pinned `corvus-regex-ecma262` 0.2.7 for Unicode `u` syntax and unanchored
 matching, including Model checking, Sample-value checking, Generation and
 Recorded trace checking. Retain the qualified guards for names, escape spelling,

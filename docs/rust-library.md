@@ -144,6 +144,9 @@ Replace `Catalogue::with_limits(inputs, limits)` with
 with `Catalogue::take_inputs(inputs)`. Replace `JsonBuilder::with_limits(limits)`
 with `JsonBuilder::new()`, which needs no configuration validation.
 Use `DifferenceAcknowledgements::from_json(bytes)` without a limits argument.
+`NumberWork` is also internal. Call `ExactNumber::compare(other)` to obtain an
+`Ordering` directly from admitted exact values. Location accessors use
+`pointer()` with the fixed internal 8 KiB ceiling, without a byte-budget argument.
 Semantic request options, including selectors, assessments and strict warnings,
 are unchanged. No removed budget is silently ignored.
 

@@ -43,18 +43,13 @@ fn selected_model_alternatives_stay_accessible_with_a_complete_sample_choice_wit
                 .sources()
                 .next()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfData/Base/minimum"
         );
         assert_eq!(
-            explanation
-                .consumer()
-                .unwrap()
-                .pointer(8192)
-                .require()
-                .unwrap(),
+            explanation.consumer().unwrap().pointer().require().unwrap(),
             "/sdfObject/Device/sdfProperty/p/sdfRef"
         );
     }
@@ -133,18 +128,13 @@ fn imported_restricted_alternatives_keep_unknown_donors_and_cannot_be_selected_a
                 .sources()
                 .next()
                 .unwrap()
-                .pointer(8192)
+                .pointer()
                 .require()
                 .unwrap(),
             "/sdfData/Rows/items/minimum"
         );
         assert_eq!(
-            explanation
-                .consumer()
-                .unwrap()
-                .pointer(8192)
-                .require()
-                .unwrap(),
+            explanation.consumer().unwrap().pointer().require().unwrap(),
             "/sdfProperty/rows/sdfRef"
         );
         assert!(SampleRequest::from_description(branch).is_err());
@@ -204,7 +194,7 @@ fn imported_restricted_alternatives_keep_unknown_donors_and_cannot_be_selected_a
         deferred_item
             .json()
             .source_json()
-            .pointer(8192)
+            .pointer()
             .require()
             .unwrap(),
         "/sdfData/Rows/items"

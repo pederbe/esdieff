@@ -7,9 +7,11 @@
   timeout. Remove the public `Limits` type and quota-selecting constructors.
   Use `Catalogue::from_inputs`, `Catalogue::take_inputs` and `JsonBuilder::new`,
   and call `DifferenceAcknowledgements::from_json(bytes)` without a limits
-  argument. Semantic request options remain unchanged. Previously unsupported
-  QuickJS capture/name capacities can now complete. Report envelopes, condition
-  codes and assessment inventories are unchanged.
+  argument. Semantic request options remain unchanged.
+  `NumberWork` is now internal. Use `ExactNumber::compare(other)` returning
+  `Ordering`, and location `pointer()` accessors without a byte-budget argument.
+  Previously unsupported QuickJS capture/name capacities can now complete.
+  Report envelopes, condition codes and assessment inventories are unchanged.
 
 - Classify added and removed declarations inside corresponding groupings with
   `--perspective implementer`. Added mandatory obligations are breaking,

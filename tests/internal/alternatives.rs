@@ -275,10 +275,7 @@ fn typed_nullable_and_direct_origin_handles_explain_final_alternative_qualities(
             AlternativeId::Choice("empty") => "/sdfData/Mode/sdfChoice/empty/minimum",
             _ => panic!("known choice"),
         };
-        assert_eq!(
-            minimum.effective().pointer(8192).require().unwrap(),
-            pointer
-        );
+        assert_eq!(minimum.effective().pointer().require().unwrap(), pointer);
         match identity {
             AlternativeId::Choice("override") => {
                 assert_eq!(
@@ -333,7 +330,7 @@ fn typed_nullable_and_direct_origin_handles_explain_final_alternative_qualities(
     assert_eq!(default.kind(), OriginKind::Default);
     assert_eq!(default.sources().count(), 0);
     assert_eq!(
-        default.effective().pointer(8192).require().unwrap(),
+        default.effective().pointer().require().unwrap(),
         "/sdfData/Rows/items/sdfChoice/full/nullable"
     );
 }
@@ -503,11 +500,11 @@ fn enum_occurrences_preserve_exact_scalar_source_identity_and_duplicate_order() 
         let source = origin.sources().next().unwrap();
         assert_eq!(source.source_id(), source_id);
         assert_eq!(
-            source.pointer(8192).require().unwrap(),
+            source.pointer().require().unwrap(),
             format!("/sdfData/Mode/enum/{index}")
         );
         assert_eq!(
-            origin.effective().pointer(8192).require().unwrap(),
+            origin.effective().pointer().require().unwrap(),
             format!("/sdfData/Mode/enum/{index}/const")
         );
     }

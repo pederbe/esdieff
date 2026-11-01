@@ -20,7 +20,8 @@ fn exact_numbers_keep_lexemes_order_and_checked_conversion() {
     let b = root.get("b").require().unwrap().number().require().unwrap();
     assert_eq!(a.lexeme(), "0.1");
     assert_eq!(
-        a.compare(b, &mut NumberWork::new(2).unwrap()).unwrap(),
+        a.compare_with_work(b, &mut NumberWork::new(2).unwrap())
+            .unwrap(),
         Ordering::Equal
     );
     assert!(a.to_i64().is_err());
@@ -344,10 +345,10 @@ fn source_paths_use_compact_ancestry_and_render_with_escaping_limits() {
         .require()
         .unwrap();
     assert_eq!(
-        leaf.pointer(8192).require().unwrap(),
+        leaf.pointer().require().unwrap(),
         format!("/{}/a~1b~0c/0", "x".repeat(100))
     );
-    assert!(matches!(leaf.pointer(10), Field::Unavailable(_)));
+    assert!(matches!(leaf.pointer_with_limit(10), Field::Unavailable(_)));
     assert_eq!(leaf.raw_json(), "42");
 }
 

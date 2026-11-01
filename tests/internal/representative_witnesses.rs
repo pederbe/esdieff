@@ -410,7 +410,7 @@ fn an_allowance_exhausted_while_generating_candidates_leaves_that_difference_und
                 .find(|difference| {
                     [Revision::Earlier, Revision::Later].iter().any(|revision| {
                         difference.side(*revision).is_some_and(|side| {
-                            side.pointer(8192)
+                            side.pointer()
                                 .present()
                                 .is_some_and(|pointer| pointer.ends_with(suffix))
                         })

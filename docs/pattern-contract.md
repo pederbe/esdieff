@@ -124,5 +124,7 @@ Use `Catalogue::from_inputs`, `Catalogue::take_inputs`, `JsonBuilder::new` or
 `Catalogue::take_inputs_with_limits` and `JsonBuilder::with_limits` are no longer
 public APIs. Decode acknowledgements with
 `DifferenceAcknowledgements::from_json(bytes)` without a limits argument.
+`NumberWork` is internal, exact numeric comparison is `compare(other)` returning
+`Ordering`, and location accessors use `pointer()` without a byte-budget argument.
 Semantic request options remain supported. No removed setting is silently
 accepted or ignored.

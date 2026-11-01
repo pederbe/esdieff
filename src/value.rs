@@ -603,12 +603,15 @@ impl<'a> SampleValueView<'a> {
         }
         Ok(json.render_pointer(size))
     }
-    pub fn pointer(self, bytes: u32) -> Field<String> {
+    pub fn pointer(self) -> Field<String> {
+        self.pointer_with_limit(8192)
+    }
+    pub(crate) fn pointer_with_limit(self, bytes: u32) -> Field<String> {
         crate::JsonView {
             source: self.source,
             node: self.value.node,
         }
-        .pointer(bytes)
+        .pointer_with_limit(bytes)
     }
 }
 #[derive(Clone, Copy)]

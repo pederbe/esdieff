@@ -383,7 +383,7 @@ impl Conditions {
                 "sample"
             },
             message,
-            pointer: at.pointer(POINTER_BYTES).present(),
+            pointer: at.pointer_with_limit(POINTER_BYTES).present(),
             span: Some(span),
             argument,
             related: Vec::new(),
@@ -528,12 +528,12 @@ fn finding_condition(
         let location = json.location();
         related.push(Related::Effective {
             root: location.root_document(),
-            pointer: location.pointer(POINTER_BYTES).present(),
+            pointer: location.pointer_with_limit(POINTER_BYTES).present(),
         });
         let origin = json.n().source;
         related.push(Related::Source {
             id: origin.source_id(),
-            pointer: origin.pointer(POINTER_BYTES).present(),
+            pointer: origin.pointer_with_limit(POINTER_BYTES).present(),
             span: origin.span(),
         });
     }
@@ -552,7 +552,7 @@ fn finding_condition(
         },
         domain: if incomplete { "operation" } else { "sample" },
         message: finding.message,
-        pointer: sample.pointer(POINTER_BYTES).present(),
+        pointer: sample.pointer_with_limit(POINTER_BYTES).present(),
         span: Some(span.start + offset..span.end + offset),
         argument: Some(("constraint", finding.constraint)),
         related,

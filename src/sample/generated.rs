@@ -63,7 +63,7 @@ impl ValueAllowance {
         b: ExactNumber<'_>,
     ) -> Result<Ordering, &'static str> {
         let mut numbers = NumberWork::from_remaining(self.numbers);
-        let order = a.compare(b, &mut numbers);
+        let order = a.compare_with_work(b, &mut numbers);
         self.numbers = numbers.remaining();
         order
     }

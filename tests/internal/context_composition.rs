@@ -98,17 +98,12 @@ fn supplied_groupings_preserve_refine_add_and_delete_context_with_nearest_origin
                 "{tail}"
             );
             assert_eq!(
-                nearest.pointer(8192).require().unwrap(),
+                nearest.pointer().require().unwrap(),
                 source_pointer,
                 "{tail}"
             );
             assert_eq!(
-                explanation
-                    .consumer()
-                    .unwrap()
-                    .pointer(8192)
-                    .require()
-                    .unwrap(),
+                explanation.consumer().unwrap().pointer().require().unwrap(),
                 consumer,
                 "{tail}"
             );

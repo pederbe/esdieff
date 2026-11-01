@@ -44,7 +44,7 @@ pub(crate) fn describe(
             .source(side.root_document())
             .map_or("", |source| source.key());
         words.push_str(&format!(" in {}", code(document)));
-        match side.pointer(catalogue.limits.pointer_bytes as u32) {
+        match side.pointer_with_limit(catalogue.limits.pointer_bytes as u32) {
             Field::Present(pointer) if pointer.is_empty() => {
                 words.push_str(" at the document root")
             }

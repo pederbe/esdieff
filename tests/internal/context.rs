@@ -58,7 +58,7 @@ fn source_and_effective_views_keep_context_separate_from_same_name_properties() 
         Field::Absent
     ));
     assert_eq!(
-        context.json().pointer(8192).require().unwrap(),
+        context.json().pointer().require().unwrap(),
         "/sdfObject/Device/sdfContext/serialNumber"
     );
     let effective = catalogue.effective(EffectiveRequest::new(id)).unwrap();

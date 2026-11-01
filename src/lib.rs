@@ -77,7 +77,8 @@ pub use generation::{
 };
 pub use human::HumanStyle;
 pub use inventory::RequirementDescriptor;
-pub use json::{Children, ExactNumber, Field, JsonKind, JsonView, NumberWork};
+pub(crate) use json::NumberWork;
+pub use json::{Children, ExactNumber, Field, JsonKind, JsonView};
 pub(crate) use limits::Limits;
 pub use reference::{ReferenceCondition, ReferenceOmissions, ReferenceRequest, ReferenceResult};
 pub use registry::{RecordedRegistryPolicy, RegistryKnowledgeView};

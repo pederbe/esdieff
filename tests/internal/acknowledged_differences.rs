@@ -542,7 +542,7 @@ fn a_difference_the_operation_limit_left_undetermined_is_never_acknowledged() {
             assert_eq!(difference.classification(), Classification::Undetermined);
             for revision in [Revision::Earlier, Revision::Later] {
                 assert_eq!(
-                    difference.side(revision).unwrap().pointer(8192).present(),
+                    difference.side(revision).unwrap().pointer().present(),
                     Some("/sdfObject/Monitor/sdfProperty/temperature/unit".to_owned())
                 );
             }

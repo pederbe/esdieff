@@ -47,10 +47,10 @@ fn required(catalogue: &Catalogue, key: &str, pointer: &str) -> Value {
                         let effective = target
                             .effective_definition()
                             .present()
-                            .map(|definition| definition.json().pointer(8192).require().unwrap());
+                            .map(|definition| definition.json().pointer().require().unwrap());
                         json!([
                             source_key(source),
-                            source.pointer(8192).require().unwrap(),
+                            source.pointer().require().unwrap(),
                             effective,
                             target.capability().as_str()
                         ])

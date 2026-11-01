@@ -259,7 +259,7 @@ fn origin(
         .unwrap()
         .key()
         .to_owned();
-    (key, source.pointer(8192).require().unwrap())
+    (key, source.pointer().require().unwrap())
 }
 
 #[test]
@@ -536,7 +536,7 @@ fn the_json_report_agrees_with_the_typed_differences() {
             assert_eq!(side["origin"]["source_id"], source.source_id().get());
             assert_eq!(
                 side["origin"]["pointer"],
-                source.pointer(8192).require().unwrap()
+                source.pointer().require().unwrap()
             );
             let span = source.span();
             assert_eq!(side["origin"]["span"], json!([span.start, span.end]));

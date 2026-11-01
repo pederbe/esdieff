@@ -150,7 +150,7 @@ fn relocated_content_keeps_its_nearest_origins_and_its_own_reference_as_consumer
             .into_iter()
             .find(|key| catalogue.source_id(key) == Some(json.source_id()))
             .unwrap();
-        (key, json.pointer(8192).require().unwrap())
+        (key, json.pointer().require().unwrap())
     };
     for (member, origin) in [
         ("type", ("base", "/sdfObject/Base/sdfData/measurement/type")),

@@ -1085,11 +1085,11 @@ impl AuthorCondition {
         self.affected = Some(AuthorAffectedLocation {
             root: effective.root_document(),
             effective_pointer: retained
-                .then(|| effective.pointer(cap as u32).present())
+                .then(|| effective.pointer_with_limit(cap as u32).present())
                 .flatten(),
             source: source.source_id(),
             source_pointer: retained
-                .then(|| source.pointer(cap as u32).present())
+                .then(|| source.pointer_with_limit(cap as u32).present())
                 .flatten(),
             span: [source_span.start as u32, source_span.end as u32],
         });

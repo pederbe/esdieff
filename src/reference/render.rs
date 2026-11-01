@@ -215,7 +215,7 @@ impl Writer<'_> {
         if !charge(&mut self.budget.allocation, cap) {
             return Err(Exhausted::Allocation);
         }
-        let pointer = json.pointer(cap as u32);
+        let pointer = json.pointer_with_limit(cap as u32);
         self.budget.allocation += cap
             - match &pointer {
                 Field::Present(p) => p.len(),
@@ -301,7 +301,7 @@ impl Writer<'_> {
         if !charge(&mut self.budget.allocation, cap) {
             return Err(Exhausted::Allocation);
         }
-        let pointer = json.pointer(cap as u32).present();
+        let pointer = json.pointer_with_limit(cap as u32).present();
         self.budget.allocation += cap - pointer.as_ref().map_or(0, String::len);
         let Some(pointer) = pointer else {
             self.omissions.pointers += 1;

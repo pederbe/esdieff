@@ -155,7 +155,7 @@ pub(crate) fn compare(
         let (Field::Present(left), Field::Present(right)) = (left.number(), right.number()) else {
             return (Verdict::Unavailable, 1, supporting);
         };
-        match left.compare(right, number) {
+        match left.compare_with_work(right, number) {
             Ok(order) => (
                 if order.is_eq() {
                     Verdict::Equal
