@@ -499,7 +499,7 @@ fn declaration_requiredness_keeps_data_and_structural_boundaries_independent() {
             "sdfProperty",
             "temp",
             json!({"writable":true}),
-            Classification::Undetermined,
+            Classification::Breaking,
         ),
         (
             "sdfProperty",

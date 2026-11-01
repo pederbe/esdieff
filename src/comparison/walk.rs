@@ -1202,10 +1202,12 @@ impl<'c, 'a> Walk<'c, 'a> {
         sides: [Option<Side<'a>>; 2],
     ) -> Step<()> {
         if !matches!(context, Context::Data(_)) {
-            // Endpoint and capability obligations need their own implementer rules.
+            // Endpoint obligations still need their own implementer rules. Property
+            // characteristics use the existing classifier with reversed revision order.
             // Documentary changes retain their existing perspective-independent meaning.
             let verdict = if self.outcome.perspective == Perspective::Implementer
                 && !matches!(verdict, Verdict::Undetermined(_))
+                && !matches!(context, Context::Characteristic)
                 && !(matches!(context, Context::Grouping)
                     && matches!(subject, DifferenceSubject::Quality("minItems" | "maxItems")))
                 && !matches!(

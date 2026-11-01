@@ -37,7 +37,7 @@ fn declaration_obligations_share_classifications_across_reports_and_saved_plans(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/8"
+            "esdieff.revision-comparison/9"
         );
         assert_eq!(wire["policy"]["perspective"], "implementer");
         assert_eq!(wire["result"]["differences"][0]["quality"], "sdfRequired");
@@ -868,7 +868,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/8: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/9: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -1054,7 +1054,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/8: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/9: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -1586,7 +1586,7 @@ fn declaration_presence_agrees_across_formats_plans_and_acknowledgement_exports(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/8"
+            "esdieff.revision-comparison/9"
         );
         let differences = wire["result"]["differences"].as_array().unwrap();
         assert_eq!(differences.len(), 1);
@@ -1724,7 +1724,7 @@ fn grouping_counts_share_perspective_exits_reports_plans_and_acknowledgements() 
         let wire = report(&diff(old.as_os_str(), new.as_os_str(), &options), exit);
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/8"
+            "esdieff.revision-comparison/9"
         );
         assert_eq!(wire["version"], "1.7");
         assert_eq!(wire["policy"]["perspective"], "implementer");
@@ -1843,6 +1843,147 @@ fn grouping_counts_share_perspective_exits_reports_plans_and_acknowledgements() 
                     "json",
                     "--acknowledgements-output",
                     exported.to_str().unwrap(),
+                ],
+            ),
+            exit,
+        );
+        let entries: Value = serde_json::from_slice(&fs::read(&exported).unwrap()).unwrap();
+        assert_eq!(entries["version"], "1");
+        assert_eq!(
+            entries["differences"].as_array().unwrap().len(),
+            usize::from(exit != 0)
+        );
+        let accepted = report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledged",
+                    exported.to_str().unwrap(),
+                ],
+            ),
+            0,
+        );
+        assert_eq!(accepted["result"]["outcome"], expected);
+    }
+}
+
+#[test]
+fn property_capabilities_share_cli_plan_and_acknowledgement_classifications() {
+    let tree = Tree::new();
+    let before = r#"{"info":{"version":"1"},"sdfObject":{"Switch":{"sdfProperty":{"on":{"type":"boolean","readable":true,"writable":false,"observable":false}}}}}"#;
+    let enabled = before.replace("writable\":false", "writable\":true");
+    let malformed = before.replace("writable\":false", "writable\":\"invalid\"");
+    for (before, after, expected, exit, client_exit) in [
+        (before, enabled.as_str(), "breaking", 1, 0),
+        (enabled.as_str(), before, "compatible", 0, 1),
+        (before, malformed.as_str(), "undetermined", 3, 3),
+    ] {
+        let old = tree.write("capability-old.json", before);
+        let new = tree.write("capability-new.json", after);
+        let options = ["--perspective", "implementer", "--format", "json"];
+        let wire = report(&diff(old.as_os_str(), new.as_os_str(), &options), exit);
+        assert_eq!(wire["version"], "1.7");
+        assert_eq!(
+            wire["request"]["comparison"],
+            "esdieff.revision-comparison/9"
+        );
+        let rows = wire["result"]["differences"].as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["kind"], "changed");
+        assert_eq!(rows[0]["quality"], "writable");
+        assert_eq!(rows[0]["classification"], expected);
+        assert_eq!(rows[0]["directions"], json!(["client_supplied"]));
+        assert!(rows[0]["witness"].is_null());
+        assert_eq!(wire["outcome"]["warnings"], usize::from(exit == 1));
+        for format in ["human", "markdown", "sarif"] {
+            let output = diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &["--perspective", "implementer", "--format", format],
+            );
+            assert_eq!(output.status.code(), Some(exit));
+            let rendered = String::from_utf8(output.stdout).unwrap();
+            assert!(rendered.contains("writable"));
+            assert!(rendered.contains(expected));
+        }
+        let client = report(
+            &diff(old.as_os_str(), new.as_os_str(), &["--format", "json"]),
+            client_exit,
+        );
+        assert_eq!(client["policy"]["perspective"], "client");
+        for perspective in [None, Some("implementer")] {
+            let mut case = json!({"name":"capabilities","operation":"diff","earlier":{"model":"capability-old.json"},"later":{"model":"capability-new.json"}});
+            if let Some(perspective) = perspective {
+                case["perspective"] = json!(perspective);
+            }
+            let plan = tree.write("capability-plan.json", &json!({"schema":"esdieff.check-plan","version":"1","sources":[{"key":"current","path":"capability-new.json","role":"model"}],"cases":[case]}).to_string());
+            let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))
+                .args(["check", "--plan"])
+                .arg(plan)
+                .args(["--format", "json"])
+                .output()
+                .unwrap();
+            assert_eq!(
+                output.status.code(),
+                Some(if perspective.is_some() {
+                    exit
+                } else {
+                    client_exit
+                })
+            );
+            let plan: Value = serde_json::from_slice(&output.stdout).unwrap();
+            let direct = if perspective.is_some() {
+                &wire
+            } else {
+                &client
+            };
+            assert_eq!(
+                plan["cases"][0]["report"]["result"]["summary"],
+                direct["result"]["summary"]
+            );
+            assert_eq!(
+                plan["cases"][0]["report"]["result"]["differences"][0]["classification"],
+                direct["result"]["differences"][0]["classification"]
+            );
+        }
+        let old_ack = tree.write("capability-old-ack.json", &json!({"schema":"esdieff.acknowledged-differences","version":"1","differences":[{"kind":"changed","subject":"quality","quality":"writable","classification":"undetermined","earlier":{"document":"document","pointer":"/sdfObject/Switch/sdfProperty/on/writable"},"later":{"document":"document","pointer":"/sdfObject/Switch/sdfProperty/on/writable"}}]}).to_string());
+        let accepted = report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledged",
+                    old_ack.to_str().unwrap(),
+                ],
+            ),
+            if exit == 3 { 0 } else { exit },
+        );
+        assert_eq!(
+            accepted["result"]["differences"][0]["acknowledged"],
+            exit == 3
+        );
+        let exported = tree.0.join("capability-export.json");
+        report(
+            &diff(
+                old.as_os_str(),
+                new.as_os_str(),
+                &[
+                    "--perspective",
+                    "implementer",
+                    "--format",
+                    "json",
+                    "--acknowledgements-output",
+                    exported.to_str().unwrap(),
+                    "--replace-acknowledgements",
                 ],
             ),
             exit,

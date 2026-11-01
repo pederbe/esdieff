@@ -262,21 +262,17 @@ fn acknowledgements_and_unmatched_documents_use_chronological_coordinates() {
 }
 
 #[test]
-fn structural_changes_and_unavailable_values_do_not_gain_implementer_proofs() {
+fn unavailable_values_do_not_gain_implementer_proofs() {
     let before = json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false}}}}});
-    for after in [
-        json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":true}}}}}),
-        json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false,"sdfRef":"#/missing"}}}}}),
-    ] {
-        let earlier = catalogue(&[("model", &before.to_string())]);
-        let later = catalogue(&[("model", &after.to_string())]);
-        let comparison = ComparisonRequest::new(&earlier, &later)
-            .perspective(Perspective::Implementer)
-            .compare()
-            .unwrap();
-        assert_eq!(comparison.outcome(), Classification::Undetermined);
-        assert!(!comparison.complete());
-    }
+    let after = json!({"sdfObject":{"Device":{"sdfProperty":{"value":{"type":"integer","writable":false,"sdfRef":"#/missing"}}}}});
+    let earlier = catalogue(&[("model", &before.to_string())]);
+    let later = catalogue(&[("model", &after.to_string())]);
+    let comparison = ComparisonRequest::new(&earlier, &later)
+        .perspective(Perspective::Implementer)
+        .compare()
+        .unwrap();
+    assert_eq!(comparison.outcome(), Classification::Undetermined);
+    assert!(!comparison.complete());
 }
 
 #[test]

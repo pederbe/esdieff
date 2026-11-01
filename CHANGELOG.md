@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Classify Property `readable`, `writable` and `observable` changes with
+  `--perspective implementer`. Enabling an interaction is breaking and disabling
+  it is compatible. Client comparison remains the default with its existing
+  classifications. Comparison contract `/9` replaces `/8`, retaining diff
+  envelope `1.7` and acknowledgement format `1`. Review intended capability
+  differences and regenerate old undetermined acknowledgements where needed.
+
 - Classify grouping-array count changes with `--perspective implementer`.
   Narrowing the permitted counts is breaking, widening is compatible, and
   client comparison remains the default with its existing classifications.
