@@ -33,12 +33,24 @@ pub fn run(args: &[&str], input: &[u8], environment: &[(&str, &str)]) -> Output 
 }
 
 pub fn closed_stdout(args: &[&str], input: &[u8]) -> Output {
-    let (reader, writer) = std::io::pipe().unwrap();
-    // Close the reader before the child can emit even its shortest output.
-    drop(reader);
+    #[cfg(unix)]
+    let unwritable = {
+        use std::{net::Shutdown, os::fd::OwnedFd, os::unix::net::UnixStream};
+        let (reader, writer) = UnixStream::pair().unwrap();
+        // Shutdown applies to every inherited copy of this socket endpoint.
+        // Closing a pipe reader alone can race another child's fork/exec.
+        reader.shutdown(Shutdown::Both).unwrap();
+        Stdio::from(OwnedFd::from(writer))
+    };
+    #[cfg(not(unix))]
+    let unwritable = {
+        let (reader, writer) = std::io::pipe().unwrap();
+        drop(reader);
+        Stdio::from(writer)
+    };
     let mut child = command(args, &[])
         .stdin(Stdio::piped())
-        .stdout(Stdio::from(writer))
+        .stdout(unwritable)
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
