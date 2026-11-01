@@ -101,8 +101,9 @@ Run `cargo run --profile dist --example pattern_qualification_consumers` from
 the repository root to check all six rich device families, Context reuse and
 independently expected 1,000/100,000-entry credential and lookbehind traces.
 Optional positional arguments name pinned public model files, including the
-OneDM Door and Operational state models at playground revision
-`41be1e0e564ad39f4d5a1c41fcccef435e388ee9`. Each model is checked, its settled
+OneDM [Door](https://raw.githubusercontent.com/one-data-model/playground/41be1e0e564ad39f4d5a1c41fcccef435e388ee9/sdfObject/sdfobject-door.sdf.json)
+and [Operational state](https://raw.githubusercontent.com/one-data-model/playground/41be1e0e564ad39f4d5a1c41fcccef435e388ee9/sdfObject/sdfobject-operational_state.sdf.json)
+models. Each model is checked, its settled
 generated values are checked individually, and their trace replay must pass.
 Generation/replay consistency is separate from the independently authored
 pattern trace expectations.

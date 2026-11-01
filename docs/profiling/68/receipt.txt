@@ -12,18 +12,18 @@ measurement admission. Outside CPU reached 1.683 cores. Single-host observations
 are not a universal speedup or exact memory promise.
 
 Nine model references: six bundled rich families, Context reuse, OneDM Door and
-Operational state at playground41be1e0e564ad39f4d5a1c41fcccef435e388ee9.
+Operational state at playground revision 41be1e0e564ad39f4d5a1c41fcccef435e388ee9.
 All Model checks complete with zero errors. 495 settled generated vectors keep
 their admission in individual Sample checks and pass Trace replay. Independent
-credential/lookbehind traces at 1000 entries each give990 passed/10 failed;
-at100000 entries each give99000 passed/1000 failed. No undetermined entries.
+credential/lookbehind traces at 1000 entries each give 990 passed/10 failed;
+at 100000 entries each give 99000 passed/1000 failed. No undetermined entries.
 Normalized semantic/count rows match byte-for-byte for every measured pair.
 Generation/replay consistency is separate from the authored trace expectations.
 
 Whole-process median wall/user/system seconds and peak RSS KiB:
 baseline  2.925 / 2.650 / 0.235 / 19240
 candidate 1.820 / 1.820 / 0.000 / 20816
-RSS rises1576KiB on this workload. Zero CPU means below the output resolution.
+RSS rises 1576 KiB on this workload. Zero CPU means below the output resolution.
 Internal elapsed_ns fields measure the documented call scopes; process.tsv also
 includes fixture loading, input assembly, output and disposal. The Hotpath
 allocation capture has instrumentation overhead and records cumulative traffic,
