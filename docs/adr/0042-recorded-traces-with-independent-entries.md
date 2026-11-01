@@ -1,5 +1,9 @@
 # 0042: Recorded traces with independent entries
 
+The door-lock simulator mentioned below is historical. Its replacement example
+checks fixed sample values without modeling device behavior. The Recorded trace
+decision remains unchanged.
+
 ## Context
 
 Teams collect interaction values from devices, apps and test runs, and want to

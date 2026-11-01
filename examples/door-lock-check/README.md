@@ -52,5 +52,5 @@ paths, preserve input bytes and need no hardware or external service.
 See [sources and adaptations](SOURCES.md) for the pinned One Data Model ideas
 and original notices, and the [device Catalogue](../../docs/device-catalogue.md)
 for independent expectations and constraint coverage. The
-[lock demonstration](../lock-demo/README.md) replays a short command sequence
-against the rich model and checks every value it produces.
+[lock example](../lock-demo/README.md) shows the Rust library calls for checking
+the rich model and eight fixed sample values.
