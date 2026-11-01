@@ -159,7 +159,7 @@ fn plan(path: &Path) -> Plan {
                     }),
                     acknowledged: row["acknowledged"].as_str().map(|file| {
                         let bytes = fs::read(directory.join(file)).expect("acknowledgements");
-                        DifferenceAcknowledgements::from_json(&bytes, &esdieff::Limits::default())
+                        DifferenceAcknowledgements::from_json(&bytes)
                             .expect("decoded acknowledgements")
                     }),
                 },

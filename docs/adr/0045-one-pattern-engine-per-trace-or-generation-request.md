@@ -1,5 +1,10 @@
 # 0045: One pattern engine per trace or generation request
 
+This worker-reuse decision is superseded by
+[ADR 0056: Fixed internal safeguards and Rust patterns](0056-fixed-internal-safeguards-and-rust-patterns.md).
+The text below retains the historical decision. Effective scopes, semantic
+results and report-detail distinctions continue where not superseded.
+
 ## Context
 
 [ADR 0014: Bounded partial ECMAScript pattern capability](0014-bounded-pattern-capability.md)

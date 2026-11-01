@@ -46,15 +46,10 @@ pub fn closed_stdout(args: &[&str], input: &[u8]) -> Output {
     child.wait_with_output().unwrap()
 }
 
-pub fn plain(bytes: &[u8]) -> String {
-    let mut text = String::from_utf8(bytes.to_vec()).unwrap();
-    for sequence in [
-        "\x1b[0m", "\x1b[1m", "\x1b[31m", "\x1b[32m", "\x1b[33m", "\x1b[36m",
-    ] {
-        text = text.replace(sequence, "");
-    }
-    text.replace("\r\n", "\n")
-}
+#[path = "../color_support/mod.rs"]
+mod color_support;
+#[allow(unused_imports)]
+pub use color_support::plain;
 
 /// util-linux script creates a real PTY without unsafe Rust or a runtime dependency.
 #[cfg(target_os = "linux")]

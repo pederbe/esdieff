@@ -2,17 +2,14 @@
 mod cli_color_support;
 
 use cli_color_support::plain;
-use esdieff::{
-    Assessment, AuthorObject, AuthorRequest, Catalogue, HumanStyle, Limits, SourceInput,
-};
+use esdieff::{Assessment, AuthorObject, AuthorRequest, Catalogue, HumanStyle, SourceInput};
 use std::{fs, path::PathBuf};
 
 const SOURCE: &str = r#"{"namespace":{"b":"https://example.com/base"},"defaultNamespace":"b","sdfObject":{"Sensor":{"sdfProperty":{"reading":{"type":"integer"}}}}}"#;
 
-fn request(source: &str, limits: Limits) -> AuthorRequest {
+fn request(source: &str) -> AuthorRequest {
     let catalogue =
-        Catalogue::with_limits(&[SourceInput::supplied("base", source.as_bytes())], limits)
-            .unwrap();
+        Catalogue::from_inputs(&[SourceInput::supplied("base", source.as_bytes())]).unwrap();
     let source = catalogue.source_id("base").unwrap();
     AuthorRequest::new(catalogue, "error recipe", "product", "failed")
         .unwrap()
@@ -24,7 +21,7 @@ fn request(source: &str, limits: Limits) -> AuthorRequest {
 
 #[test]
 fn author_style_is_explicit_and_leaves_names_and_unrequested_checking_plain() {
-    let result = request(SOURCE, Limits::default()).author().unwrap();
+    let result = request(SOURCE).author().unwrap();
     let ordinary = result.to_human();
     assert_eq!(ordinary, result.to_human_with_style(HumanStyle::Plain));
     let styled = result.to_human_with_style(HumanStyle::Ansi);
@@ -207,7 +204,7 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
         "\"type\":\"integer\"",
         "\"type\":\"integer\",\"minimum\":\"cold\",\"vendor:meaning\":{}",
     );
-    let result = request(&source, Limits::default())
+    let result = request(&source)
         .checking(Assessment::Initial)
         .unwrap()
         .author()
@@ -248,54 +245,6 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
             reference = Some(report);
         }
     }
-}
-
-#[test]
-fn generation_limits_and_report_omissions_preserve_the_plain_facts() {
-    let local = r#"{"sdfObject":{"Sensor":{}}}"#;
-    for (source, limits, expected_code) in [
-        (local, Limits::default(), "author.local_only_object"),
-        (
-            SOURCE,
-            Limits::default().catalogue_bytes(SOURCE.len() + 40),
-            "author.generation_limit",
-        ),
-    ] {
-        let result = request(source, limits).author().unwrap();
-        assert_eq!(result.generation(), esdieff::Generation::Unavailable);
-        assert_eq!(
-            result.outcome().disposition(),
-            esdieff::Disposition::Undetermined
-        );
-        assert!(result.generated_document().is_none());
-        let ordinary = result.to_human();
-        let styled = result.to_human_with_style(HumanStyle::Ansi);
-        assert_eq!(plain(styled.as_bytes()), ordinary);
-        assert!(styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[33munavailable\x1b[0m"));
-        assert!(styled.contains(expected_code));
-    }
-    let source = SOURCE.replace(
-        "\"type\":\"integer\"",
-        "\"type\":\"integer\",\"minimum\":\"cold\",\"vendor:meaning\":{}",
-    );
-    let limit = 40_000;
-    let result = request(
-        &source,
-        Limits::default().report_bytes(limit).diagnostic_bytes(1),
-    )
-    .checking(Assessment::Initial)
-    .unwrap()
-    .author()
-    .unwrap();
-    let ordinary = result.to_human();
-    let styled = result.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(plain(styled.as_bytes()), ordinary);
-    assert!(ordinary.contains("Diagnostic details omitted:"));
-    assert!(ordinary.contains("Errors: 1"));
-    assert!(ordinary.len() <= limit);
-    assert!(styled.len() <= limit);
-    assert_eq!(result.outcome().disposition(), esdieff::Disposition::Failed);
-    assert!(!ordinary.contains("error formal."));
 }
 
 #[test]

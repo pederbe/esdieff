@@ -8,7 +8,6 @@ use crate::budgeted::failure;
 use crate::effective::EffectiveModel;
 use crate::finding::Finding;
 use crate::json::{self, Issue, JsonView};
-use crate::pattern::MatchingWork;
 use crate::report::WireBasis;
 use crate::role::SetAside;
 use crate::sample::{
@@ -123,10 +122,8 @@ impl<'s, 'm> Selectors<'s, 'm> {
         }
     }
 
-    /// Decode, read and check one line, lending the entry's allowance any live pattern worker
-    /// that `patterns` holds for the trace. Later entries can start another engine after a
-    /// worker stops; they retain their independent Sample-value checking allowances.
-    pub(super) fn check(&mut self, line: Line<'_>, patterns: &mut MatchingWork) -> Checked {
+    /// Decode and check one line with independent fixed Sample safeguards.
+    pub(super) fn check(&mut self, line: Line<'_>) -> Checked {
         let catalogue = self.model.catalogue;
         let limits = &catalogue.limits;
         // The decoding allowances a Sample source would have in this Catalogue.
@@ -164,9 +161,7 @@ impl<'s, 'm> Selectors<'s, 'm> {
             decoding.numeric,
             limits.equality_pairs,
         );
-        patterns.lend_worker(&mut allowance.budget.patterns);
         let outcome = self.settle(&source, &mut allowance, &mut checked, &mut conditions);
-        patterns.reclaim_worker(&mut allowance.budget.patterns);
         checked.entry.outcome = outcome;
         if outcome != TraceOutcome::Passed {
             checked.entry.conditions = conditions.kept;

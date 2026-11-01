@@ -3,7 +3,7 @@
 //! ADR0013: Shared workflow and report guarantees.
 
 use esdieff::{
-    Assessment, Catalogue, CheckRequest, DifferenceAcknowledgements, InspectRequest, Limits,
+    Assessment, Catalogue, CheckRequest, DifferenceAcknowledgements, InspectRequest,
     RecordedRegistryPolicy, SampleKind, SampleRequest, SourceInput, View,
 };
 use std::{
@@ -414,7 +414,7 @@ fn read_acknowledgements(path: &Path) -> Result<(DifferenceAcknowledgements, usi
     std::fs::File::open(path)
         .and_then(|file| file.take(cap).read_to_end(&mut bytes))
         .map_err(|error| error.to_string())?;
-    let acknowledgements = DifferenceAcknowledgements::from_json(&bytes, &Limits::default())?;
+    let acknowledgements = DifferenceAcknowledgements::from_json(&bytes)?;
     Ok((acknowledgements, bytes.len()))
 }
 fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {

@@ -2,9 +2,9 @@
 //! trace is a JSON Lines file of Trace entries, each naming a Sample selector of one selected
 //! document, a value and optionally an Expected admission and a label. The document is
 //! composed once, each distinct selector is resolved once, and every entry is decoded and
-//! checked with its own Sample-value checking allowance. A live pattern worker may be
-//! reused under ADR 0045: One pattern engine per trace or generation request, while each
-//! entry retains its own counters. Malformed entries do not stop later entries.
+//! checked with independent fixed Sample-value safeguards. Corvus matching follows
+//! ADR 0056: Fixed internal safeguards and Rust patterns. Malformed or exhausted
+//! entries do not stop later entries.
 //! The file, line and entry ceilings keep the request finite under ADR 0009: Bounded processing and reporting, and the JSON input
 //! policies of ADR 0012: Exact numbers and JSON input policies apply to every line.
 mod entry;
@@ -345,17 +345,13 @@ impl Catalogue {
         result.scope.set_aside |= budget.set_aside;
         let mut room = self.limits.report_bytes - reserve;
         let mut selectors = entry::Selectors::new(&model);
-        // The trace's own allowance holds the pattern worker that each entry borrows in turn.
         for (index, range) in lines.into_iter().enumerate() {
-            let checked = selectors.check(
-                entry::Line {
-                    id,
-                    number: index as u32 + 1,
-                    offset: range.start,
-                    bytes: &request.trace[range],
-                },
-                &mut budget.patterns,
-            );
+            let checked = selectors.check(entry::Line {
+                id,
+                number: index as u32 + 1,
+                offset: range.start,
+                bytes: &request.trace[range],
+            });
             result.partial |= checked.partial;
             result.scope.interpretations |= checked.interpretations;
             result.scope.set_aside |= checked.set_aside;

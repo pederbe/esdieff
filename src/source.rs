@@ -181,7 +181,7 @@ impl Catalogue {
     pub fn take_inputs(inputs: Vec<SourceInput<'_>>) -> Result<Self, &'static str> {
         Self::take_inputs_with_limits(inputs, Limits::default())
     }
-    pub fn take_inputs_with_limits(
+    pub(crate) fn take_inputs_with_limits(
         inputs: Vec<SourceInput<'_>>,
         limits: Limits,
     ) -> Result<Self, &'static str> {
@@ -191,7 +191,10 @@ impl Catalogue {
     pub fn from_inputs(inputs: &[SourceInput<'_>]) -> Result<Self, &'static str> {
         Self::with_limits(inputs, Limits::default())
     }
-    pub fn with_limits(inputs: &[SourceInput<'_>], limits: Limits) -> Result<Self, &'static str> {
+    pub(crate) fn with_limits(
+        inputs: &[SourceInput<'_>],
+        limits: Limits,
+    ) -> Result<Self, &'static str> {
         let reserve = admit(inputs, &limits)?;
         Self::build(inputs.iter().map(SourceInput::borrowed), limits, reserve)
     }

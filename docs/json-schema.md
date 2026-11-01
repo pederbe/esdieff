@@ -81,7 +81,7 @@ can change equality, patterns depend on engine behavior, and Direct items have
 restricted vocabulary and unavailable nullability. Copying those keywords would
 make a stronger fidelity claim than the existing model supports.
 
-Composition and export share the configured work, node, reference and derived
+Composition and export share the fixed internal work, node, reference and derived
 allocation allowances. Exported schema traversal has a depth ceiling of 64 and
 uses the report byte ceiling, reserving space for a refusal first. If mandatory
 identity cannot fit, the library returns a request error rather than a report.

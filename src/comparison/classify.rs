@@ -504,7 +504,7 @@ impl<'s, 'c> Descriptions<'s, 'c> {
             .multiple(value, step)
             .map_err(UndeterminedReason::limit)
     }
-    /// Both revisions share one `Limits` configuration.
+    /// Both revisions use the fixed internal safeguards.
     fn limits(&self) -> &'c crate::Limits {
         &self.descriptions[0].model.catalogue.limits
     }

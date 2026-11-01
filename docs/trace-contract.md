@@ -75,13 +75,17 @@ For an undetermined admission, an incomplete condition comes before other value-
 
 ## Composition and allowances
 
-The selected document is composed once, on the request's own allowance, as `esdieff generate` composes it. Each distinct selector, a kind and a pointer, is resolved once against that composition, and later entries reuse its resolution. Each entry is checked with an allowance of its own, with the work, allocation, numeric and equality limits that one `esdieff sample` request receives against the same Catalogue, as [ADR 0042: Recorded traces with independent entries](adr/0042-recorded-traces-with-independent-entries.md) states. A check that runs out of its allowance leaves only that entry undetermined, with an `operation.limit` condition. Entries take turns with one pattern engine rather than starting their own, as [ADR 0045: One pattern engine per trace or generation request](adr/0045-one-pattern-engine-per-trace-or-generation-request.md) states. Each entry still has its own pattern polls and duration. Rarely, an entry spends one more pattern poll than it would alone, so an entry with no poll to spare can be undetermined in a trace while it settles on its own, never the other way round.
+Each value or Trace entry retains independent checking safeguards. Pattern matching
+uses Corvus with an internal cooperative timeout for each match, following
+[ADR 0056](adr/0056-fixed-internal-safeguards-and-rust-patterns.md). An interrupted
+match does not poison later independent work. No JavaScript worker, polling
+allowance or accumulated matching-duration budget is shared across values.
 
 ## Bounds
 
 A Recorded trace holds at most 64 MiB, 100,000 entries and 1 MiB per line, apart from its line ending, under [ADR 0009: Bounded processing and reporting](adr/0009-bounded-processing-and-reporting.md). Going beyond any of them is a request error before any entry is checked, so a run never reports a partial file.
 
-The report fits the report byte limit, `Limits::report_bytes`. After the Catalogue's mandatory report reserve and the trace envelope's own, each failed or undetermined entry is charged the bytes of its larger rendering, as a JSON report record or human report lines, in line order. The first entry that does not fit, and every failed or undetermined entry after it, is counted in `entries_omitted` with a `report_limit` record and is not listed. Counts, the outcome and the disposition always cover every entry.
+The report fits the report byte limit, the fixed 8 MiB report ceiling. After the Catalogue's mandatory report reserve and the trace envelope's own, each failed or undetermined entry is charged the bytes of its larger rendering, as a JSON report record or human report lines, in line order. The first entry that does not fit, and every failed or undetermined entry after it, is counted in `entries_omitted` with a `report_limit` record and is not listed. Counts, the outcome and the disposition always cover every entry.
 
 ## Report 1.5
 

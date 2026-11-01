@@ -86,7 +86,7 @@ impl JsonBuilder {
             limits: Limits::default(),
         }
     }
-    pub fn with_limits(limits: Limits) -> Result<Self, &'static str> {
+    pub(crate) fn with_limits(limits: Limits) -> Result<Self, &'static str> {
         limits.validate()?;
         Ok(Self { limits })
     }

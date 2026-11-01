@@ -1,5 +1,10 @@
 # 0014: Bounded partial ECMAScript pattern capability
 
+The engine, runtime and resource-control decision is superseded by
+[ADR 0056: Fixed internal safeguards and Rust patterns](0056-fixed-internal-safeguards-and-rust-patterns.md).
+The text below retains the historical decision. Effective scopes, semantic
+results and report-detail distinctions continue where not superseded.
+
 Esdieff interprets the `pattern` data quality using [ECMA-262 2025](https://tc39.es/ecma262/2025/multipage/text-processing.html#sec-patterns) Unicode `u` syntax and unanchored matching, as required by [RFC 9880 Appendix C.2](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-C.2). Its suggested portable subset does not restrict otherwise permitted syntax.
 
 An initially partial capability uses pinned regress 0.12.0 with optimizations disabled for syntax, and pinned rquickjs 0.14.0 with bundled QuickJS-ng 0.16.2 for matching. Matching guards, parsing, engine initialization, helper evaluation, compilation, matching and destruction occur on one private Rust worker with a 4 MiB stack per operation allowance. The worker starts lazily, reuses its runtime and context, and joins when the allowance is dropped. Syntax checks share the worker without initializing an engine. Supplied patterns and subjects are values passed to fixed internal functions, and the toolkit owns the runtime and allocator choice.

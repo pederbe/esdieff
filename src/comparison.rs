@@ -439,7 +439,7 @@ fn reverse_reason(verdict: Verdict) -> Verdict {
 
 use crate::budgeted::failure;
 
-/// Compares an earlier and a later Catalogue. Both share one `Limits` configuration,
+/// Compares an earlier and a later Catalogue. Both use the fixed internal safeguards,
 /// which sets the single allowance covering both revisions.
 pub struct ComparisonRequest<'a> {
     perspective: Perspective,

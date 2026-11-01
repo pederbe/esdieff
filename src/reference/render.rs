@@ -1164,7 +1164,7 @@ fn example(
     if !kind.suffix().is_empty() {
         pointer.truncate(pointer.len().saturating_sub(kind.suffix().len()));
     }
-    let example = examples.search(kind, pointer, json, &mut writer.budget.patterns);
+    let example = examples.search(kind, pointer, json);
     writer.row(&["\n", example.status, ".\n\n"])?;
     if let Some(value) = example.value {
         // The delimiter cannot be closed by any line within supplied JSON string content.
