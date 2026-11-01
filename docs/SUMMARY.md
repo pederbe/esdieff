@@ -22,7 +22,6 @@
 - [Supplied source documents](source-workflow.md)
 - [Repeatable catalogue checks](check-plans.md)
 - [Check a local model collection](directory-discovery.md)
-- [Pinned document acquisition](acquisition-contract.md)
 - [Model meaning assessment](model-meaning-contract.md)
   - [Formal model admission](formal-admission-contract.md)
   - [Model coverage boundaries](model-coverage-boundaries.md)
@@ -108,3 +107,4 @@
   - [0054: Implementer declaration requiredness](adr/0054-implementer-declaration-requiredness.md)
   - [0055: Implementer declaration presence](adr/0055-implementer-declaration-presence.md)
   - [0056: Fixed internal safeguards and Rust patterns](adr/0056-fixed-internal-safeguards-and-rust-patterns.md)
+  - [0057: Supplied models without network acquisition](adr/0057-supplied-models-without-network-acquisition.md)

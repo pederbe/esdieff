@@ -13,22 +13,18 @@ share a link to the case you are discussing.
 
 <div id="esdieff-process-map"></div>
 
-<p id="esdieff-process-static"><img src="../images/process-overview.svg" alt="Local model files or explicitly acquired snapshots form a catalogue. Source inspection reads original content. Effective views resolve supplied definitions. Model checks, revision comparison and value testing produce results with evidence."></p>
+<p id="esdieff-process-static"><img src="../images/process-overview.svg" alt="Local model files form a catalogue. Source inspection reads original content. Effective views resolve supplied definitions. Model checks, revision comparison and value testing produce results with evidence."></p>
 
 ## Supply the files
 
-Supply the model and the shared definitions it uses as local files. The optional
-`acquire` command retrieves one explicitly selected public GitHub file at a
-pinned commit and verifies its bytes against an independently established
-SHA-256. Acquisition does not parse or validate the model.
-
-The subsequent model operations run offline. Namespace URIs identify supplied
+Supply the model and the shared definitions it uses as local files. Obtain those
+files with your preferred tools. Esdieff's model operations run offline.
+Namespace URIs identify supplied
 definitions and do not trigger downloads. The catalogue retains the original
 content, exact numbers and source locations so findings can point back to what
 you supplied.
 
-See [supplied source documents](../source-workflow.md) and
-[pinned document acquisition](../acquisition-contract.md).
+See [supplied source documents](../source-workflow.md).
 
 ## Check and inspect
 

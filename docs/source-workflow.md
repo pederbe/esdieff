@@ -2,7 +2,8 @@
 
 Esdieff accepts explicit SDF documents and retains every acquisition attempt. Source inspection and typed source projections are available independently of completed model assessment, following [ADR 0013: Shared workflow and report guarantees](adr/0013-shared-workflow-and-report-guarantees.md).
 
-For deliberate retrieval of a pinned public GitHub file into a new local snapshot, use the separate [acquisition operation](acquisition-contract.md). Its receipt is independent of ordinary Model checking and is never loaded automatically.
+Esdieff reads supplied files and bytes. Obtain files with your preferred tools
+before checking them. Source URIs are descriptive metadata and are never fetched.
 
 The command accepts files and one standard-input document:
 

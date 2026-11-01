@@ -448,16 +448,6 @@ Comparison of data values in an applicable effective context, returning equal, d
 
 These Esdieff terms distinguish work performed on SDF specifications from the network interactions they describe. Operational rules belong in the linked contracts and ADRs.
 
-**Pinned document acquisition**:
-Explicit retrieval of one selected source document at a complete revision identity, retaining its unchanged bytes only when their digest matches a separately supplied expectation.
-_Avoid_: Model checking, namespace resolution or dependency discovery.
-
-**Acquired snapshot**:
-The unchanged local bytes retained by Pinned document acquisition. Its content identity does not establish JSON decoding, SDF validity or device behavior.
-
-**Acquisition receipt**:
-Evidence of a Pinned document acquisition request and its actual transfer, content verification and output outcome. It is separate from a Model checking report.
-
 **Model checking**:
 Assessment of an SDF specification against the applicable SDF requirements.
 _Avoid_: Sample-value checking when assessing the specification itself.

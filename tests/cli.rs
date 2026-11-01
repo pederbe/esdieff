@@ -21,6 +21,24 @@ fn run(args: &[&str], stdin: &[u8]) -> std::process::Output {
     child.stdin.take().unwrap().write_all(stdin).unwrap();
     child.wait_with_output().unwrap()
 }
+
+#[test]
+fn network_acquisition_is_not_a_command_or_a_help_option() {
+    let help = run(&["--help"], b"");
+    assert!(help.status.success());
+    assert!(!String::from_utf8(help.stdout).unwrap().contains("acquire"));
+    for args in [&["acquire"][..], &["acquire", "--help"][..]] {
+        let output = run(args, b"");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(
+            String::from_utf8(output.stderr)
+                .unwrap()
+                .contains("unknown command")
+        );
+    }
+}
+
 #[test]
 fn stdin_check_completes_initial_work_in_both_formats() {
     let output = run(&["check", "--format", "json", "-"], b"{}");

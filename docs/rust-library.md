@@ -3,8 +3,8 @@
 The model operations behind the `esdieff` command are available as a Rust
 library, so you can embed checking, inspection, generation and revision
 comparison in your own tools. The library forbids unsafe Rust in its own code
-and performs no network access. The separate `acquire` command's network
-retrieval and command-line file-output adapters are outside this library API.
+and performs no network access. Supply model bytes through the library, or pass
+local file paths to the command-line tool.
 
 ## Add the crate
 
