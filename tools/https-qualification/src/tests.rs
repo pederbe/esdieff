@@ -298,7 +298,9 @@ fn handshake_headers_and_trickling_body_exhaust_deadlines() {
     .new_agent();
     assert!(matches!(
         receive(&agent, &server.uri, &digest(b"x")),
-        Err(Failure::Transport(_))
+        Err(Failure::Transport(ureq::Error::Timeout(
+            ureq::Timeout::Connect
+        )))
     ));
     server.finish();
     let server = Server::start(
@@ -314,7 +316,9 @@ fn handshake_headers_and_trickling_body_exhaust_deadlines() {
     .new_agent();
     assert!(matches!(
         receive(&agent, &server.uri, &digest(b"x")),
-        Err(Failure::Transport(_))
+        Err(Failure::Transport(ureq::Error::Timeout(
+            ureq::Timeout::Global
+        )))
     ));
     server.finish();
     let mut chunks = vec![(
@@ -331,7 +335,9 @@ fn handshake_headers_and_trickling_body_exhaust_deadlines() {
     .new_agent();
     assert!(matches!(
         receive(&agent, &server.uri, &digest(b"xxxxxxxxxx")),
-        Err(Failure::Body(_))
+        Err(Failure::Body(error)) if error.get_ref()
+            .and_then(|source| source.downcast_ref::<ureq::Error>())
+            .is_some_and(|error| matches!(error, ureq::Error::Timeout(ureq::Timeout::Global)))
     ));
     server.finish();
 }
@@ -359,9 +365,9 @@ fn complete_empty_and_chunked_bodies_keep_exact_bytes() {
 
 #[test]
 fn delayed_resolution_exhausts_the_allowance_it_receives() {
-    use std::sync::mpsc;
+    use std::sync::{Mutex, mpsc};
     #[derive(Debug)]
-    struct BlockedResolver;
+    struct BlockedResolver(Mutex<mpsc::Receiver<()>>);
     impl Resolver for BlockedResolver {
         fn resolve(
             &self,
@@ -371,24 +377,33 @@ fn delayed_resolution_exhausts_the_allowance_it_receives() {
         ) -> Result<ResolvedSocketAddrs, ureq::Error> {
             // Same bounded channel wait as ureq's DefaultResolver, with a
             // deterministic slow lookup in place of the host's getaddrinfo.
-            let (sender, receiver) = mpsc::sync_channel::<()>(1);
-            let worker = thread::spawn(move || {
-                thread::sleep(Duration::from_millis(150));
-                let _ = sender.send(());
-            });
-            let result = receiver.recv_timeout(*timeout.after);
-            worker.join().unwrap();
+            let result = self.0.lock().unwrap().recv_timeout(*timeout.after);
             assert!(result.is_err());
             Err(ureq::Error::Timeout(timeout.reason))
         }
     }
+    let (sender, receiver) = mpsc::sync_channel(1);
+    let (release, released) = mpsc::sync_channel(1);
+    let worker = thread::spawn(move || {
+        // Lookup cannot finish until the caller explicitly releases it.
+        released.recv_timeout(Duration::from_secs(2)).unwrap();
+        let _ = sender.send(());
+    });
     let agent = Agent::with_parts(
         config(trusted(), Duration::from_millis(50), Duration::from_secs(1)),
         DefaultConnector::default(),
-        BlockedResolver,
+        BlockedResolver(Mutex::new(receiver)),
     );
+    let started = Instant::now();
     assert!(matches!(
         receive(&agent, "https://localhost/file", &digest(b"")),
-        Err(Failure::Transport(ureq::Error::Timeout(_)))
+        Err(Failure::Transport(ureq::Error::Timeout(
+            ureq::Timeout::Resolve
+        )))
     ));
+    let elapsed = started.elapsed();
+    release.send(()).unwrap();
+    worker.join().unwrap();
+    assert!(elapsed >= Duration::from_millis(50));
+    assert!(elapsed < Duration::from_secs(1));
 }
