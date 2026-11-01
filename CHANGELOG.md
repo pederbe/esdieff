@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+### Changed
+
 - Classify Property `readable`, `writable` and `observable` changes with
   `--perspective implementer`. Enabling an interaction is breaking and disabling
   it is compatible. Client comparison remains the default with its existing
@@ -52,7 +54,7 @@
   Making a corresponding declaration mandatory is breaking, releasing
   obligations alone is compatible, and equivalent resolved requirements produce
   no difference. Declaration presence follows the rules above. Comparison
-  contract `/7` includes these rules, with diff envelope `1.7` and acknowledgement
+  contract `/9` includes these rules, with diff envelope `1.7` and acknowledgement
   format `1` unchanged. Review intended differences and regenerate old
   undetermined acknowledgements where classifications have changed.
 
@@ -62,12 +64,18 @@
   Client comparison remains the default. Reports state the perspective.
   Other structural implementation obligations remain undetermined and Context
   metadata compatibility remains outside scope. Diff JSON readers must accept
-  envelope `1.7` with `policy.perspective` and comparison contract `/7`.
+  envelope `1.7` with `policy.perspective` and comparison contract `/9`.
+  Whole Action/Event input or output presence changes remain undetermined for
+  implementers. Explicit rename mapping remains outside the supported workflow.
 
 ### Fixed
 
 - Correct documentation and requirement descriptions for metadata absence,
   implicit defaults, report contracts and current capability boundaries.
+  Inspection guidance now distinguishes authored, effective and requirement
+  views and uses consistent SDF terminology.
+  ([#54](https://github.com/pederbe/esdieff/pull/54),
+  [#56](https://github.com/pederbe/esdieff/pull/56))
 
 ### Added
 
@@ -102,6 +110,32 @@
   effective constraints, illustrative admitted values and source origins. Use
   `esdieff reference --document MODEL --pointer POINTER INPUT...` or the
   library’s `ReferenceRequest`. Existing commands and report formats are unchanged.
+
+### Documentation and maintenance
+
+- Add a guide to resolving missing and ambiguous name references, including
+  namespace lookup and supplied-document examples. Connect shared-definition
+  exploration to revision comparison in the authoring workflow.
+  ([#52](https://github.com/pederbe/esdieff/pull/52),
+  [#53](https://github.com/pederbe/esdieff/pull/53))
+- Finalize source changelogs before weekly release preparation and record
+  published release notes through pull requests. Keep source entries separate
+  from published notes, and check the recorded notes against their release.
+  These changes maintain release records without changing model operations.
+  ([#37](https://github.com/pederbe/esdieff/pull/37),
+  [#38](https://github.com/pederbe/esdieff/pull/38),
+  [#39](https://github.com/pederbe/esdieff/pull/39),
+  [#40](https://github.com/pederbe/esdieff/pull/40))
+- Update optional Hotpath profiling from `0.30.0` to `0.30.3`, website tooling
+  Wrangler from `4.154.0` to `4.156.0`, Node.js from `26.12.1` to `26.13.0`
+  and the Homebrew setup action revision.
+  ([#41](https://github.com/pederbe/esdieff/pull/41),
+  [#66](https://github.com/pederbe/esdieff/pull/66))
+- Move checks that depend on internal resource controls into the internal test
+  suite, retaining public library and command-line coverage for the fixed
+  resource API. Separate pattern semantics checks from the default deadline.
+  ([#40](https://github.com/pederbe/esdieff/pull/40),
+  [#73](https://github.com/pederbe/esdieff/pull/73))
 
 ## [0.2.0] - 2026-10-30
 
