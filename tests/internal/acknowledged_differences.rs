@@ -275,7 +275,7 @@ fn the_human_report_lists_acknowledged_differences_and_unused_entries() {
     let human = comparison.to_human();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/7: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/8: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -339,7 +339,7 @@ fn omitted_details_keep_unacknowledged_rows_first_with_the_counts_and_unused_ent
     assert_eq!(wire["diagnostics"]["truncated"], true);
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/7: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/8: breaking\nDisposition: failed, with 1 breaking and 0 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -484,7 +484,7 @@ fn an_acknowledged_added_unit_passes_complete_while_it_stays_undetermined() {
     let human = comparison.to_human();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/7: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/8: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );

@@ -47,6 +47,7 @@ mod formal_admission;
 mod formatted_null;
 mod generated_values;
 mod gregorian_dates;
+mod implementer_instance_counts;
 mod implementer_presence;
 mod implementer_requiredness;
 mod input_capabilities;
