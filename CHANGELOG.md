@@ -74,6 +74,9 @@
 
 ### Fixed
 
+- Generate Homebrew recipes that pass current Homebrew style and audit checks.
+  Existing installations keep the same release archives and checksums.
+
 - Correct documentation and requirement descriptions for metadata absence,
   implicit defaults, report contracts and current capability boundaries.
   Inspection guidance now distinguishes authored, effective and requirement

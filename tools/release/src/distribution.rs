@@ -655,7 +655,7 @@ fn homebrew(args: &[String]) -> Result<()> {
 
 fn formula(version: &str, hashes: &[String]) -> String {
     format!(
-        "class Esdieff < Formula\n  desc \"An SDF toolkit for connected-device models\"\n  homepage \"https://esdieff.com\"\n  version \"{version}\"\n  license any_of: [\"MIT\", \"Apache-2.0\"]\n\n  on_macos do\n    depends_on macos: :sequoia\n    depends_on arch: :arm64\n    url \"{RELEASES}/v{version}/esdieff-aarch64-apple-darwin.tar.xz\"\n    sha256 \"{}\"\n  end\n\n  on_linux do\n    on_intel do\n      url \"{RELEASES}/v{version}/esdieff-x86_64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n    on_arm do\n      url \"{RELEASES}/v{version}/esdieff-aarch64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n  end\n\n  def install\n    bin.install \"esdieff\"\n    doc.install \"README.md\", \"CHANGELOG.md\", \"LICENSE-MIT\", \"LICENSE-APACHE\", \"THIRD-PARTY-LICENSES.md\"\n  end\n\n  test do\n    assert_equal \"esdieff #{{version}}\\n\", shell_output(\"#{{bin}}/esdieff --version\")\n    (testpath/\"model.sdf.json\").write '{{\"sdfObject\":{{\"Thermostat\":{{\"sdfProperty\":{{\"temperature\":{{\"type\":\"number\"}}}}}}}}}}'\n    system bin/\"esdieff\", \"check\", \"model.sdf.json\"\n  end\nend\n",
+        "class Esdieff < Formula\n  desc \"SDF toolkit for connected-device models\"\n  homepage \"https://esdieff.com\"\n  url \"{RELEASES}/v{version}/esdieff-aarch64-apple-darwin.tar.xz\"\n  sha256 \"{}\"\n  license any_of: [\"MIT\", \"Apache-2.0\"]\n\n  on_macos do\n    depends_on arch: :arm64\n    depends_on macos: :sequoia\n  end\n\n  on_linux do\n    on_intel do\n      url \"{RELEASES}/v{version}/esdieff-x86_64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n    on_arm do\n      url \"{RELEASES}/v{version}/esdieff-aarch64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n  end\n\n  def install\n    bin.install \"esdieff\"\n    doc.install \"README.md\", \"CHANGELOG.md\", \"LICENSE-MIT\", \"LICENSE-APACHE\", \"THIRD-PARTY-LICENSES.md\"\n  end\n\n  test do\n    assert_equal \"esdieff #{{version}}\\n\", shell_output(\"#{{bin}}/esdieff --version\")\n    (testpath/\"model.sdf.json\").write '{{\"sdfObject\":{{\"Thermostat\":{{\"sdfProperty\":{{\"temperature\":{{\"type\":\"number\"}}}}}}}}}}'\n    system bin/\"esdieff\", \"check\", \"model.sdf.json\"\n  end\nend\n",
         hashes[0], hashes[1], hashes[2]
     )
 }
@@ -755,6 +755,13 @@ mod tests {
     #[test]
     fn formula_uses_the_retained_archives_and_macos_minimum() {
         let formula = formula("0.1.0", &["a".repeat(64), "b".repeat(64), "c".repeat(64)]);
+        assert!(formula.contains("desc \"SDF toolkit for connected-device models\""));
+        assert!(!formula.contains("  version \""));
+        assert!(formula.contains(
+            "on_macos do\n    depends_on arch: :arm64\n    depends_on macos: :sequoia\n  end"
+        ));
+        // Homebrew loads every OS/architecture pair, even unsupported Intel Macs.
+        assert!(formula.contains("  url \"https://github.com/pederbe/esdieff/releases/download/v0.1.0/esdieff-aarch64-apple-darwin.tar.xz\"\n  sha256 "));
         assert!(formula.contains("depends_on macos: :sequoia"));
         assert!(formula.contains("depends_on arch: :arm64"));
         assert!(!formula.contains("x86_64-apple-darwin"));
