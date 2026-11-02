@@ -2,11 +2,6 @@
 
 ## Unreleased
 
-### Fixed
-
-- Generate Homebrew recipes that pass current Homebrew style and audit checks.
-  Existing installations keep the same release archives and checksums.
-
 ### Development
 
 - Follow rolling stable Rust and install the standard analysis, source, formatting and lint components with the project toolchain.
@@ -78,6 +73,9 @@
   implementers. Explicit rename mapping remains outside the supported workflow.
 
 ### Fixed
+
+- Generate Homebrew recipes that pass current Homebrew style and audit checks.
+  Existing installations keep the same release archives and checksums.
 
 - Correct documentation and requirement descriptions for metadata absence,
   implicit defaults, report contracts and current capability boundaries.
