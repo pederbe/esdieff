@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Generate Homebrew recipes that pass current Homebrew style and audit checks.
+  Existing installations keep the same release archives and checksums.
+
 ### Development
 
 - Follow rolling stable Rust and install the standard analysis, source, formatting and lint components with the project toolchain.

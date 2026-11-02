@@ -268,7 +268,9 @@ jobs:
             cp "$archive" "$(brew --cache)/downloads/$hash--$name"
           done
           cp "$formula" "$RUNNER_TEMP/current.rb"
-          sed -i.bak 's/version ".*"/version "0.0.0"/' "$formula"
+          sed -i.bak '/^  homepage /a\
+            version "0.0.0"\
+          ' "$formula"
           brew install esdieff/check/esdieff
           cp "$RUNNER_TEMP/current.rb" "$formula"
           brew upgrade esdieff/check/esdieff

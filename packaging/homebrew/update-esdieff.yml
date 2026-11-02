@@ -42,7 +42,7 @@ jobs:
           version=${tag#v}
           previous=
           if [[ -f Formula/esdieff.rb ]]; then
-            previous=$(sed -n 's/^  version "\([^"]*\)"$/\1/p' Formula/esdieff.rb)
+            previous=$(sed -n 's|.*releases/download/v\([^/]*\)/esdieff-.*|\1|p' Formula/esdieff.rb | sort -u)
             [[ "$previous" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           fi
           if [[ "$previous" == "$version" ]]; then
@@ -59,7 +59,6 @@ jobs:
             gh release download "$tag" --repo pederbe/esdieff --pattern "$name" --pattern "$name.sha256"
             sha256sum -c "$name.sha256"
           done
-          grep -qxF "  version \"$version\"" esdieff.rb
           for archive in *.tar.xz; do
             checksum=$(sha256sum "$archive" | cut -d' ' -f1)
             grep -qF "https://github.com/pederbe/esdieff/releases/download/$tag/$archive" esdieff.rb
@@ -113,7 +112,7 @@ jobs:
           brew tap pederbe/tap
           formula=$(brew --repository pederbe/tap)/Formula/esdieff.rb
           if [[ -n "$PREVIOUS" ]]; then
-            test "$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$formula")" = "$PREVIOUS"
+            test "$(sed -n 's|.*releases/download/v\([^/]*\)/esdieff-.*|\1|p' "$formula" | sort -u)" = "$PREVIOUS"
             brew install pederbe/tap/esdieff
             test "$(brew list --versions esdieff)" = "esdieff $PREVIOUS"
           fi
@@ -154,7 +153,7 @@ jobs:
           git pull --ff-only origin main
           current=
           if [[ -f Formula/esdieff.rb ]]; then
-            current=$(sed -n 's/^  version "\([^"]*\)"$/\1/p' Formula/esdieff.rb)
+            current=$(sed -n 's|.*releases/download/v\([^/]*\)/esdieff-.*|\1|p' Formula/esdieff.rb | sort -u)
           fi
           if [[ "$current" == "$VERSION" ]]; then exit 0; fi
           test "$current" = "$PREVIOUS"
