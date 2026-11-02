@@ -248,7 +248,7 @@ jobs:
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3 # main
         with:
           stable: true
-      - name: Check installation, upgrade and removal from a temporary tap
+      - name: Check formula, installation, upgrade and removal from a temporary tap
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
@@ -260,6 +260,10 @@ jobs:
           brew tap-new esdieff/check
           formula=$(brew --repository esdieff/check)/Formula/esdieff.rb
           cp target/distrib/esdieff.rb "$formula"
+          brew trust esdieff/check
+          brew style esdieff/check/esdieff
+          brew readall --aliases --os=all --arch=all esdieff/check
+          brew audit --except=installed esdieff/check/esdieff
           # Cache the exact artifacts so the private check needs no public release.
           mkdir -p "$(brew --cache)/downloads"
           for archive in target/distrib/*.tar.xz; do
