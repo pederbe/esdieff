@@ -102,7 +102,7 @@ jobs:
       - uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # main
         with:
           stable: true
-      - name: Install, upgrade, exercise and remove the retained binary
+      - name: Check formula, install, upgrade, exercise and remove the retained binary
         env:
           VERSION: ${{ needs.candidate.outputs.version }}
           PREVIOUS: ${{ needs.candidate.outputs.previous }}
@@ -110,6 +110,7 @@ jobs:
         run: |
           set -euo pipefail
           brew tap pederbe/tap
+          brew trust pederbe/tap
           formula=$(brew --repository pederbe/tap)/Formula/esdieff.rb
           if [[ -n "$PREVIOUS" ]]; then
             test "$(sed -n 's|.*releases/download/v\([^/]*\)/esdieff-.*|\1|p' "$formula" | sort -u)" = "$PREVIOUS"
@@ -117,6 +118,9 @@ jobs:
             test "$(brew list --versions esdieff)" = "esdieff $PREVIOUS"
           fi
           cp "$RUNNER_TEMP/candidate/esdieff.rb" "$formula"
+          brew style pederbe/tap/esdieff
+          brew readall --aliases --os=all --arch=all pederbe/tap
+          brew audit --except=installed pederbe/tap/esdieff
           if [[ -n "$PREVIOUS" ]]; then
             brew upgrade pederbe/tap/esdieff
           else
