@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - name: Exercise release preparation
         run: cargo test --locked --manifest-path tools/release/Cargo.toml
       - name: Freeze or resume a candidate

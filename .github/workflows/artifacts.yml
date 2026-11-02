@@ -50,7 +50,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - uses: Swatinem/rust-cache@v2.9.3
         with:
           workspaces: |
@@ -170,7 +170,7 @@ jobs:
           path: target/distrib
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - uses: Swatinem/rust-cache@v2.9.3
         with:
           workspaces: tools/release -> target
@@ -244,7 +244,7 @@ jobs:
           merge-multiple: true
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3 # main
         with:
           stable: true
@@ -292,7 +292,7 @@ jobs:
           path: target/distrib
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - name: Generate the portable manifest
         run: |
           set -euo pipefail
@@ -398,7 +398,7 @@ jobs:
           path: target/distrib
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-binstall@1.26.1

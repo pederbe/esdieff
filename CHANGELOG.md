@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Development
+
+- Follow rolling stable Rust and install the standard analysis, source, formatting and lint components with the project toolchain.
+
 ### Changed
 
 - Classify Property `readable`, `writable` and `observable` changes with
