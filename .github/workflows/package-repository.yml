@@ -94,7 +94,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         if: ${{ !inputs.verify_only }}
         with:
-          toolchain: '1.99.1'
+          toolchain: stable
       - uses: Swatinem/rust-cache@v2.9.3
         if: ${{ !inputs.verify_only }}
         with:
