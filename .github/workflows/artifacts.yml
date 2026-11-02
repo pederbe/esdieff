@@ -260,6 +260,7 @@ jobs:
           brew tap-new esdieff/check
           formula=$(brew --repository esdieff/check)/Formula/esdieff.rb
           cp target/distrib/esdieff.rb "$formula"
+          brew trust esdieff/check
           brew style esdieff/check/esdieff
           brew readall --aliases --os=all --arch=all esdieff/check
           brew audit --except=installed esdieff/check/esdieff
