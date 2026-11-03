@@ -33,12 +33,12 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
     ));
     fs::create_dir(&temporary).unwrap();
     let output_path = temporary.join("outputs");
-    let selected = |path: &str, second: &str| {
+    let selected = |event: &str, base: &str, path: &str, second: &str| {
         fs::write(&output_path, "").unwrap();
         let output = Command::new("bash")
             .args(["-c", &script])
-            .env("EVENT", "push")
-            .env("BASE", "checked-base")
+            .env("EVENT", event)
+            .env("BASE", base)
             .env("CHANGED_PATH", path)
             .env("SECOND_CHANGED_PATH", second)
             .env("RUNNER_TEMP", &temporary)
@@ -64,11 +64,18 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         (".github/FUNDING.yml", false, false, false, false),
     ] {
         assert_eq!(
-            selected(path, ""),
+            selected("pull_request", "checked-base", path, ""),
             format!(
                 "rust={rust}\ndocs={docs}\nstyles={styles}\nwebsite={website}\nrelease_changelog=false\n"
             ),
             "incorrect check and deployment selection for {path}"
+        );
+        assert_eq!(
+            selected("push", "checked-base", path, ""),
+            format!(
+                "rust=false\ndocs=false\nstyles=false\nwebsite={website}\nrelease_changelog=false\n"
+            ),
+            "post-merge selection must only retain website delivery for {path}"
         );
     }
     for path in [
@@ -82,16 +89,33 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         ".github/workflows/release-changelog-check.yml",
     ] {
         assert_eq!(
-            selected(path, ""),
+            selected("pull_request", "checked-base", path, ""),
             "rust=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=true\n",
             "standalone helper change must not select application checks: {path}"
         );
+        assert_eq!(
+            selected("push", "checked-base", path, ""),
+            "rust=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=false\n",
+            "post-merge selection must not repeat helper checks: {path}"
+        );
     }
     assert_eq!(
-        selected("tools/release-changelog/src/main.rs", "src/lib.rs"),
+        selected(
+            "pull_request",
+            "checked-base",
+            "tools/release-changelog/src/main.rs",
+            "src/lib.rs"
+        ),
         "rust=true\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=true\n",
         "helper selection must preserve application checks for a mixed change"
     );
+    for base in ["checked-base", ""] {
+        assert_eq!(
+            selected("workflow_dispatch", base, "src/lib.rs", ""),
+            "rust=true\ndocs=true\nstyles=true\nwebsite=true\nrelease_changelog=true\n",
+            "manual CI and the manually dispatched release caller must retain full checks"
+        );
+    }
     fs::remove_dir_all(temporary).unwrap();
 }
 
