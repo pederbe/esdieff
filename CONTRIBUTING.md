@@ -17,6 +17,10 @@ that passes the required hosted `CI` check. The maintainer uses a `contrib/`
 branch in this repository. Other contributors use a branch in their fork.
 Explain the problem, the resulting behavior and the relevant validation.
 
+CI validates pull requests before merging. After merging, it only builds and
+deploys the website when relevant files change. Manual CI and release validation
+continue to run the full checks.
+
 Include a concise entry under `Unreleased` in [CHANGELOG.md](CHANGELOG.md) in the
 same pull request as a user-visible change. Cover new capabilities, fixes,
 installation changes and changes to command-line behavior, report versions or
