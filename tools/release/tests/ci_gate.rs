@@ -119,6 +119,7 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
     for (path, artifacts) in [
         ("tools/release/tests/ci_gate.rs", false),
         ("tools/release/tests/fixtures/gh.rs", false),
+        ("tools/release/src/distribution_checks.rs", false),
         ("tools/release/src/weekly.rs", false),
         ("tools/release/src/distribution.rs", true),
         ("tools/release/src/smoke.rs", true),
