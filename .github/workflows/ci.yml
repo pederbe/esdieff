@@ -31,6 +31,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       rust: ${{ steps.paths.outputs.rust }}
+      release_tools: ${{ steps.paths.outputs.release_tools }}
+      artifacts: ${{ steps.paths.outputs.artifacts }}
       docs: ${{ steps.paths.outputs.docs }}
       styles: ${{ steps.paths.outputs.styles }}
       website: ${{ steps.paths.outputs.website }}
@@ -48,20 +50,32 @@ jobs:
         run: |
           set -euo pipefail
           rust=false
+          release_tools=false
+          artifacts=false
           docs=false
           styles=false
           website=false
           release_changelog=false
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             rust=true
+            release_tools=true
+            artifacts=true
             docs=true
             styles=true
             website=true
             release_changelog=true
           else
-            git diff --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
+            # Inspect both paths when a rename crosses check scopes.
+            git diff --no-renames --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
             while IFS= read -r -d '' path; do
               case "$path" in
+                tools/release/tests/*|tools/release/src/weekly.rs)
+                  release_tools=true
+                  ;;
+                tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/weekly-release.yml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
+                  release_tools=true
+                  artifacts=true
+                  ;;
                 tools/release-changelog/*|scripts/check-release-changelog.sh|scripts/record-release-changelog.sh|scripts/configure-release-changelog.sh|scripts/prepare-release.sh|.github/workflows/release-changelog.yml|.github/workflows/release-changelog-check.yml)
                   release_changelog=true
                   ;;
@@ -90,16 +104,18 @@ jobs:
           # validation keep their full coverage.
           if [ "$EVENT" = push ]; then
             rust=false
+            release_tools=false
+            artifacts=false
             docs=false
             styles=false
             release_changelog=false
           fi
-          printf 'rust=%s\ndocs=%s\nstyles=%s\nwebsite=%s\nrelease_changelog=%s\n' "$rust" "$docs" "$styles" "$website" "$release_changelog" >> "$GITHUB_OUTPUT"
+          printf 'rust=%s\nrelease_tools=%s\nartifacts=%s\ndocs=%s\nstyles=%s\nwebsite=%s\nrelease_changelog=%s\n' "$rust" "$release_tools" "$artifacts" "$docs" "$styles" "$website" "$release_changelog" >> "$GITHUB_OUTPUT"
 
   checks:
     name: Checks (${{ matrix.os }})
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.release_tools == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -124,7 +140,7 @@ jobs:
             tools/terminal-html -> target
           key: checks-${{ matrix.os }}
       - name: Run maintained checks
-        run: bash scripts/check.sh
+        run: bash scripts/check.sh ${{ needs.changes.outputs.rust == 'true' && '--all' || '--release-tools-only' }}
 
   release-changelog:
     name: Release changelog tooling
@@ -179,7 +195,7 @@ jobs:
   artifacts:
     name: Release checks
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.artifacts == 'true'
     uses: ./.github/workflows/artifacts.yml
     with:
       tag: ${{ inputs.release_tag || '' }}
@@ -211,17 +227,22 @@ jobs:
           DOCS_RESULT: ${{ needs.docs.result }}
           ARTIFACTS_RESULT: ${{ needs.artifacts.result }}
           RUST_SELECTED: ${{ needs.changes.outputs.rust }}
+          RELEASE_TOOLS_SELECTED: ${{ needs.changes.outputs.release_tools }}
+          ARTIFACTS_SELECTED: ${{ needs.changes.outputs.artifacts }}
           DOCS_SELECTED: ${{ needs.changes.outputs.docs }}
           RELEASE_CHANGELOG_SELECTED: ${{ needs.changes.outputs.release_changelog }}
           RELEASE_CHANGELOG_RESULT: ${{ needs.release-changelog.result }}
         run: |
           set -euo pipefail
           test "$CHANGES_RESULT" = success
-          if [ "$RUST_SELECTED" = true ]; then
+          if [ "$RUST_SELECTED" = true ] || [ "$RELEASE_TOOLS_SELECTED" = true ]; then
             test "$CHECKS_RESULT" = success
-            test "$ARTIFACTS_RESULT" = success
           else
             test "$CHECKS_RESULT" = skipped
+          fi
+          if [ "$RUST_SELECTED" = true ] || [ "$ARTIFACTS_SELECTED" = true ]; then
+            test "$ARTIFACTS_RESULT" = success
+          else
             test "$ARTIFACTS_RESULT" = skipped
           fi
           if [ "$RUST_SELECTED" = true ] || [ "$RELEASE_CHANGELOG_SELECTED" = true ]; then
