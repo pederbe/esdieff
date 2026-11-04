@@ -21,6 +21,12 @@ CI validates pull requests before merging. After merging, it only builds and
 deploys the website when relevant files change. Manual CI and release validation
 continue to run the full checks.
 
+Release-helper-only changes reuse the platform jobs with
+`bash scripts/check.sh --release-tools-only`. Helper tests and weekly planning
+changes skip application builds. Packaging, installation and artifact workflow
+changes retain release installation checks. Application, shared-fixture and mixed
+changes retain full coverage, as do changes to CI selection or the check script.
+
 Include a concise entry under `Unreleased` in [CHANGELOG.md](CHANGELOG.md) in the
 same pull request as a user-visible change. Cover new capabilities, fixes,
 installation changes and changes to command-line behavior, report versions or
