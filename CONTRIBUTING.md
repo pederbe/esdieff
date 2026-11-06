@@ -39,7 +39,8 @@ conventional prefix:
 - `fix:` for a bug fix, listed under Fixed
 - `perf:` for a measured performance improvement, listed under Performance
 - `docs:` for documentation that users should notice, listed under Documentation
-- `fix(deps):` for a dependency update that ships to users, listed under Dependencies
+- `fix(deps):` for a dependency update that ships to users, listed under
+  Dependencies
 - `ci:`, `build:`, `chore:`, `test:`, `style:` or `refactor:` for internal work,
   which stays out of the changelog
 
@@ -69,15 +70,16 @@ builds and publishes the release with that changelog section as its notes.
 To edit a release pull request, disable its auto-merge first, then merge it
 before anything else merges, because any merge to `main` replaces it with a new
 one that merges automatically. To skip a week, close the release pull request.
-To release a new minor version for an additive milestone, raise the
-version in `Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next
-release pull request keeps that version. Maintainers can open a release pull
-request at another time by running the Release-plz workflow manually.
+To release a new minor version for an additive milestone, raise the version in
+`Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next release pull
+request keeps that version. Maintainers can open a release pull request at
+another time by running the Release-plz workflow manually.
 
 If the Release workflow fails after tagging for a reason outside the tagged
 sources, such as a flaky job, a secret or a setting, fix the cause and run it
-again for that tag with publishing enabled. Release-plz compares `main` with the version
-published on crates.io, so later releases wait until this one is published.
+again for that tag with publishing enabled. Release-plz compares `main` with the
+version published on crates.io, so later releases wait until this one is
+published.
 
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
 fine-grained personal access token for this repository, with read and write
