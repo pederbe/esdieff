@@ -198,19 +198,6 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: gh workflow run distribution.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG" -f submit_winget=true
 
-  changelog:
-    needs: publish
-    if: needs.publish.result == 'success'
-    runs-on: ubuntu-26.04
-    permissions:
-      actions: write
-    steps:
-      - name: Dispatch changelog recording on main
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-        run: gh workflow run release-changelog.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$TAG"
-
   website:
     needs: publish
     if: needs.publish.result == 'success'

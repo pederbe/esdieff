@@ -36,7 +36,6 @@ jobs:
       docs: ${{ steps.paths.outputs.docs }}
       styles: ${{ steps.paths.outputs.styles }}
       website: ${{ steps.paths.outputs.website }}
-      release_changelog: ${{ steps.paths.outputs.release_changelog }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,7 +54,6 @@ jobs:
           docs=false
           styles=false
           website=false
-          release_changelog=false
           if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             rust=true
             release_tools=true
@@ -63,21 +61,17 @@ jobs:
             docs=true
             styles=true
             website=true
-            release_changelog=true
           else
             # Inspect both paths when a rename crosses check scopes.
             git diff --no-renames --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
             while IFS= read -r -d '' path; do
               case "$path" in
-                tools/release/tests/*|tools/release/src/distribution_checks.rs|tools/release/src/weekly.rs)
+                tools/release/tests/*|tools/release/src/distribution_checks.rs|tools/release/src/metadata.rs)
                   release_tools=true
                   ;;
-                tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/weekly-release.yml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
+                tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
                   release_tools=true
                   artifacts=true
-                  ;;
-                tools/release-changelog/*|scripts/check-release-changelog.sh|scripts/record-release-changelog.sh|scripts/configure-release-changelog.sh|scripts/prepare-release.sh|.github/workflows/release-changelog.yml|.github/workflows/release-changelog-check.yml)
-                  release_changelog=true
                   ;;
                 site/*|tools/site/*)
                   docs=true
@@ -91,7 +85,7 @@ jobs:
                 *.md)
                   docs=true
                   ;;
-                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml)
+                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml|.github/workflows/release-plz.yml|release-plz.toml)
                   ;;
                 *)
                   rust=true
@@ -108,9 +102,8 @@ jobs:
             artifacts=false
             docs=false
             styles=false
-            release_changelog=false
           fi
-          printf 'rust=%s\nrelease_tools=%s\nartifacts=%s\ndocs=%s\nstyles=%s\nwebsite=%s\nrelease_changelog=%s\n' "$rust" "$release_tools" "$artifacts" "$docs" "$styles" "$website" "$release_changelog" >> "$GITHUB_OUTPUT"
+          printf 'rust=%s\nrelease_tools=%s\nartifacts=%s\ndocs=%s\nstyles=%s\nwebsite=%s\n' "$rust" "$release_tools" "$artifacts" "$docs" "$styles" "$website" >> "$GITHUB_OUTPUT"
 
   checks:
     name: Checks (${{ matrix.os }})
@@ -141,22 +134,6 @@ jobs:
           key: checks-${{ matrix.os }}
       - name: Run maintained checks
         run: bash scripts/check.sh ${{ needs.changes.outputs.rust == 'true' && '--all' || '--release-tools-only' }}
-
-  release-changelog:
-    name: Release changelog tooling
-    needs: changes
-    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.release_changelog == 'true'
-    runs-on: ubuntu-26.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-      - run: bash scripts/check-release-changelog.sh
 
   docs:
     name: Documentation
@@ -215,7 +192,7 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, checks, release-changelog, docs, artifacts]
+    needs: [changes, checks, docs, artifacts]
     if: always() && (github.repository == 'pederbe/esdieff' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -230,8 +207,6 @@ jobs:
           RELEASE_TOOLS_SELECTED: ${{ needs.changes.outputs.release_tools }}
           ARTIFACTS_SELECTED: ${{ needs.changes.outputs.artifacts }}
           DOCS_SELECTED: ${{ needs.changes.outputs.docs }}
-          RELEASE_CHANGELOG_SELECTED: ${{ needs.changes.outputs.release_changelog }}
-          RELEASE_CHANGELOG_RESULT: ${{ needs.release-changelog.result }}
         run: |
           set -euo pipefail
           test "$CHANGES_RESULT" = success
@@ -244,11 +219,6 @@ jobs:
             test "$ARTIFACTS_RESULT" = success
           else
             test "$ARTIFACTS_RESULT" = skipped
-          fi
-          if [ "$RUST_SELECTED" = true ] || [ "$RELEASE_CHANGELOG_SELECTED" = true ]; then
-            test "$RELEASE_CHANGELOG_RESULT" = success
-          else
-            test "$RELEASE_CHANGELOG_RESULT" = skipped
           fi
           if [ "$DOCS_SELECTED" = true ]; then
             test "$DOCS_RESULT" = success
