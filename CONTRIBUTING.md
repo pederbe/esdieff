@@ -27,7 +27,7 @@ changes skip application builds. Packaging, installation and artifact workflow
 changes retain release installation checks. Application, shared-fixture and mixed
 changes retain full coverage, as do changes to CI selection or the check script.
 
-Include a concise entry under `Unreleased` in [CHANGELOG.md](CHANGELOG.md) in the
+Include a concise entry under `## Unreleased` in [CHANGELOG.md](CHANGELOG.md) in the
 same pull request as a user-visible change. Cover new capabilities, fixes,
 installation changes and changes to command-line behavior, report versions or
 file formats. Explain compatibility consequences and any action users need to
@@ -41,10 +41,13 @@ supplements this user-facing summary and does not replace it.
 
 Release preparation automatically replaces Unreleased with the selected version
 and UTC date. The release tool accepts dated-only changelogs and omits empty
-pending headings. After publication, the Release changelog workflow records the
-dated notes on `main` through a checked pull request. It preserves entries added
-after the candidate was frozen. Its manual check-only mode and retry operate on
-the published tag without rebuilding or republishing it.
+pending headings. It refuses any other heading before the dated releases, so
+curated notes never drop out of a release unnoticed. After publication, the
+Release workflow starts the Release changelog workflow, which records the dated
+notes on `main` through a checked pull request. The workflow preserves entries
+added after the candidate was frozen. Its manual check-only mode and retry
+operate on the published tag without rebuilding or republishing it. Corrections
+made on `main` to a released section carry into later releases.
 
 For an incompatible command-line, report or file-format change, include a
 `BREAKING CHANGE:` explanation in the final squash commit. Automatic releases

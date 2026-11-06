@@ -60,27 +60,6 @@ fn valid_date(date: &str) -> bool {
     year > 0 && day > 0 && day <= days
 }
 
-/// GitHub timestamps use UTC seconds. A validation rerun is not publication.
-pub fn published_during_run(published: &str, started: &str, completed: &str) -> bool {
-    fn timestamp(value: &str) -> bool {
-        value.len() == 20
-            && value.bytes().enumerate().all(|(index, byte)| match index {
-                4 | 7 => byte == b'-',
-                10 => byte == b'T',
-                13 | 16 => byte == b':',
-                19 => byte == b'Z',
-                _ => byte.is_ascii_digit(),
-            })
-            && valid_date(&value[..10])
-            && value[11..13].parse::<u8>().is_ok_and(|hour| hour < 24)
-            && value[14..16].parse::<u8>().is_ok_and(|minute| minute < 60)
-            && value[17..19].parse::<u8>().is_ok_and(|second| second < 60)
-    }
-    [published, started, completed].into_iter().all(timestamp)
-        && started <= published
-        && published <= completed
-}
-
 fn parse(text: &str) -> Result<Document> {
     let text = text.replace("\r\n", "\n");
     let mut starts = Vec::new();
@@ -142,7 +121,7 @@ fn render(document: &Document) -> String {
     let mut result = document.intro.trim_end().to_owned();
     result.push_str("\n\n");
     if !document.pending.trim().is_empty() {
-        result.push_str("## [Unreleased]\n\n");
+        result.push_str("## Unreleased\n\n");
         result.push_str(document.pending.trim());
         result.push_str("\n\n");
     }
@@ -365,7 +344,7 @@ mod tests {
             .replace("Initial release.", "Corrected historical description.");
         let recorded = record(&current, SOURCE, &released, "v0.2.0").unwrap();
         assert!(recorded.starts_with(
-            "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- Another capability.\n\n## [0.2.0]"
+            "# Changelog\n\n## Unreleased\n\n### Added\n\n- Another capability.\n\n## [0.2.0]"
         ));
         assert_eq!(recorded.matches("- A capability.").count(), 1);
         assert!(recorded.contains("Corrected historical description."));
@@ -411,7 +390,13 @@ mod tests {
     fn edited_pending_notes_are_preserved() {
         let released = finalize(SOURCE, "v0.2.0", "2026-10-30").unwrap();
         let changed = SOURCE.replace("A continuation.", "A newly changed continuation.");
-        assert!(record(&changed, SOURCE, &released, "v0.2.0").unwrap().contains("## [Unreleased]\n\n### Added\n\n- A capability.\n  A newly changed continuation."));
+        assert!(
+            record(&changed, SOURCE, &released, "v0.2.0")
+                .unwrap()
+                .contains(
+                    "## Unreleased\n\n### Added\n\n- A capability.\n  A newly changed continuation."
+                )
+        );
     }
 
     #[test]

@@ -95,55 +95,13 @@ fn actual_tag_reconciliation_preserves_later_work_and_is_idempotent() {
     assert_eq!(fixture.git(&["diff", "--name-only"]).trim(), "CHANGELOG.md");
     let recorded = fs::read_to_string(&changelog).unwrap();
     assert!(
-        recorded.contains(
-            "## [Unreleased]\n\n### Added\n\n- Later feature.\n\n## [0.2.0] - 2026-10-30"
-        )
+        recorded
+            .contains("## Unreleased\n\n### Added\n\n- Later feature.\n\n## [0.2.0] - 2026-10-30")
     );
     assert_eq!(recorded.matches("Shipping feature.").count(), 1);
     assert_eq!(fixture.git(&["show", "v0.2.0:CHANGELOG.md"]), released);
     fixture.passed(&["record-release", "v0.2.0", plan.to_str().unwrap()]);
     assert_eq!(fs::read_to_string(plan).unwrap(), "changed=false\n");
-}
-
-#[test]
-fn publication_gate_rejects_a_check_only_rerun_of_an_existing_release() {
-    let fixture = Fixture::new();
-    let started = "2026-10-30T10:00:00Z";
-    let completed = "2026-10-30T10:10:00Z";
-    assert!(
-        !fixture
-            .run(&[
-                "publication-window",
-                "2026-10-29T10:05:00Z",
-                started,
-                completed
-            ])
-            .status
-            .success()
-    );
-    fixture.passed(&[
-        "publication-window",
-        "2026-10-30T10:05:00Z",
-        started,
-        completed,
-    ]);
-    assert!(
-        !fixture
-            .run(&["publication-window", "", started, completed])
-            .status
-            .success()
-    );
-    assert!(
-        !fixture
-            .run(&[
-                "publication-window",
-                "2026-10-30T10:11:00Z",
-                started,
-                completed
-            ])
-            .status
-            .success()
-    );
 }
 
 #[test]
