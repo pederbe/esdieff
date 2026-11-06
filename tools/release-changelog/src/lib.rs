@@ -344,7 +344,7 @@ mod tests {
             .replace("Initial release.", "Corrected historical description.");
         let recorded = record(&current, SOURCE, &released, "v0.2.0").unwrap();
         assert!(recorded.starts_with(
-            "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- Another capability.\n\n## [0.2.0]"
+            "# Changelog\n\n## Unreleased\n\n### Added\n\n- Another capability.\n\n## [0.2.0]"
         ));
         assert_eq!(recorded.matches("- A capability.").count(), 1);
         assert!(recorded.contains("Corrected historical description."));
