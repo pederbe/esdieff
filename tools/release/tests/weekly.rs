@@ -177,6 +177,9 @@ fn malformed_changelogs_do_not_modify_release_metadata() {
         "# Changelog\n\n## [Soon] - 2026-10-30\n\nA fix.\n",
         "# Changelog\n\n## [0.1.0] - not-a-date\n\nA fix.\n",
         "# Changelog\n\n## [0.1.0] - 2026-10-27\n\nInitial.\n\n## [Unreleased]\n",
+        "# Changelog\n\n## [0.1.0] - 2026-10-27\n\nInitial.\n\n## Unreleased\n",
+        "# Changelog\n\n## Pending\n\n- A fix.\n\n## [0.1.0] - 2026-10-27\n\nInitial.\n",
+        "# Changelog\n\n## Unreleased\n\n- A fix.\n\n## Notes\n\n## [0.1.0] - 2026-10-27\n\nInitial.\n",
     ] {
         let fixture = Fixture::new();
         fixture.write("CHANGELOG.md", changelog);
@@ -190,6 +193,64 @@ fn malformed_changelogs_do_not_modify_release_metadata() {
         assert_eq!(fixture.read("CHANGELOG.md"), changelog);
         assert!(!fixture.output.exists());
     }
+}
+
+#[test]
+fn both_pending_heading_spellings_publish_curated_notes() {
+    for heading in ["## Unreleased", "## [Unreleased]"] {
+        let fixture = Fixture::new();
+        fixture.write(
+            "CHANGELOG.md",
+            &format!("# Changelog\n\n{heading}\n\n### Fixed\n\n- Keep curated notes.\n\n## [0.1.0] - 2026-10-27\n\nInitial release.\n"),
+        );
+        fixture.write("src/main.rs", "fn main() {}\n");
+        fixture.commit("fix: Handle the next change", "");
+        passed(fixture.prepare("v0.1.0", "auto", None));
+        let changelog = fixture.read("CHANGELOG.md");
+        assert!(
+            changelog.starts_with(
+                "# Changelog\n\n## [0.1.1] - 2026-11-02\n\n### Fixed\n\n- Keep curated notes.\n"
+            ),
+            "{changelog}"
+        );
+        assert!(!changelog.contains("Unreleased"));
+        let notes = fixture.output.with_extension("md");
+        passed(
+            fixture
+                .command()
+                .args(["release-notes", "v0.1.1"])
+                .arg(&notes)
+                .output()
+                .unwrap(),
+        );
+        let notes = fs::read_to_string(notes).unwrap();
+        assert!(notes.contains("- Keep curated notes."));
+        assert!(notes.contains("fix: Handle the next change"));
+    }
+}
+
+#[test]
+fn notes_recorded_on_main_replace_the_released_tag_history() {
+    let fixture = Fixture::new();
+    fixture.write("src/main.rs", "fn main() {}\n");
+    fixture.commit("fix: Handle the first change", "");
+    let source = fixture.git(&["rev-parse", "HEAD"]);
+    passed(fixture.prepare("v0.1.0", "auto", None));
+    fixture.commit("Prepare automated release v0.1.1", "");
+    fixture.git(&["tag", "v0.1.1"]);
+    fixture.git(&["checkout", "--detach", source.trim()]);
+    fixture.write(
+        "CHANGELOG.md",
+        "# Changelog\n\n## Unreleased\n\n## [0.1.1] - 2026-11-02\n\nCorrected notes.\n\n## [0.1.0] - 2026-10-27\n\nInitial release.\n",
+    );
+    fixture.write("src/main.rs", "fn main() { println!(\"later\"); }\n");
+    fixture.commit("fix: Handle a later change", "");
+    passed(fixture.prepare("v0.1.1", "auto", None));
+    let changelog = fixture.read("CHANGELOG.md");
+    assert!(changelog.starts_with("# Changelog\n\n## [0.1.2] - 2026-11-02\n"));
+    assert_eq!(changelog.matches("Corrected notes.").count(), 1);
+    assert!(!changelog.contains("fix: Handle the first change"));
+    assert_eq!(changelog.matches("Initial release.").count(), 1);
 }
 
 #[test]

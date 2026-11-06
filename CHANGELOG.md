@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.3.0] - 2026-11-02
+
 ### Development
 
 - Follow rolling stable Rust and install the standard analysis, source, formatting and lint components with the project toolchain.
@@ -143,6 +145,156 @@
   resource API. Separate pattern semantics checks from the default deadline.
   ([#40](https://github.com/pederbe/esdieff/pull/40),
   [#73](https://github.com/pederbe/esdieff/pull/73))
+
+### Breaking changes
+
+- feat: generate bounded pattern-aware string representatives ([72d1df1](https://github.com/pederbe/esdieff/commit/72d1df1936df96f689ee5cac0072690ccc9a40d5))
+  Generate deterministic ASCII pattern-aware representatives combined with length limits and required sibling entries. Keep independent sample admission and documented unsupported-pattern fallbacks.
+  
+  Keep semantic comparison assertions independent of the default matching deadline and separately cover exhausted matching.
+  
+  Closes #43.
+  
+  BREAKING CHANGE: generation uses esdieff.generation/2 and revision comparison uses esdieff.revision-comparison/4. Consumers checking these contract identities must accept the new values. Report schemas and trace formats are unchanged.
+- feat: compare revisions from the existing implementer perspective (#60) ([b58a3ee](https://github.com/pederbe/esdieff/commit/b58a3ee1492fe888e357709816c5888e50dc5a2a))
+  Add an explicit implementer perspective to the library, direct CLI and saved diff cases. Preserve client comparison as the default, chronological evidence and scoped unknown results. Keep structural implementation obligations undetermined and Context metadata compatibility outside scope.
+  
+  Closes #47.
+  
+  BREAKING CHANGE: Diff reports use envelope 1.7 with required policy.perspective and comparison contract esdieff.revision-comparison/5. JSON readers must accept the new envelope. Acknowledgement format 1 remains unchanged.
+- feat: classify implementer declaration presence (#64) ([503b306](https://github.com/pederbe/esdieff/commit/503b306caa629193873d14b989eef77bc2016bc7))
+  Classify added and removed declarations inside corresponding groupings from the implementer perspective using complete later mandatory closures. Preserve unavailable correspondence, chronological reporting and existing client classifications.
+  
+  BREAKING CHANGE: Implementer declaration-presence classifications now follow comparison contract esdieff.revision-comparison/7. Previously undetermined differences can become breaking or compatible. Review intended differences and regenerate affected acknowledgements. Diff envelope 1.7 and acknowledgement format 1 remain unchanged.
+  
+  Closes #63.
+- feat!: replace JavaScript patterns with Corvus and fixed safeguards (#73) ([63e8920](https://github.com/pederbe/esdieff/commit/63e8920a58ca5f4625f066575b57fb3c7641ee40))
+  Replace the JavaScript pattern runtime with Corvus Unicode matching and fixed internal safeguards. Preserve model, sample, generation and trace conclusions, source locations and report formats. Retain internal failure-path coverage and ordinary public CLI tests.
+  
+  BREAKING CHANGE: Remove the public Limits and NumberWork types and quota-selecting constructors. Use Catalogue::from_inputs, Catalogue::take_inputs and JsonBuilder::new. ExactNumber::compare(other) returns Ordering, location pointer() accessors take no byte budget, and DifferenceAcknowledgements::from_json(bytes) takes no limits argument. Semantic request options remain supported.
+  
+  Closes #68.
+- feat!: remove network acquisition from Esdieff (#76) ([64e6167](https://github.com/pederbe/esdieff/commit/64e61678cabe67b0d6f6def448b946dbf2b3cc48))
+  Remove downloading from the installed command. Model operations consume supplied local files and bytes. Delete acquisition receipts, examples, transport dependencies and dedicated filesystem and license handling. Supersede the acquisition decision and reconcile current documentation and diagrams.
+  
+  BREAKING CHANGE: esdieff acquire and its acquisition receipt format are removed. Obtain model files with existing tools and pass local paths to Esdieff. Local source metadata and model operations retain their meanings.
+  
+  Closes #75.
+- feat: classify implementer grouping counts (#80) ([ecc63c0](https://github.com/pederbe/esdieff/commit/ecc63c03bca6ae9a1612eeae1c154abab4a7ab5d))
+  Preserve every earlier permitted modeled instance count for corresponding Object and Thing arrays. Reuse exact range comparison and effective composition, keeping client classifications unchanged. Record ADR 0058 and advance comparison contract to /8 while retaining diff envelope 1.7 and acknowledgement format 1.
+  
+  BREAKING CHANGE: Implementer grouping-count differences formerly reported as undetermined can now be breaking or compatible under comparison contract esdieff.revision-comparison/8. Review intended differences and regenerate old undetermined count acknowledgements where needed.
+  
+  Closes #65.
+
+### Added
+
+- feat: generate a readable Markdown model reference (#48) ([683c113](https://github.com/pederbe/esdieff/commit/683c11394090dd9a50189b5557063fed06cde01f))
+  Add the selected library reference operation and CLI, bounded inert Markdown, admitted illustrative values, source navigation, documentation and focused public contract coverage.
+  
+  Closes #42.
+- feat: export selected effective payloads as JSON Schema (#50) ([3c6284c](https://github.com/pederbe/esdieff/commit/3c6284c56b5f05458c0f9e87c46534dd7a0be487))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- feat: classify implementer declaration obligations (#62) ([9c4da0a](https://github.com/pederbe/esdieff/commit/9c4da0a29e3d168b84e7086d3b158cc6bd57f821))
+  Classify new mandatory declarations as breaking for implementers and released obligations alone as compatible. Reuse resolved mandatory closures, preserving client defaults, endpoint boundaries and unavailable reasons.
+  
+  Advance the comparison contract to esdieff.revision-comparison/6. Diff envelope 1.7 and acknowledgement format 1 are unchanged. Intended differences need review and old undetermined acknowledgements may need regeneration.
+  
+  Closes #61.
+- feat: classify implementer Property capability changes (#82) ([02edf56](https://github.com/pederbe/esdieff/commit/02edf56a26ad0649d41627f905b0bed01273c7a0))
+  Closes #81
+  
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+
+### Other changes
+
+- Update changelog for version 0.2.0 release (#37) ([f4c25f8](https://github.com/pederbe/esdieff/commit/f4c25f8159f38a7d04161b34e0b52519793a59da))
+- Restore the changelog section for upcoming changes (#38) ([3ed530d](https://github.com/pederbe/esdieff/commit/3ed530de36b10a20e30e08add3776f443b023cdd))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Keep the released changelog under version 0.2.0 (#39) ([d83e416](https://github.com/pederbe/esdieff/commit/d83e416c0d6f8e4d5cbde9c064ac9b7c8f684bf9))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Finalize release notes and record publications on main (#40) ([09e18ec](https://github.com/pederbe/esdieff/commit/09e18ec71237ebcba4ba354e375976dc9b279caa))
+  * Finalize release changelogs and record published notes on main
+  
+  * Keep source and published prose records separate
+  
+  * Filter paginated releases with supported GitHub CLI options
+  
+  * Report validated changelog checks on the checked commit
+  
+  * Separate semantic pattern assertions from the default deadline
+  
+  ---------
+  
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Update daily dependencies (#41) ([e86e7a4](https://github.com/pederbe/esdieff/commit/e86e7a4278e00bf362ff2ffb95cc1b462bbf0c0a))
+- Explore shared definitions and inherited constraints (#51) ([0c5cd81](https://github.com/pederbe/esdieff/commit/0c5cd81ea31243a961507b43c2867b06c08af154))
+  * feat: explore shared definition uses in model references
+  
+  Extend the existing Markdown reference with opt-in catalogue use navigation and previous-source links for local overrides.
+  
+  Refs #45
+  
+  * fix: exclude the selected alias from its own uses
+  
+  * fix: select authored refinements by their source coordinate
+  
+  * test: tolerate stdin closure after schema invocation rejection
+  
+  ---------
+  
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- docs: connect shared-definition exploration with revision comparison (#52) ([5158833](https://github.com/pederbe/esdieff/commit/5158833c7d73d878be48a33318ebd44e1b72d1b8))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- docs: explain missing and ambiguous name reference resolution (#53) ([d7040cd](https://github.com/pederbe/esdieff/commit/d7040cda9bd08936e21597eaf582c9692b646260))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- docs: correct inspection views and domain terminology (#54) ([934fad8](https://github.com/pederbe/esdieff/commit/934fad8612b2cd1fe8d458cf343b5ec97621d54c))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- docs: audit terminology and current behavior across maintained documentation (#56) ([43a89cd](https://github.com/pederbe/esdieff/commit/43a89cd94876734c55bbe1ccb55c49951df4e940))
+  Align guides, contracts, examples, site copy and API documentation with RFC 9880, the canonical glossary and current behavior.
+  
+  Closes #55.
+- Explain generated corpus candidates and boundary evidence (#57) ([c49a14d](https://github.com/pederbe/esdieff/commit/c49a14d7564404559e3f787950419c853a59981b))
+  Explain retained generation candidates with corpus evidence in the library and reports. Preserve whole-description admission and distinguish it from constraint coverage.
+  
+  Closes #46.
+- Report successful Choice admission evidence for generated corpora (#59) ([d515c6c](https://github.com/pederbe/esdieff/commit/d515c6ccdbd95851a64ec910c81c0877423df9a2))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Update Rust crate hotpath to v0.30.3 (#66) ([9dce6b6](https://github.com/pederbe/esdieff/commit/9dce6b6667b498f6f94b5d119c0af32a39b78e0b))
+- docs: replace the door-lock simulator with sample checks (#78) ([c76cb62](https://github.com/pederbe/esdieff/commit/c76cb621c264d159eb7604b5614073ee666e1b25))
+  Replace the simulated device, seeded commands, virtual clock and behavioral oracle with a short example that checks a supplied door-lock model and eight fixed values through the public SDF APIs. Retire demonstration-only glossary terms and clarify historical trace context.
+  
+  Run cargo run --example lock-demo without a seed argument. Editing, installation routes, package-manager support and application/library behavior are unchanged.
+  
+  Closes #77.
+- Render documentation terminal examples with Rust (#71) (#79) ([277b35a](https://github.com/pederbe/esdieff/commit/277b35ac53bf697aba77cd6a22ac109a75fb135b))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- docs: complete changelog coverage since v0.2.0 (#83) ([706f20e](https://github.com/pederbe/esdieff/commit/706f20e8978a6ca59beb7a34c7da20ab9262f45d))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Follow rolling stable Rust for development and CI (#84) ([10544ba](https://github.com/pederbe/esdieff/commit/10544ba29e0d46ef47794751c456fd4be0a19bc0))
+- chore(deps): update dependency wrangler to v4.156.1 (#85) ([408472f](https://github.com/pederbe/esdieff/commit/408472f7bbf597716bff9b99d385026f5b459266))
+- Fix Homebrew formula generation and version detection (#86) ([fc474a8](https://github.com/pederbe/esdieff/commit/fc474a8b0e9dce5b3da4dba68aa9d75bddd060fb))
+  * Fix generated Homebrew formula syntax and version handling
+  
+  * Group Homebrew fix with existing Unreleased fixes
+  
+  * Keep a default archive for Homebrew cross-platform loading
+  
+  ---------
+  
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Check Homebrew formula style, audit and cross-platform loading (#87) ([67998d3](https://github.com/pederbe/esdieff/commit/67998d345f9bbc116b8cac5565684ec3d421305b))
+  * Audit generated Homebrew formulas before installation checks
+  
+  * Trust the generated temporary tap before loading its formula
+  
+  ---------
+  
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+- Keep Homebrew updater formula checks in sync with the tap (#88) ([bfef4bc](https://github.com/pederbe/esdieff/commit/bfef4bcfaad471d6ea869f0bee51b54f2790b323))
+  Co-authored-by: Peder Bergan <16326438+pederbe@users.noreply.github.com>
+
+[Full comparison](https://github.com/pederbe/esdieff/compare/v0.2.0...v0.3.0)
 
 ## [0.2.0] - 2026-10-30
 

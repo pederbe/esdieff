@@ -159,25 +159,51 @@ fn release_date(date: &str) -> bool {
         })
 }
 
+// Older tags spell the pending heading with brackets.
+const PENDING_HEADINGS: [&str; 2] = ["## Unreleased", "## [Unreleased]"];
+
 // Finalized changelogs need no placeholder for work that has not happened yet.
-// Older tags may still have one, so keep authored entries separate from history.
+// Keep authored entries separate from history, and refuse any other heading so
+// curated notes never silently become introduction text.
 fn changelog_sections(changelog: &str) -> Result<(&str, &str, &str)> {
-    let (intro, first) = changelog
-        .split_once("## [")
-        .ok_or("missing changelog release section")?;
-    let (authored, history) = if let Some(rest) = first.strip_prefix("Unreleased]\n") {
+    let start = if changelog.starts_with("## ") {
+        0
+    } else {
+        changelog
+            .find("\n## ")
+            .ok_or("missing changelog release section")?
+            + 1
+    };
+    let (intro, first) = changelog.split_at(start);
+    let pending = PENDING_HEADINGS
+        .iter()
+        .find_map(|heading| first.strip_prefix(heading)?.strip_prefix('\n'));
+    let (authored, history) = if let Some(rest) = pending {
         rest.split_once("\n## [")
             .ok_or("missing previous changelog section")?
+    } else if let Some(history) = first.strip_prefix("## [") {
+        ("", history)
     } else {
-        ("", first)
+        let heading = first.lines().next().unwrap_or_default();
+        return Err(format!(
+            "unrecognized changelog heading `{heading}`. Use `## Unreleased` for pending entries"
+        )
+        .into());
     };
+    if let Some(heading) = authored.lines().find(|line| line.starts_with("## ")) {
+        return Err(format!("unrecognized changelog heading `{heading}`").into());
+    }
     let (released, date) = history
         .lines()
         .next()
         .and_then(|heading| heading.split_once("] - "))
         .ok_or("missing dated changelog release section")?;
     version(released)?;
-    if !release_date(date) || history.contains("\n## [Unreleased]") {
+    if !release_date(date)
+        || history
+            .lines()
+            .any(|line| PENDING_HEADINGS.contains(&line.trim_end()))
+    {
         return Err("invalid changelog release history".into());
     }
     Ok((intro, authored, history))
@@ -324,10 +350,17 @@ pub(crate) fn prepare(args: &[String]) -> Result<()> {
     let manifest = replace_manifest_version(&manifest, &next)?;
     let lock = replace_lock_version(&read(root.join("Cargo.lock"))?, &next)?;
     let changelog = read(root.join("CHANGELOG.md"))?;
-    let (intro, authored, _) = changelog_sections(&changelog)?;
+    let (intro, authored, recorded) = changelog_sections(&changelog)?;
     let previous_changelog =
         git(&root, &["show", &format!("{previous}:CHANGELOG.md")])?.replace("\r\n", "\n");
-    let (_, _, history) = changelog_sections(&previous_changelog)?;
+    let (_, _, released) = changelog_sections(&previous_changelog)?;
+    // Once main records the previous release, keep its later corrections.
+    let previous_heading = format!("{}] - ", previous.strip_prefix('v').unwrap_or(previous));
+    let history = if recorded.starts_with(&previous_heading) {
+        recorded
+    } else {
+        released
+    };
     let prior_source =
         git(&root, &["show", &format!("{base}:CHANGELOG.md")])?.replace("\r\n", "\n");
     let (_, prior_authored, _) = changelog_sections(&prior_source)?;
