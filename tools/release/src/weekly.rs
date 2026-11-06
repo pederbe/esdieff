@@ -191,7 +191,10 @@ fn changelog_sections(changelog: &str) -> Result<(&str, &str, &str)> {
         .into());
     };
     if let Some(heading) = authored.lines().find(|line| line.starts_with("## ")) {
-        return Err(format!("unrecognized changelog heading `{heading}`").into());
+        return Err(format!(
+            "unrecognized changelog heading `{heading}`. Move it into a dated release or remove it"
+        )
+        .into());
     }
     let (released, date) = history
         .lines()

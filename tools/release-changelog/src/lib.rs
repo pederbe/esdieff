@@ -121,7 +121,7 @@ fn render(document: &Document) -> String {
     let mut result = document.intro.trim_end().to_owned();
     result.push_str("\n\n");
     if !document.pending.trim().is_empty() {
-        result.push_str("## [Unreleased]\n\n");
+        result.push_str("## Unreleased\n\n");
         result.push_str(document.pending.trim());
         result.push_str("\n\n");
     }
@@ -390,7 +390,13 @@ mod tests {
     fn edited_pending_notes_are_preserved() {
         let released = finalize(SOURCE, "v0.2.0", "2026-10-30").unwrap();
         let changed = SOURCE.replace("A continuation.", "A newly changed continuation.");
-        assert!(record(&changed, SOURCE, &released, "v0.2.0").unwrap().contains("## [Unreleased]\n\n### Added\n\n- A capability.\n  A newly changed continuation."));
+        assert!(
+            record(&changed, SOURCE, &released, "v0.2.0")
+                .unwrap()
+                .contains(
+                    "## Unreleased\n\n### Added\n\n- A capability.\n  A newly changed continuation."
+                )
+        );
     }
 
     #[test]

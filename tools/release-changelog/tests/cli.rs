@@ -95,9 +95,8 @@ fn actual_tag_reconciliation_preserves_later_work_and_is_idempotent() {
     assert_eq!(fixture.git(&["diff", "--name-only"]).trim(), "CHANGELOG.md");
     let recorded = fs::read_to_string(&changelog).unwrap();
     assert!(
-        recorded.contains(
-            "## [Unreleased]\n\n### Added\n\n- Later feature.\n\n## [0.2.0] - 2026-10-30"
-        )
+        recorded
+            .contains("## Unreleased\n\n### Added\n\n- Later feature.\n\n## [0.2.0] - 2026-10-30")
     );
     assert_eq!(recorded.matches("Shipping feature.").count(), 1);
     assert_eq!(fixture.git(&["show", "v0.2.0:CHANGELOG.md"]), released);
