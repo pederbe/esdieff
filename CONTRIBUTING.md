@@ -53,8 +53,8 @@ message. GitHub uses the commit title instead of the pull request title when a
 pull request has a single commit, so give both the same title.
 
 Only changes to files in the published crate count towards a release. Workflow,
-packaging and release-helper changes stay out of the changelog and ship with the
-next release.
+packaging and release-helper changes are not released on their own and stay out
+of the changelog.
 
 Every Monday, the Release-plz workflow opens a release pull request when `main`
 has changes for the changelog. It raises the version and adds a dated section to
@@ -73,8 +73,9 @@ version in `Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next
 release pull request keeps that version. Maintainers can open a release pull
 request at another time by running the Release-plz workflow manually.
 
-If the Release workflow fails after tagging, fix the cause and run it again for
-that tag with publishing enabled. Release-plz compares `main` with the version
+If the Release workflow fails after tagging for a reason outside the tagged
+sources, such as a flaky job, a secret or a setting, fix the cause and run it
+again for that tag with publishing enabled. Release-plz compares `main` with the version
 published on crates.io, so later releases wait until this one is published.
 
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
