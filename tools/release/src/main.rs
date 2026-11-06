@@ -1,24 +1,20 @@
 mod distribution;
 mod licenses;
+mod metadata;
 mod serve;
 mod smoke;
-mod weekly;
 
 pub(crate) type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn run(args: &[String]) -> Result<()> {
     let Some((command, rest)) = args.split_first() else {
-        return Err(
-            "expected smoke, licenses, prepare-weekly, release-notes or a distribution command"
-                .into(),
-        );
+        return Err("expected smoke, licenses, release-notes or a distribution command".into());
     };
     match command.as_str() {
         "smoke" => smoke::run(rest),
         "licenses" => licenses::run(rest),
         "serve-artifacts" => serve::run(rest),
-        "prepare-weekly" => weekly::prepare(rest),
-        "release-notes" => weekly::notes(rest),
+        "release-notes" => metadata::notes(rest),
         "package-linux" | "repository" | "homebrew" | "winget" => distribution::run(args),
         _ => Err(format!("unknown release command: {command}").into()),
     }

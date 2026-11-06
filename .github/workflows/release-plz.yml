@@ -1,0 +1,89 @@
+name: Release-plz
+
+# Every Monday, release-plz opens a release pull request with the next version
+# and changelog when there are unreleased changes. It merges once CI passes.
+# Merging it tags the version, and the Release workflow builds and publishes it.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-pr:
+    if: >-
+      github.ref == 'refs/heads/main' && !github.event.repository.private &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.WEEKLY_RELEASE_ENABLED == 'true'))
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    concurrency:
+      group: release-plz-pr
+      cancel-in-progress: false
+    steps:
+      # CI runs only on pull requests opened with a personal token, not with the workflow token.
+      - name: Require the release token
+        env:
+          RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: test -n "$RELEASE_PLZ_TOKEN" || { echo '::error::Add the RELEASE_PLZ_TOKEN secret. See CONTRIBUTING.md.'; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+      - name: Merge the release pull request once CI passes
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("release-plz-"))][0].number // empty')
+          if [ -z "$pr" ]; then
+            echo 'No unreleased changes this week.'
+            exit 0
+          fi
+          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --auto
+
+  release:
+    if: github.event_name == 'push' && !github.event.repository.private
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - id: release-plz
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # Tags pushed with the workflow token start no workflows, so start the build here.
+      - name: Build and publish the tagged release
+        if: steps.release-plz.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASES: ${{ steps.release-plz.outputs.releases }}
+        run: |
+          set -euo pipefail
+          for tag in $(jq -r '.[].tag' <<< "$RELEASES"); do
+            gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag" -f publish=true
+          done

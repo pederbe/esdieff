@@ -56,9 +56,9 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
         return Err("usage: esdieff-release smoke BIN [VERSION]".into());
     }
     let expected = if let Some(version) = rest.first() {
-        weekly_version(version)?
+        tag_version(version)?
     } else {
-        crate::weekly::crate_version(&fs::read_to_string("Cargo.toml")?)?
+        crate::metadata::crate_version(&fs::read_to_string("Cargo.toml")?)?
     };
     let version = output(Command::new(binary).arg("--version"))?;
     if version.trim() != format!("esdieff {expected}") {
@@ -100,7 +100,7 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn weekly_version(version: &str) -> Result<String> {
-    crate::weekly::version(version)?;
+fn tag_version(version: &str) -> Result<String> {
+    crate::metadata::version(version)?;
     Ok(version.strip_prefix('v').unwrap_or(version).to_owned())
 }

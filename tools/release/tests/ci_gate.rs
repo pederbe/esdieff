@@ -66,53 +66,22 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         assert_eq!(
             selected("pull_request", "checked-base", path, ""),
             format!(
-                "rust={rust}\nrelease_tools=false\nartifacts=false\ndocs={docs}\nstyles={styles}\nwebsite={website}\nrelease_changelog=false\n"
+                "rust={rust}\nrelease_tools=false\nartifacts=false\ndocs={docs}\nstyles={styles}\nwebsite={website}\n"
             ),
             "incorrect check and deployment selection for {path}"
         );
         assert_eq!(
             selected("push", "checked-base", path, ""),
             format!(
-                "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite={website}\nrelease_changelog=false\n"
+                "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite={website}\n"
             ),
             "post-merge selection must only retain website delivery for {path}"
         );
     }
-    for path in [
-        "tools/release-changelog/src/main.rs",
-        "tools/release-changelog/Cargo.lock",
-        "scripts/check-release-changelog.sh",
-        "scripts/record-release-changelog.sh",
-        "scripts/configure-release-changelog.sh",
-        "scripts/prepare-release.sh",
-        ".github/workflows/release-changelog.yml",
-        ".github/workflows/release-changelog-check.yml",
-    ] {
-        assert_eq!(
-            selected("pull_request", "checked-base", path, ""),
-            "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=true\n",
-            "standalone helper change must not select application checks: {path}"
-        );
-        assert_eq!(
-            selected("push", "checked-base", path, ""),
-            "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=false\n",
-            "post-merge selection must not repeat helper checks: {path}"
-        );
-    }
-    assert_eq!(
-        selected(
-            "pull_request",
-            "checked-base",
-            "tools/release-changelog/src/main.rs",
-            "src/lib.rs"
-        ),
-        "rust=true\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=true\n",
-        "helper selection must preserve application checks for a mixed change"
-    );
     for base in ["checked-base", ""] {
         assert_eq!(
             selected("workflow_dispatch", base, "src/lib.rs", ""),
-            "rust=true\nrelease_tools=true\nartifacts=true\ndocs=true\nstyles=true\nwebsite=true\nrelease_changelog=true\n",
+            "rust=true\nrelease_tools=true\nartifacts=true\ndocs=true\nstyles=true\nwebsite=true\n",
             "manual CI and the manually dispatched release caller must retain full checks"
         );
     }
@@ -120,7 +89,7 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         ("tools/release/tests/ci_gate.rs", false),
         ("tools/release/tests/fixtures/gh.rs", false),
         ("tools/release/src/distribution_checks.rs", false),
-        ("tools/release/src/weekly.rs", false),
+        ("tools/release/src/metadata.rs", false),
         ("tools/release/src/distribution.rs", true),
         ("tools/release/src/smoke.rs", true),
         ("tools/release/src/licenses.rs", true),
@@ -128,20 +97,21 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         ("tools/release/Cargo.lock", true),
         (".github/workflows/artifacts.yml", true),
         (".github/workflows/release.yml", true),
-        (".github/workflows/weekly-release.yml", true),
+        (".github/workflows/release-plz.yml", true),
+        ("release-plz.toml", true),
         (".github/workflows/distribution.yml", true),
         (".github/workflows/package-repository.yml", true),
     ] {
         assert_eq!(
             selected("pull_request", "checked-base", path, ""),
             format!(
-                "rust=false\nrelease_tools=true\nartifacts={artifacts}\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=false\n"
+                "rust=false\nrelease_tools=true\nartifacts={artifacts}\ndocs=false\nstyles=false\nwebsite=false\n"
             ),
             "incorrect release-helper coverage for {path}"
         );
         assert_eq!(
             selected("push", "checked-base", path, ""),
-            "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=false\n",
+            "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\n",
             "post-merge selection must not repeat release-helper checks: {path}"
         );
     }
@@ -157,7 +127,7 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
             assert_eq!(
                 selected("pull_request", "checked-base", path, helper),
                 format!(
-                    "rust=true\nrelease_tools={}\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\nrelease_changelog=false\n",
+                    "rust=true\nrelease_tools={}\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\n",
                     !helper.is_empty()
                 ),
                 "application, shared or unknown inputs must retain full checks: {path}"
@@ -166,7 +136,7 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
     }
     assert_eq!(
         selected("workflow_call", "", "tools/release/tests/ci_gate.rs", ""),
-        "rust=true\nrelease_tools=true\nartifacts=true\ndocs=true\nstyles=true\nwebsite=true\nrelease_changelog=true\n",
+        "rust=true\nrelease_tools=true\nartifacts=true\ndocs=true\nstyles=true\nwebsite=true\n",
         "release validation without a comparison base must retain full checks"
     );
     fs::remove_dir_all(temporary).unwrap();
@@ -240,55 +210,12 @@ fn aggregate_requires_selected_checks_and_accepts_only_intentional_skips() {
             .env("RELEASE_TOOLS_SELECTED", "false")
             .env("ARTIFACTS_SELECTED", "false")
             .env("DOCS_SELECTED", docs_selected)
-            .env("RELEASE_CHANGELOG_SELECTED", "false")
-            .env(
-                "RELEASE_CHANGELOG_RESULT",
-                if rust_selected == "true" {
-                    "success"
-                } else {
-                    "skipped"
-                },
-            )
             .output()
             .unwrap();
         assert_eq!(
             output.status.success(),
             expected,
             "incorrect aggregate result for checks={checks}, docs={docs}, artifacts={artifacts}"
-        );
-    }
-    for (rust_selected, helper_selected, helper_result, expected) in [
-        ("false", "true", "success", true),
-        ("false", "true", "skipped", false),
-        ("false", "true", "failure", false),
-        ("false", "true", "cancelled", false),
-        ("false", "false", "skipped", true),
-        ("false", "false", "success", false),
-        ("true", "false", "skipped", false),
-    ] {
-        let selected_result = if rust_selected == "true" {
-            "success"
-        } else {
-            "skipped"
-        };
-        let output = Command::new("bash")
-            .args(["-c", &gate])
-            .env("CHANGES_RESULT", "success")
-            .env("CHECKS_RESULT", selected_result)
-            .env("DOCS_RESULT", "skipped")
-            .env("ARTIFACTS_RESULT", selected_result)
-            .env("RUST_SELECTED", rust_selected)
-            .env("RELEASE_TOOLS_SELECTED", "false")
-            .env("ARTIFACTS_SELECTED", "false")
-            .env("DOCS_SELECTED", "false")
-            .env("RELEASE_CHANGELOG_SELECTED", helper_selected)
-            .env("RELEASE_CHANGELOG_RESULT", helper_result)
-            .output()
-            .unwrap();
-        assert_eq!(
-            output.status.success(),
-            expected,
-            "incorrect aggregate result for rust={rust_selected}, helper={helper_selected}/{helper_result}"
         );
     }
     for (artifacts_selected, artifacts_result) in [("false", "skipped"), ("true", "success")] {
@@ -304,8 +231,6 @@ fn aggregate_requires_selected_checks_and_accepts_only_intentional_skips() {
                     .env("RELEASE_TOOLS_SELECTED", "true")
                     .env("ARTIFACTS_SELECTED", artifacts_selected)
                     .env("DOCS_SELECTED", "false")
-                    .env("RELEASE_CHANGELOG_SELECTED", "false")
-                    .env("RELEASE_CHANGELOG_RESULT", "skipped")
                     .output()
                     .unwrap();
                 assert_eq!(
