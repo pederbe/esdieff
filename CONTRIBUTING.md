@@ -61,14 +61,15 @@ has changes for the changelog. It raises the version and adds a dated section to
 the changelog. Before 1.0, a breaking change raises the minor version and any
 other change raises the patch version. An incompatible library API change found
 by `cargo-semver-checks` also raises the minor version. The release pull request
-merges automatically once CI passes, and release-plz refreshes it when another
-change merges first. Merging it tags the version and starts the Release
-workflow, which builds and publishes the release with that changelog section as
-its notes.
+merges automatically once CI passes. When another change merges first, the
+workflow replaces it with an up-to-date release pull request. Merging the
+release pull request tags the version and starts the Release workflow, which
+builds and publishes the release with that changelog section as its notes.
 
 To edit a release pull request, disable its auto-merge first, then merge it
-before anything else merges, because release-plz replaces it after a change to
-`main`. The replacement merges after the next scheduled or manual run. To release a new minor version for an additive milestone, raise the
+before anything else merges, because any merge to `main` replaces it with a new
+one that merges automatically. To skip a week, close the release pull request.
+To release a new minor version for an additive milestone, raise the
 version in `Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next
 release pull request keeps that version. Maintainers can open a release pull
 request at another time by running the Release-plz workflow manually.

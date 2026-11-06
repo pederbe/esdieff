@@ -23,29 +23,31 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      pull-requests: read
     concurrency:
       group: release-plz-pr
       cancel-in-progress: false
     steps:
-      # The main branch must be up to date before a pull request merges. After
-      # another change merges, refresh an open release pull request so it can.
-      - name: Decide whether to prepare a release pull request
+      # release-plz force-pushes when it updates an open release pull request.
+      # Close that pull request instead, so release-plz opens a fresh one. After
+      # another change merges, this keeps the release up to date with main.
+      - name: Replace any open release pull request
         id: prepare
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          run=true
-          if [ "$EVENT" = push ]; then
-            open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json headRefName \
-              --jq '[.[] | select(.headRefName | startswith("release-plz-"))] | length')
-            if [ "$open" = 0 ]; then
-              run=false
-            fi
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("release-plz-")) | .number')
+          if [ "$EVENT" = push ] && [ -z "$open" ]; then
+            echo run=false >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          echo "run=$run" >> "$GITHUB_OUTPUT"
+          for pr in $open; do
+            gh pr close "$pr" --repo "$GITHUB_REPOSITORY" --delete-branch \
+              --comment 'Replaced by a new release pull request with the latest changes on main.'
+          done
+          echo run=true >> "$GITHUB_OUTPUT"
       - if: steps.prepare.outputs.run == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,7 +65,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Merge the release pull request once CI passes
-        if: steps.prepare.outputs.run == 'true' && github.event_name != 'push'
+        if: steps.prepare.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
         run: |

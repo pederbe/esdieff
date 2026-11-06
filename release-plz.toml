@@ -6,9 +6,9 @@ git_tag_name = "v{{ version }}"
 # Release only when the weekly release pull request merges.
 release_always = false
 # Release only for changes that appear in the changelog, so every release has
-# notes. These are feat:, fix:, perf:, docs:, breaking changes and unprefixed
-# titles that start with a capital letter.
-release_commits = '^([A-Z]|(feat|fix|perf|docs)[(:!]|[a-z]+(\([^)]*\))?!:)|BREAKING[ -]CHANGE'
+# notes. These are feat:, fix:, perf:, docs:, revert:, breaking changes and
+# titles without a conventional prefix.
+release_commits = '^([A-Z]|[a-z]+[^a-z(!:]|(feat|fix|perf|docs|revert)[(:!]|[a-z]+(\([^)]*\))?!:)|BREAKING[ -]CHANGE'
 pr_name = "chore: release v{{ version }}"
 
 [changelog]
