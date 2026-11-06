@@ -68,7 +68,7 @@ its notes.
 
 To edit a release pull request, disable its auto-merge first, then merge it
 before anything else merges, because release-plz replaces it after a change to
-`main`. To release a new minor version for an additive milestone, raise the
+`main`. The replacement merges after the next scheduled or manual run. To release a new minor version for an additive milestone, raise the
 version in `Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next
 release pull request keeps that version. Maintainers can open a release pull
 request at another time by running the Release-plz workflow manually.
