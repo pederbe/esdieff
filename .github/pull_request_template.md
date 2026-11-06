@@ -6,8 +6,8 @@
 
 <!-- The pull request title becomes the changelog entry, so start it with a
      conventional prefix such as feat:, fix: or ci:. For a user-visible change,
-     summarize compatibility consequences, report versions and any required
-     user action here. See CONTRIBUTING.md. -->
+     summarize compatibility consequences, report format versions and any
+     required user action here. See CONTRIBUTING.md. -->
 
 ## Validation and limitations
 

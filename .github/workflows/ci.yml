@@ -69,7 +69,7 @@ jobs:
                 tools/release/tests/*|tools/release/src/distribution_checks.rs|tools/release/src/metadata.rs)
                   release_tools=true
                   ;;
-                tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/release-plz.yml|release-plz.toml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
+                tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
                   release_tools=true
                   artifacts=true
                   ;;
@@ -85,7 +85,7 @@ jobs:
                 *.md)
                   docs=true
                   ;;
-                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml)
+                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml|.github/workflows/release-plz.yml|release-plz.toml)
                   ;;
                 *)
                   rust=true

@@ -16,33 +16,54 @@ permissions:
 jobs:
   release-pr:
     if: >-
-      github.ref == 'refs/heads/main' && !github.event.repository.private &&
-      (github.event_name == 'workflow_dispatch' ||
+      github.repository == 'pederbe/esdieff' && github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && vars.WEEKLY_RELEASE_ENABLED == 'true'))
     runs-on: ubuntu-26.04
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
     concurrency:
       group: release-plz-pr
       cancel-in-progress: false
     steps:
-      # CI runs only on pull requests opened with a personal token, not with the workflow token.
-      - name: Require the release token
+      # The main branch must be up to date before a pull request merges. After
+      # another change merges, refresh an open release pull request so it can.
+      - name: Decide whether to prepare a release pull request
+        id: prepare
         env:
-          RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
-        run: test -n "$RELEASE_PLZ_TOKEN" || { echo '::error::Add the RELEASE_PLZ_TOKEN secret. See CONTRIBUTING.md.'; exit 1; }
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          run=true
+          if [ "$EVENT" = push ]; then
+            open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json headRefName \
+              --jq '[.[] | select(.headRefName | startswith("release-plz-"))] | length')
+            if [ "$open" = 0 ]; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - if: steps.prepare.outputs.run == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PLZ_TOKEN }}
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+          persist-credentials: false
+      - if: steps.prepare.outputs.run == 'true'
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
-      - uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
+      # CI runs only on pull requests opened with a personal token, not with the workflow token.
+      - if: steps.prepare.outputs.run == 'true'
+        uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
         with:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Merge the release pull request once CI passes
+        if: steps.prepare.outputs.run == 'true' && github.event_name != 'push'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
         run: |
@@ -56,7 +77,7 @@ jobs:
           gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --auto
 
   release:
-    if: github.event_name == 'push' && !github.event.repository.private
+    if: github.repository == 'pederbe/esdieff' && github.event_name == 'push'
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
@@ -67,6 +88,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
@@ -76,7 +98,7 @@ jobs:
           command: release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # Tags pushed with the workflow token start no workflows, so start the build here.
+      # Tags created with the workflow token start no workflows, so start the build here.
       - name: Build and publish the tagged release
         if: steps.release-plz.outputs.releases_created == 'true'
         env:

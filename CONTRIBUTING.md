@@ -22,11 +22,11 @@ deploys the website when relevant files change. Manual CI and release validation
 continue to run the full checks.
 
 Release-helper-only changes reuse the platform jobs with
-`bash scripts/check.sh --release-tools-only`. Helper tests and release-notes
-changes skip application builds. Packaging, installation, release and artifact
-workflow changes retain release installation checks. Application, shared-fixture
-and mixed changes retain full coverage, as do changes to CI selection or the
-check script.
+`bash scripts/check.sh --release-tools-only`. Changes to the release helper's
+tests and release-notes code skip application builds. Packaging, installation
+and artifact workflow changes retain release installation checks. Application,
+shared-fixture and mixed changes retain full coverage, as do changes to CI
+selection or the check script.
 
 ## Changelog and releases
 
@@ -46,24 +46,36 @@ conventional prefix:
 Titles without a prefix are listed under Other changes. Write the rest of the
 title for users, describing the new behavior rather than the implementation.
 Each entry links to its pull request, so explain compatibility consequences,
-report versions and any action users need to take in the description. For a
-breaking change, add `!` after the prefix, such as `feat!:`, and add a
+report format versions and any action users need to take in the description.
+For a breaking change, add `!` after the prefix, such as `feat!:`, and add a
 `BREAKING CHANGE:` footer with the required action to the squashed commit
 message. GitHub uses the commit title instead of the pull request title when a
 pull request has a single commit, so give both the same title.
 
+Only changes to files in the published crate count towards a release. Workflow,
+packaging and release-helper changes stay out of the changelog and ship with the
+next release.
+
 Every Monday, the Release-plz workflow opens a release pull request when `main`
-has changes since the last release. It raises the version and adds a dated
-section to the changelog. Before 1.0, a breaking change raises the minor version
-and any other change raises the patch version. The release pull request merges
-automatically once CI passes. Merging it tags the version and starts the Release
+has changes for the changelog. It raises the version and adds a dated section to
+the changelog. Before 1.0, a breaking change raises the minor version and any
+other change raises the patch version. An incompatible library API change found
+by `cargo-semver-checks` also raises the minor version. The release pull request
+merges automatically once CI passes, and release-plz refreshes it when another
+change merges first. Merging it tags the version and starts the Release
 workflow, which builds and publishes the release with that changelog section as
-its notes. To adjust the release first, disable auto-merge on the release pull
-request, edit it and merge it. For example, raise the minor version for an
-additive milestone by changing the version in its `Cargo.toml`, `Cargo.lock` and
-new changelog heading. Maintainers can also open a
-release pull request at another time by running the Release-plz workflow
-manually.
+its notes.
+
+To edit a release pull request, disable its auto-merge first, then merge it
+before anything else merges, because release-plz replaces it after a change to
+`main`. To release a new minor version for an additive milestone, raise the
+version in `Cargo.toml` and `Cargo.lock` in an ordinary pull request. The next
+release pull request keeps that version. Maintainers can open a release pull
+request at another time by running the Release-plz workflow manually.
+
+If the Release workflow fails after tagging, fix the cause and run it again for
+that tag with publishing enabled. Release-plz compares `main` with the version
+published on crates.io, so later releases wait until this one is published.
 
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
 fine-grained personal access token for this repository, with read and write

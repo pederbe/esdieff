@@ -62,6 +62,14 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         ("README.md", false, true, false, false),
         ("src/lib.rs", true, false, false, false),
         (".github/FUNDING.yml", false, false, false, false),
+        (
+            ".github/workflows/release-plz.yml",
+            false,
+            false,
+            false,
+            false,
+        ),
+        ("release-plz.toml", false, false, false, false),
     ] {
         assert_eq!(
             selected("pull_request", "checked-base", path, ""),
@@ -97,8 +105,6 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         ("tools/release/Cargo.lock", true),
         (".github/workflows/artifacts.yml", true),
         (".github/workflows/release.yml", true),
-        (".github/workflows/release-plz.yml", true),
-        ("release-plz.toml", true),
         (".github/workflows/distribution.yml", true),
         (".github/workflows/package-repository.yml", true),
     ] {
@@ -255,7 +261,6 @@ fn maintained_check_command_limits_only_the_requested_scope() {
                 argument,
             ])
             .current_dir(&root)
-            .env("GITHUB_ACTIONS", "true")
             .output()
             .unwrap();
         assert!(output.status.success(), "{output:?}");
