@@ -294,3 +294,20 @@ jobs:
           for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
           bash scripts/check-packages.sh "$RUNNER_TEMP/candidate/repository" "$VERSION" \
             "$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz"
+      - name: Check the one-command Linux installer
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          for image in debian:12-slim ubuntu:22.04 ubuntu:24.04 fedora:44; do
+            docker run --rm -e VERSION -v "$PWD/scripts/install.sh:/install.sh:ro" \
+              -v "$PWD/examples/thermostat-check/rich.sdf.json:/model.sdf.json:ro" "$image" sh -ec '
+              if command -v apt-get >/dev/null; then
+                apt-get update -q
+                apt-get install -qy --no-install-recommends curl ca-certificates
+              fi
+              cat /install.sh | sh
+              test "$(esdieff --version)" = "esdieff $VERSION"
+              esdieff check /model.sdf.json
+            '
+          done
