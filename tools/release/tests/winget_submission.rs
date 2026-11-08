@@ -21,10 +21,14 @@ fn failed_body_update_resumes_existing_pr_without_resubmission() {
     assert!(status.success());
     let client = root.join(format!("bin/wingetcreate{extension}"));
     fs::copy(&gh, &client).unwrap();
-    for suffix in ["", ".installer", ".locale.en-US"] {
+    for (suffix, kind) in [
+        ("", "version"),
+        (".installer", "installer"),
+        (".locale.en-US", "defaultLocale"),
+    ] {
         fs::write(
             root.join(format!("manifests/Publisher.Tool{suffix}.yaml")),
-            "PackageIdentifier: Publisher.Tool\nPackageVersion: 1.2.3\nManifestVersion: 1.28.0\n",
+            format!("# yaml-language-server: $schema=https://aka.ms/winget-manifest.{kind}.1.28.0.schema.json\nPackageIdentifier: Publisher.Tool\nPackageVersion: 1.2.3\nManifestType: {kind}\nManifestVersion: 1.28.0\n"),
         )
         .unwrap();
     }

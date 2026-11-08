@@ -20,6 +20,11 @@ fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("submit") {
         assert!(!root.join("created").exists(), "created a duplicate PR");
+        for entry in fs::read_dir(args.last().unwrap()).unwrap() {
+            let text = fs::read_to_string(entry.unwrap().path()).unwrap();
+            assert!(!text.contains("yaml-language-server"));
+            assert!(text.contains("ManifestVersion: 1.28.0"));
+        }
         fs::write(root.join("created"), "yes").unwrap();
         return;
     }
@@ -44,10 +49,14 @@ fn main() {
     } else if let Some(path) = args.iter().find(|a| a.contains("?ref=")) {
         let name = path.split('?').next().unwrap().rsplit('/').next().unwrap();
         let text = fs::read_to_string(root.join("manifests").join(name)).unwrap();
-        let mut lines: Vec<_> = text.lines().collect();
+        let kind = text
+            .lines()
+            .find_map(|line| line.strip_prefix("ManifestType: "))
+            .unwrap();
+        let mut lines: Vec<_> = text.lines().filter(|line| !line.starts_with('#')).collect();
         lines.reverse();
         print!(
-            "# Created using wingetcreate 1.12.13.0\r\n\r\n{}\r\n",
+            "# Created using wingetcreate 1.12.13.0\r\n# yaml-language-server: $schema=https://aka.ms/winget-manifest.{kind}.1.28.0.schema.json\r\n\r\n{}\r\n",
             lines.join("\r\n")
         );
     } else if args.iter().any(|a| a.ends_with("pulls/7")) {
