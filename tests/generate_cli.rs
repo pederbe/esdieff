@@ -105,7 +105,7 @@ fn patterned_identifiers_agree_across_reports_and_replay_as_trace_entries() {
     );
     assert_eq!(
         json["request"]["generation"]["contract"],
-        "esdieff.generation/2"
+        "esdieff.generation/3"
     );
     assert!(rows(&json).contains(&("type".into(), "ID-00".into(), "admitted".into())));
     let human = run(&["generate", "--document", path, path]);
@@ -164,7 +164,7 @@ fn the_human_report_shows_targets_values_and_admissions() {
     assert_eq!(output.status.code(), Some(0));
     let text = String::from_utf8(output.stdout).unwrap();
     assert!(
-        text.starts_with("Generated values esdieff.generation/2: passed\n"),
+        text.starts_with("Generated values esdieff.generation/3: passed\n"),
         "{text}"
     );
     assert!(

@@ -1,5 +1,5 @@
 //! The Generation targets of one effective data description, in the order the contract
-//! `esdieff.generation/2` fixes, each settled by Sample-value checking as soon as it is kept.
+//! `esdieff.generation/3` fixes, each settled by Sample-value checking as soon as it is kept.
 //! Settling each value before generating the next keeps every kept admission, even when later
 //! generation runs out of the description's allowance.
 //!
@@ -216,6 +216,7 @@ impl<'m> Run<'_, 'm, '_> {
             self.offer("duplicate_items", value)?;
         }
         self.missing_entries(description)?;
+        self.link_members(description)?;
         self.wrong_type(description)?;
         self.nested(description)
     }
@@ -453,6 +454,76 @@ impl<'m> Run<'_, 'm, '_> {
             names.remove(missing);
             let value = self.filled(&names, &described)?;
             self.offer("missing_entry", value)?;
+        }
+        Ok(())
+    }
+
+    /// For a description with link meaning, one value rejected by each member rule of
+    /// ADR 0060: Link sdfType draft support. Each is the map of required entries beside an
+    /// undeclared member, `Href` holding a string for the lowercase name rule and `rel`
+    /// holding a number for the string rule, renamed with `_` until no entry is described or
+    /// required under that name. Neither is offered when a required entry would break a
+    /// member rule itself.
+    fn link_members(&mut self, description: EffectiveJson<'_>) -> Result<(), Exhausted> {
+        let budget = &mut self.generator.allowance.budget;
+        if !crate::link::established(description, budget) {
+            // `established` reports an exhausted allowance as no link meaning.
+            return if budget.work == 0 {
+                Err(Exhausted::Work)
+            } else {
+                Ok(())
+            };
+        }
+        let Some((described, required)) = self.entries(description)? else {
+            return Ok(());
+        };
+        // Each value isolates its own rule only when the required entries obey both: each is
+        // lowercase and described with a `type`, rather than filled with `null` or the `0`
+        // an untyped description gives first.
+        for name in &required {
+            self.generator.work(name.len() + 1)?;
+            if !crate::link::member_name_admitted(name) {
+                return Ok(());
+            }
+            let mut typed = false;
+            for (other, entry) in &described {
+                self.generator.work(name.len().min(other.len()) + 1)?;
+                if other == name {
+                    typed = self.generator.member(*entry, "type")?.is_some();
+                    break;
+                }
+            }
+            if !typed {
+                return Ok(());
+            }
+        }
+        let string = self.text(0)?;
+        let number = self.generator.lexeme("0")?;
+        for (base, target, value) in [
+            ("Href", "uppercase_member", string),
+            ("rel", "nonstring_member", number),
+        ] {
+            let Some(value) = value else {
+                continue;
+            };
+            let mut name = base.to_owned();
+            loop {
+                let names = described.iter().map(|(other, _)| *other);
+                let names = names.chain(required.iter().copied());
+                if !listed(names, &name, &mut self.generator.allowance.budget)? {
+                    break;
+                }
+                self.generator.work(name.len() + 1)?;
+                if !crate::allowance::charge(&mut self.generator.allowance.budget.allocation, 1) {
+                    return Err(Exhausted::Allocation);
+                }
+                name.push('_');
+            }
+            let depth = self.path.len();
+            let value = self
+                .generator
+                .map(description, Some((&name, value)), None, depth)?;
+            self.offer(target, value)?;
         }
         Ok(())
     }

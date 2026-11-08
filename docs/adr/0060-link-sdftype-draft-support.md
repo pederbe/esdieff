@@ -70,7 +70,10 @@ between `link` and another convention is breaking, and adding or removing `link`
 is breaking with a Breaking witness, a map with an uppercase member name.
 Contract `esdieff.revision-comparison/10` supersedes `/9` for these
 classifications, and old undetermined acknowledgements do not match the newly
-classified rows. Reports
+classified rows. Generation adds one
+rejection for each member rule, the `uppercase_member` and `nonstring_member`
+targets, so a replayed corpus shows whether an implementation enforces them.
+Contract `esdieff.generation/3` supersedes `/2` for these targets. Reports
 identify the draft revision, digest and limits in `baseline.extensions`, beside
 the Context draft. Following links, resolving `href` targets and the undefined
 `oma-object` URI scheme remain outside this support.

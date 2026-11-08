@@ -353,7 +353,7 @@ Operation `generate` uses version `1.5` under [ADR 0041: Generated values settle
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Generate request | assessment:null; inventory:null; generation:{contract:`"esdieff.generation/2"`, document:Id, selector?:SampleSelector}; scope:Scope | The request names the generation contract identity, the document and an explicit selector when one was given. Scope is selected, with the document as its root. |
+| Generate request | assessment:null; inventory:null; generation:{contract:`"esdieff.generation/3"`, document:Id, selector?:SampleSelector}; scope:Scope | The request names the generation contract identity, the document and an explicit selector when one was given. Scope is selected, with the document as its root. |
 | Generate outcome | Outcome fields | Generation reports no model findings, so the finding counts are 0 and the disposition is passed when generation completed for every selected description, otherwise undetermined. Exit codes follow `check`. |
 | Generate requested coverage | inventory:null; count_unit:`"description"`; total:Count|null; assessed:Count; not_applicable:0; unassessed:Count; undetermined:Count | One unit per selected description. total is null when the document's selection is partial. |
 | GenerateResult | kind:`"generate"`; summary:{admitted, rejected, undetermined}; selection; descriptions; descriptions_omitted:Count; omissions:Omission[] | Typed descriptions with their selectors, effective locations, states and values of `{target, value, admission, codes}`. Summary counts and the outcome survive omitted description details. |

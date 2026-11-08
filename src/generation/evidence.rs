@@ -49,7 +49,7 @@ impl Aim {
             }
             "below_minimum" | "above_maximum" | "not_multiple" | "too_short" | "too_long"
             | "too_few_items" | "too_many_items" | "duplicate_items" | "missing_entry"
-            | "wrong_type" => Self::Outside,
+            | "uppercase_member" | "nonstring_member" | "wrong_type" => Self::Outside,
             _ => Self::Example,
         }
     }
