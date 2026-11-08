@@ -39,6 +39,8 @@ pub(crate) enum Basis {
     AbstractEstablishment,
     PatternCapability,
     PatternWork,
+    /// A link value rule of ADR 0060: Link sdfType draft support.
+    Link,
 }
 impl Basis {
     pub(crate) const fn support_mask(self) -> u32 {
@@ -67,6 +69,7 @@ impl Basis {
             Self::Abstract => 21,
             Self::Byte => 22,
             Self::Unix => 23,
+            Self::Link => 24,
             _ => return 0,
         };
         1 << index
@@ -116,6 +119,9 @@ impl Basis {
             }
             Self::ResourceWork => "",
             Self::Abstract | Self::Byte | Self::Unix => "RFC 9880 Section 4.7.1 Table 5",
+            Self::Link => {
+                "draft-ietf-asdf-sdftype-link-02 Section 2; ADR 0060: Link sdfType draft support"
+            }
         }
     }
     pub(crate) fn incomplete(self) -> bool {
@@ -138,7 +144,9 @@ impl Basis {
         match self {
             Self::TemporalRepresentation => "interpretation",
             Self::TemporalKnowledge | Self::TemporalMeaning | Self::TemporalWork => "operational",
-            Self::UuidText | Self::UuidValue | Self::Byte | Self::Unix => "interpretation",
+            Self::UuidText | Self::UuidValue | Self::Byte | Self::Unix | Self::Link => {
+                "interpretation"
+            }
             Self::ResourceMeaning
             | Self::ResourceWork
             | Self::AbstractUnavailable
@@ -160,6 +168,7 @@ impl Basis {
             Self::ResourceMeaning | Self::ResourceWork => Some("sample-establishment"),
             Self::Byte => Some("byte-string-json/1"),
             Self::Unix => Some("unix-time-posix-coordinate/1"),
+            Self::Link => Some(crate::link::DRAFT),
             Self::AbstractUnavailable => Some("sample-abstract-denotation-unavailable"),
             Self::AbstractWork => Some("sample-work-limit"),
             Self::AbstractNumberWork => Some("sample-number-work-limit"),

@@ -110,3 +110,4 @@
   - [0057: Supplied models without network acquisition](adr/0057-supplied-models-without-network-acquisition.md)
   - [0058: Implementer grouping counts](adr/0058-implementer-grouping-counts.md)
   - [0059: Implementer Property capabilities](adr/0059-implementer-property-capabilities.md)
+  - [0060: Link sdfType draft support](adr/0060-link-sdftype-draft-support.md)

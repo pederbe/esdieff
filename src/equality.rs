@@ -1165,6 +1165,9 @@ mod comparison {
                 "items" if kind != Some("array") => return false,
                 "properties" if kind != Some("object") => return false,
                 "items" | "properties" => {}
+                // Link values compare as ordinary maps under ADR 0060: Link sdfType draft
+                // support. Its member rules are admission rules, not a value denotation.
+                "sdfType" if crate::link::established(json, budget) => {}
                 "sdfType" | "contentFormat" | "sdfRef" => return false,
                 "format" => {
                     if kind != Some("string")

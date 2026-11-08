@@ -1830,13 +1830,29 @@ impl Report<'_> {
                 output.push('\n');
             }
         }
-        if value["baseline"]["extensions"].is_array() {
+        // Each recorded draft keeps one line naming its support and one naming its limits.
+        for row in value["baseline"]["extensions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let (id, scope, limits) = if row["id"] == crate::context::DRAFT {
+                (
+                    crate::context::DRAFT,
+                    "Context checking, composition, inspection and selected-value checking",
+                    "Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined and reuse outside Context unavailable",
+                )
+            } else if row["id"] == crate::link::DRAFT {
+                (
+                    crate::link::DRAFT,
+                    "link checking, inspection, selected-value checking, generation, trace replay and revision comparison",
+                    "Link limits: link meaning requires type object, attribute value case is not assessed and links are not followed",
+                )
+            } else {
+                continue;
+            };
             output.heading("Draft support:");
-            output.push_str(&format!(
-                " {} (Context checking, composition, inspection and selected-value checking)\n",
-                crate::context::DRAFT
-            ));
-            output.push_str("Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined, reuse outside Context unavailable and general link meaning unavailable\n");
+            output.push_str(&format!(" {id} ({scope})\n{limits}\n"));
         }
         if value["baseline"]["temporal_knowledge"].is_object() {
             output.heading("Temporal knowledge:");
@@ -2713,8 +2729,12 @@ impl Report<'_> {
             request["sample"] = json!(state.sample.get());
         }
         let mut baseline = json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":[],"deviations":[],"registry_knowledge":[]});
-        if self.structure.context_used || matches!(self.operation, Operation::Inspect { .. }) {
-            baseline["extensions"] = crate::context::support();
+        let inspect = matches!(self.operation, Operation::Inspect { .. });
+        if let Some(extensions) = crate::link::extensions(
+            self.structure.context_used || inspect,
+            self.structure.link_used || inspect,
+        ) {
+            baseline["extensions"] = extensions;
         }
         let temporal_use = self.structure.temporal_use
             | self.sample.as_ref().map_or(0, |state| state.temporal_use);

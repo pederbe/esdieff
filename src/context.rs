@@ -12,7 +12,7 @@ pub(crate) fn support() -> serde_json::Value {
         "id":DRAFT,
         "sha256":SHA256,
         "scope":"Context checking, composition, inspection, selected-value checking, generation, trace replay and client-interaction revision comparison",
-        "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "reference reuse outside Context unavailable", "general link meaning unavailable"]
+        "limitations":["absent nullable defaults unresolved", "Context sdfRequired meaning undefined", "reference reuse outside Context unavailable"]
     }])
 }
 

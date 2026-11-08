@@ -357,7 +357,10 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                 coverage.observe(
                     Requirement::M025,
                     if json.kind() == JsonKind::String
-                        && !matches!(json.text(), Field::Present("byte-string" | "unix-time"))
+                        && !matches!(
+                            json.text(),
+                            Field::Present("byte-string" | "unix-time" | "link")
+                        )
                     {
                         Unassessed
                     } else {
@@ -366,7 +369,8 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                 );
                 if json.effective().is_some() {
                     match json.text() {
-                        Field::Present("byte-string" | "unix-time") => {}
+                        // ADR 0060: Link sdfType draft support records `link`.
+                        Field::Present("byte-string" | "unix-time" | "link") => {}
                         Field::Present(_) => coverage.observe(Requirement::M028, Undetermined),
                         _ => {}
                     }

@@ -26,12 +26,15 @@ cargo test --test context_draft_examples
 ```
 
 The plan checks all five originals and compares Figure 2 with the derived
-revision below. It exits 3 because general `sdfType: "link"` meaning remains
-unsupported. The first four model checks complete with no errors. The four
-fragments receive missing-`info` warnings, and the original `°C` spelling in
-Figure 2 receives unit-registry notices. Those source details are preserved.
-The regression test asserts these outcomes and exercises admitted and rejected
-Context values, including nested required fields, enums and certification arrays.
+revision below. It exits 0, and every model check completes with no errors. The
+four fragments receive missing-`info` warnings, and the original `°C` spelling
+in Figure 2 receives unit-registry notices. Those source details are preserved.
+Figure 6's links are checked under the
+[Link sdfType draft](../link-draft-02/README.md), so a datasheet link with a
+string `href` is admitted and one with a numeric `href` is rejected. The
+regression test asserts these outcomes and exercises admitted and rejected
+Context values, including nested required fields, enums, certification arrays
+and links.
 
 ## Compare a derived revision
 

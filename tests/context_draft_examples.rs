@@ -25,7 +25,7 @@ fn saved_plan_checks_all_five_figures_and_the_derived_revision() {
         .unwrap();
     assert_eq!(
         output.status.code(),
-        Some(3),
+        Some(0),
         "{}\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
@@ -36,27 +36,27 @@ fn saved_plan_checks_all_five_figures_and_the_derived_revision() {
     for (index, case) in cases[..5].iter().enumerate() {
         let report = &case["report"];
         assert_eq!(report["outcome"]["errors"], 0, "{case}");
-        assert_eq!(report["outcome"]["complete"], index < 4, "{case}");
-        assert_eq!(
-            report["outcome"]["disposition"],
-            if index < 4 { "passed" } else { "undetermined" },
-            "{case}"
-        );
+        assert_eq!(report["outcome"]["complete"], true, "{case}");
+        assert_eq!(report["outcome"]["disposition"], "passed", "{case}");
         assert_eq!(
             report["outcome"]["warnings"],
             usize::from(index > 0),
             "{case}"
         );
     }
-    let links = &cases[4]["report"]["diagnostics"]["items"];
-    assert_eq!(
-        links
+    // Figure 6's links have the recorded meaning of ADR 0060: Link sdfType draft support.
+    let links = &cases[4]["report"];
+    assert!(
+        links["diagnostics"]["items"]
             .as_array()
             .unwrap()
             .iter()
-            .filter(|item| item["code"] == "extension.optional_unsupported")
-            .count(),
-        3
+            .all(|item| item["code"] != "extension.optional_unsupported"),
+        "{links}"
+    );
+    assert_eq!(
+        links["baseline"]["extensions"][1]["id"],
+        "draft-ietf-asdf-sdftype-link-02"
     );
 
     let diff = &cases[5]["report"];
@@ -158,20 +158,30 @@ fn published_context_shapes_accept_and_reject_independent_values() {
 }
 
 #[test]
-fn unchanged_examples_preserve_unknown_nullability_and_link_semantics() {
+fn unchanged_examples_preserve_unknown_nullability_and_check_links() {
     assert_eq!(
         sample(DEVICE, CALIBRATION, "null"),
         (Admission::Undetermined, false)
     );
     for name in ["datasheetLink", "certificationLink", "digitalTwinLink"] {
-        assert_eq!(
-            sample(
-                LINKS,
-                &format!("/sdfObject/deviceWithLinks/sdfContext/{name}"),
-                r#"{"href":"https://example.com/resource"}"#
+        let pointer = format!("/sdfObject/deviceWithLinks/sdfContext/{name}");
+        for (value, expected) in [
+            (
+                r#"{"href":"https://example.com/resource"}"#,
+                (Admission::Admitted, true),
             ),
-            (Admission::Undetermined, false),
-            "{name}"
-        );
+            (
+                r#"{"href":"https://example.com/resource","rel":"describedby"}"#,
+                (Admission::Admitted, true),
+            ),
+            (r#"{"href":7}"#, (Admission::Rejected, true)),
+            (
+                r#"{"HREF":"https://example.com/resource"}"#,
+                (Admission::Rejected, true),
+            ),
+            ("null", (Admission::Undetermined, false)),
+        ] {
+            assert_eq!(sample(LINKS, &pointer, value), expected, "{name}: {value}");
+        }
     }
 }

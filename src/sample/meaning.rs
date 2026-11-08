@@ -38,7 +38,7 @@ impl SampleBasisRef {
 }
 
 // Keep the precise producing references, including compound and format rules.
-pub(super) const SUPPORT: [Basis; 24] = [
+pub(super) const SUPPORT: [Basis; 25] = [
     Basis::Numeric,
     Basis::Text,
     Basis::Boolean,
@@ -63,10 +63,11 @@ pub(super) const SUPPORT: [Basis; 24] = [
     Basis::Abstract,
     Basis::Byte,
     Basis::Unix,
+    Basis::Link,
 ];
 // Only abstract-value producers insert into this area. Ordinary type, const,
 // choice and compound rules retain their distinct admission/const references.
-pub(super) const ABSTRACT_SUPPORT: u32 = ((1 << 24) - 1) & !((1 << 9) - 1);
+pub(super) const ABSTRACT_SUPPORT: u32 = ((1 << 25) - 1) & !((1 << 9) - 1);
 // Definite contextual comparators establish these denotations. Representation
 // rejection references belong to abstract/admission producers, not a successful
 // comparison of two established values.
@@ -99,8 +100,16 @@ const CITED_LIMITS: [Basis; 3] = [
     Basis::ResourceMeaning,
 ];
 
+/// Three slots of `WIDTH` bytes: abstract values, const and the admission conclusion. Each
+/// slot holds `SUPPORT_BYTES` bytes of supporting references, then two bytes of limitations
+/// whose top bit in the conclusion slot marks a failed witness.
+const WIDTH: usize = 6;
+const SUPPORT_BYTES: usize = 4;
+const CONCLUSION: usize = 2 * WIDTH;
+const FLAGS: usize = CONCLUSION + SUPPORT_BYTES + 1;
+
 #[derive(Clone, Copy, Default)]
-pub(super) struct MeaningRecord([u8; 15]);
+pub(super) struct MeaningRecord([u8; 3 * WIDTH]);
 impl MeaningRecord {
     fn insert(&mut self, slot: usize, basis: Basis) {
         self.insert_mask(slot, basis.support_mask());
@@ -111,25 +120,27 @@ impl MeaningRecord {
         } else if slot == 1 {
             assert_eq!(mask & !CONST_SUPPORT, 0);
         }
-        self.0[slot * 5] |= mask as u8;
-        self.0[slot * 5 + 1] |= (mask >> 8) as u8;
-        self.0[slot * 5 + 2] |= (mask >> 16) as u8;
+        for (index, byte) in mask.to_le_bytes().into_iter().enumerate() {
+            self.0[slot * WIDTH + index] |= byte;
+        }
     }
     fn clear_support(&mut self, slot: usize) {
-        self.0[slot * 5..slot * 5 + 3].fill(0);
+        self.0[slot * WIDTH..slot * WIDTH + SUPPORT_BYTES].fill(0);
     }
     fn limit(&mut self, slot: usize, index: u8) {
         assert!(index < 9);
-        self.0[slot * 5 + 3 + usize::from(index / 8)] |= 1 << (index % 8);
+        self.0[slot * WIDTH + SUPPORT_BYTES + usize::from(index / 8)] |= 1 << (index % 8);
     }
     fn merge_limits(&mut self, slot: usize, mask: u16) {
         assert_eq!(mask & !511, 0);
-        self.0[slot * 5 + 3] |= mask as u8;
-        self.0[slot * 5 + 4] |= (mask >> 8) as u8;
+        let offset = slot * WIDTH + SUPPORT_BYTES;
+        self.0[offset] |= mask as u8;
+        self.0[offset + 1] |= (mask >> 8) as u8;
     }
     fn replace_limits(&mut self, slot: usize, mask: u16) {
-        self.0[slot * 5 + 3] = mask as u8;
-        self.0[slot * 5 + 4] = (self.0[slot * 5 + 4] & 128) | (mask >> 8) as u8;
+        let offset = slot * WIDTH + SUPPORT_BYTES;
+        self.0[offset] = mask as u8;
+        self.0[offset + 1] = (self.0[offset + 1] & 128) | (mask >> 8) as u8;
     }
     fn has_limits(&self, slot: usize) -> bool {
         self.limitations(slot) != 0
@@ -138,9 +149,9 @@ impl MeaningRecord {
         self.limitations(slot) & (1 << index) != 0
     }
     fn copy_const_support_to_conclusion(&mut self) {
-        self.0[10] |= self.0[5];
-        self.0[11] |= self.0[6];
-        self.0[12] |= self.0[7];
+        for index in 0..SUPPORT_BYTES {
+            self.0[CONCLUSION + index] |= self.0[WIDTH + index];
+        }
     }
     fn const_primary(&self) -> Basis {
         match self.support(1) & ABSTRACT_SUPPORT {
@@ -150,55 +161,58 @@ impl MeaningRecord {
         }
     }
     fn merge_areas(&mut self, other: &Self) {
-        for index in 0..10 {
+        for index in 0..CONCLUSION {
             self.0[index] |= other.0[index];
         }
-        self.0[14] |= other.0[14] & 128;
+        self.0[FLAGS] |= other.0[FLAGS] & 128;
     }
     fn merge_conclusion(&mut self, other: &Self) {
-        for index in 10..15 {
+        for index in CONCLUSION..3 * WIDTH {
             self.0[index] |= other.0[index];
         }
     }
     fn merge_conclusion_areas(&mut self) {
-        self.0[10] |= self.0[0] | self.0[5];
-        self.0[11] |= self.0[1] | self.0[6];
-        self.0[12] |= self.0[2] | self.0[7];
+        for index in 0..SUPPORT_BYTES {
+            self.0[CONCLUSION + index] |= self.0[index] | self.0[WIDTH + index];
+        }
     }
     fn merge_conclusion_limits(&mut self) {
-        self.0[13] |= self.0[3] | self.0[8];
-        self.0[14] |= self.0[4] | self.0[9];
+        for index in SUPPORT_BYTES..WIDTH {
+            self.0[CONCLUSION + index] |= self.0[index] | self.0[WIDTH + index];
+        }
     }
     fn normalize(&mut self, areas: &[Status; 9], admission: super::Admission) {
         for (slot, area) in [(0, 8), (1, 4)] {
             if areas[area] == Status::NotApplicable {
-                self.0[slot * 5..slot * 5 + 5].fill(0);
+                self.0[slot * WIDTH..(slot + 1) * WIDTH].fill(0);
             }
         }
         if admission == super::Admission::Undetermined {
             self.clear_support(2);
         } else {
-            self.0[13] = 0;
-            self.0[14] &= 128;
+            self.0[FLAGS - 1] = 0;
+            self.0[FLAGS] &= 128;
         }
     }
     fn witness_failed(&self) -> bool {
-        self.0[14] & 128 != 0
+        self.0[FLAGS] & 128 != 0
     }
     fn mark_witness_failed(&mut self) {
-        self.0[14] |= 128;
-        self.0[3] |= 1 << 5;
-        self.0[8] |= 1 << 5;
-        self.0[13] |= 1 << 5;
+        self.0[FLAGS] |= 128;
+        for slot in 0..3 {
+            self.0[slot * WIDTH + SUPPORT_BYTES] |= 1 << 5;
+        }
     }
     fn support(&self, slot: usize) -> u32 {
-        let offset = slot * 5;
-        u32::from(self.0[offset])
-            | (u32::from(self.0[offset + 1]) << 8)
-            | (u32::from(self.0[offset + 2]) << 16)
+        let offset = slot * WIDTH;
+        u32::from_le_bytes(
+            self.0[offset..offset + SUPPORT_BYTES]
+                .try_into()
+                .expect("four support bytes"),
+        )
     }
     fn limitations(&self, slot: usize) -> u32 {
-        let offset = slot * 5 + 3;
+        let offset = slot * WIDTH + SUPPORT_BYTES;
         (u32::from(self.0[offset]) | (u32::from(self.0[offset + 1]) << 8)) & 511
     }
 }
@@ -680,15 +694,15 @@ mod tests {
                 complete.push(triple(reference));
             }
         }
-        assert_eq!(SUPPORT.len(), 24);
-        assert_eq!(complete.len(), 23);
+        assert_eq!(SUPPORT.len(), 25);
+        assert_eq!(complete.len(), 24);
         for mask in [
             0,
             slot,
             leap,
             slot | leap,
             (1 << 12) | slot | leap | (1 << 15),
-            (1 << 24) - 1,
+            (1 << 25) - 1,
         ] {
             let mut expected = Vec::new();
             for (index, basis) in SUPPORT.iter().enumerate() {

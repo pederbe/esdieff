@@ -1,0 +1,24 @@
+{
+  "namespace": {
+    "org": "https://models.example.com/"
+  },
+  "sdfData": {
+    "idlink": {
+      "description": "Special kind of link type example org uses",
+      "type": "object",
+      "sdfType": "link",
+      "properties": {
+        "href": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "minvalue": 0,
+          "maxvalue": 255,
+          "description":
+            "Special identifier for metadata about this link"
+        }
+      }
+    }
+  }
+}

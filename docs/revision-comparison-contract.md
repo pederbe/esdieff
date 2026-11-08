@@ -13,9 +13,10 @@ println!("{}", comparison.to_human());
 std::process::exit(comparison.disposition().exit_code().into());
 ```
 
-The comparison contract identity is `esdieff.revision-comparison/9`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
+The comparison contract identity is `esdieff.revision-comparison/10`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/9` adds implementer Property
+This page describes the current checkout. Contract `/10` classifies adding, removing
+and swapping the recorded `link` convention. Contract `/9` added implementer Property
 capability classifications. Contract `/8` added implementer grouping
 count classifications. Contract `/7` added implementer
 declaration-presence classifications to `/6`, which classified changes to
@@ -102,7 +103,7 @@ acknowledgement format `1` are unchanged.
 
 The comparison assesses interactions only, from the selected perspective. It does not assess compatibility for consumers of instance metadata, following [ADR 0049: Context revision comparison](adr/0049-context-revision-comparison.md).
 
-Named Context definitions correspond within Objects and Things after inheritance and refinement. Their additions, removals and changed effective content appear as separate `sdfContext` differences, with no client data directions. Available Context differences are compatible for client interactions, including changed constraints, defaults and documentary content. This says nothing about whether a metadata consumer can accept the new values. Structural comparison uses exact numbers and unordered maps. It does not compare the abstract meaning of metadata values, including unsupported meanings such as `sdfType: "link"`, or settle disputed Context defaults.
+Named Context definitions correspond within Objects and Things after inheritance and refinement. Their additions, removals and changed effective content appear as separate `sdfContext` differences, with no client data directions. Available Context differences are compatible for client interactions, including changed constraints, defaults and documentary content. This says nothing about whether a metadata consumer can accept the new values. Structural comparison uses exact numbers and unordered maps. It does not compare the abstract meaning of metadata values or settle disputed Context defaults.
 
 A Context and Property with the same Given Name remain separate definitions. Moving a Property into Context still removes the old affordance and is breaking. A shared `sdfData` description is compared normally through each Property that reuses it, even when a Context uses it too. A Context origin never makes an actual Property change safe. Direct references from a non-Context role into Context remain unavailable under [ADR 0047: Context reuse with existing composition](adr/0047-context-reuse-with-existing-composition.md).
 
@@ -262,7 +263,7 @@ Unchanged qualities produce no difference. `sdfRequired` instead compares by the
 | Any other changed `unit` in data | Undetermined, with its [unit reason](#units) |
 | Changed `contentFormat` in data between two different established meanings | Breaking |
 | Any other changed `contentFormat` in data | Undetermined, with its [content-format reason](#content-formats) |
-| Changed `sdfType` in data between `byte-string` and `unix-time` | Breaking |
+| Changed `sdfType` in data between `byte-string`, `unix-time` and `link` | Breaking |
 | `sdfType` added to or removed from data, with a Breaking witness | Breaking |
 | `sdfType` added to or removed from data without a witness | Undetermined, with a [witness reason](#breaking-witnesses-and-compatibility-proofs) |
 | Any other changed `sdfType` in data | Undetermined, `comparison.not_classified` |
@@ -419,8 +420,16 @@ the base64url alphabet, for `byte-string`, and `""`, which is not a number, for
 `unix-time`. Thus `byte-string` added to client-supplied string data, or removed
 from thing-supplied string data, is breaking with the witness `"!"`. The reverse
 changes, and a candidate that another constraint such as a `pattern` already
-excludes, stay undetermined with `comparison.unproven`. Any other `sdfType` value
-is not classified.
+excludes, stay undetermined with `comparison.unproven`.
+
+The `link` convention follows [ADR 0060: Link sdfType draft support](adr/0060-link-sdftype-draft-support.md)
+and is classified the same way. Its candidate is the map `{"X":""}`, whose
+member name is not in the lowercase form a link requires. Constraints inside a
+link description, such as a member's `maximum` or `const`, are classified like
+any other data constraints. A link member without a `type` is a string, so
+adding or removing a member's `type`, or a member's whole description, changes
+between string and that type rather than widening or narrowing. Witnesses settle
+those changes. Any other `sdfType` value is not classified.
 
 ## Requiredness
 
@@ -663,7 +672,7 @@ Operation `diff` uses the `esdieff.report` envelope with version `1.7`, which ad
 
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
-| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/9"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
+| Diff request | assessment:null; inventory:null; comparison:`"esdieff.revision-comparison/10"`; scope:{earlier:Scope, later:Scope} | Each revision has catalogue scope. `assessed` lists its model documents. `unavailable_required` lists documents whose retained source JSON is unavailable, rather than every document with incomplete effective composition. |
 | Diff source | Source fields; revision:`"earlier"|"later"` | Every acquisition attempt of both revisions. |
 | Diff policy and baseline | policy.recorded_registry:`"use_recorded"|"withhold_recorded"`; policy.acknowledgements:Count; policy.compatibility_scope:`"client_interactions"`; policy.perspective:`"client"|"implementer"`; baseline.registry_knowledge:RegistryKnowledge[]; baseline.extensions:Extension[] | The request's recorded evidence policy and the number of supplied acknowledgement entries, 0 without any. Registry knowledge lists each recorded unit section and content-format registry that unit and content-format comparison consulted or found withheld, as in `check` reports, and is empty when no change needed it. |
 | Diff outcome | complete:boolean; errors:Count; warnings:Count; notices:0; incomplete_checks:Count; strict_warnings:false; disposition | `errors` counts unacknowledged breaking differences. `warnings` counts Version warnings, including omitted ones, and changes neither completeness nor the disposition. `complete` is false and `incomplete_checks` is 1 when any unacknowledged difference is undetermined. The disposition is failed when any unacknowledged difference is breaking, otherwise undetermined when any unacknowledged difference is undetermined, otherwise passed. Without acknowledgements it is failed for a breaking comparison, undetermined for an undetermined one and passed for a compatible one. |
