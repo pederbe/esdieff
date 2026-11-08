@@ -34,37 +34,39 @@ Save the following two documents from the [directory-check example](https://gith
 Checking the device on its own cannot finish, because the referenced definition is not in the catalogue:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check device.sdf.json
-<b>Esdieff:</b> <span class="y">undetermined</span>
-<b>Complete:</b> <span class="y">false</span>
-<b>Errors:</b> 0; <b>warnings:</b> 0; <b>notices:</b> 0; <b>incomplete checks:</b> 6
-<b>Scope:</b> catalogue
+<b><span class="h">Esdieff:</span></b> <b><span class="y">⚠ undetermined</span></b>
+<b><span class="h">Complete:</span></b> <b><span class="y">false</span></b>
+<b><span class="h">Errors:</span></b> 0 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 6
+<b><span class="h">Scope:</span></b> catalogue
 ...
-<span class="y">reference.unavailable</span>: supplied global target unavailable
+
+<b><span class="y">⚠ reference.unavailable</span></b>: supplied global target unavailable
 effective 1 "/sdfObject/Sensor/sdfProperty/reading"
   related source 1 "/sdfObject/Sensor/sdfProperty/reading/sdfRef"
   related source 1 "/sdfObject/Sensor/sdfProperty/reading"
-<span class="y">coverage.unavailable</span>: Requested assessment area has unfinished applicable work
+
+<b><span class="y">⚠ coverage.unavailable</span></b>: Requested assessment area has unfinished applicable work
 ...
 </code></pre>
 
 The missing target leaves reference resolution unfinished, producing an `undetermined` verdict and exit status 3. This is an Esdieff processing limitation under the supplied catalogue. Supply both files, and select `device.sdf.json` as the **root document** so the requested model check covers that document and its needed dependencies:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --root device.sdf.json device.sdf.json types.sdf.json
-<b>Esdieff:</b> <span class="g">passed</span>
-<b>Complete:</b> true
-<b>Errors:</b> 0; <b>warnings:</b> 0; <b>notices:</b> 0; <b>incomplete checks:</b> 0
-<b>Scope:</b> selected
-<b>Broader RFC coverage:</b> partial
-<b>Requested assessment:</b> esdieff.initial/1
-<b>Baseline:</b> rfc9880/base-1 (RFC 9880)
-<b>Acceptance restrictions:</b> A001, A002; <b>strict warnings:</b> false
-<b>Requested sources:</b> [1]
-<b>Requested inventory:</b> esdieff.initial/1
-<b>Requested coverage (assessment_area):</b> total 8; assessed 7; not applicable 1; unassessed 0; undetermined 0
-<b>Source</b> 1 ["input1"]: acquired / usable (247 retained bytes, content complete: true)
-<b>Source</b> 2 ["input2"]: acquired / usable (211 retained bytes, content complete: true)
-<b>Dependency sources:</b> [2]
-<b>Diagnostic details omitted:</b> 0
+<b><span class="h">Esdieff:</span></b> <b><span class="g">✔ passed</span></b>
+<b><span class="h">Complete:</span></b> true
+<b><span class="h">Errors:</span></b> 0 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
+<b><span class="h">Scope:</span></b> selected
+<b><span class="h">Broader RFC coverage:</span></b> partial
+<b><span class="h">Requested assessment:</span></b> esdieff.initial/1
+<b><span class="h">Baseline:</span></b> rfc9880/base-1 (RFC 9880)
+<b><span class="h">Acceptance restrictions:</span></b> A001, A002 · <b><span class="h">strict warnings:</span></b> false
+<b><span class="h">Requested sources:</span></b> [1]
+<b><span class="h">Requested inventory:</span></b> esdieff.initial/1
+<b><span class="h">Requested coverage (assessment_area):</span></b> total 8 · assessed 7 · not applicable 1 · unassessed 0 · undetermined 0
+<b><span class="h">Source</span></b> 1 ["input1"]: acquired / usable (247 retained bytes, content complete: true)
+<b><span class="h">Source</span></b> 2 ["input2"]: acquired / usable (211 retained bytes, content complete: true)
+<b><span class="h">Dependency sources:</span></b> [2]
+<b><span class="h">Diagnostic details omitted:</span></b> 0
 </code></pre>
 
 `Scope: selected` with `Dependency sources: [2]` records that `types.sdf.json` was used as a dependency of the root document. Without `--root`, the scope is `catalogue`: every supplied model document, including unused definitions, is assessed under the requested assessment profile. Catalogue scope suits a collection you maintain. Selected-model scope starts from the chosen roots and assesses the dependency content needed for their checks.
@@ -84,13 +86,15 @@ Every model-check report names its inventory and counts assessed, not applicable
 A finding has a condition code, a message and any available locations. To follow this example, create a `draft` directory and save [unfinished.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/directory-check/draft/unfinished.sdf.json) there. Its `type` quality has a numeric value where text is required:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check draft/unfinished.sdf.json
-<b>Esdieff:</b> <span class="r">failed</span>
-<b>Complete:</b> true
-<b>Errors:</b> 1; <b>warnings:</b> 0; <b>notices:</b> 0; <b>incomplete checks:</b> 0
+<b><span class="h">Esdieff:</span></b> <b><span class="r">✗ failed</span></b>
+<b><span class="h">Complete:</span></b> true
+<b><span class="h">Errors:</span></b> 1 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
 ...
-<span class="r">data.string</span>: A textual data quality must contain a string
+
+<b><span class="r">✗ data.string</span></b>: A textual data quality must contain a string
 source 1 "/sdfData/Unfinished/type"
-<b>Diagnostic details omitted:</b> 0
+
+<b><span class="h">Diagnostic details omitted:</span></b> 0
 </code></pre>
 
 `data.string` is the stable condition code, and the message explains it. This **source location** identifies the authored `type` quality by its source ID and JSON Pointer. The source table maps ID 1 to the supplied document. Errors fail the check. Warnings fail it when `--strict-warnings` is set. Notices are informational and do not themselves fail the check. Incomplete checks mark unfinished requested work. With no error or strict-warning failure, that incompleteness makes the verdict undetermined. `Complete: true` records completed requested work, including established errors.
@@ -104,11 +108,12 @@ An **effective location** identifies a position in a root document's composed mo
 Inspection completion concerns the selected view. Run `esdieff check` to request model assessment. Inspect the thermostat's target temperature:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document thermostat.sdf.json --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
-<b>Esdieff:</b> <span class="g">passed</span>
+<b><span class="h">Esdieff:</span></b> <b><span class="g">✔ passed</span></b>
 ...
-<b>Inspection</b> effective at "/sdfObject/Thermostat/sdfProperty/targetTemperature":
+
+<b><span class="h">Inspection</span></b> effective at "/sdfObject/Thermostat/sdfProperty/targetTemperature":
 {"description":"Requested room temperature in half-degree increments","type":"number","nullable":false,"minimum":5,"maximum":30,"multipleOf":0.5,"unit":"Cel","readable":true,"writable":true}
-<b>Alternatives</b> absent at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature"
+<b><span class="h">Alternatives</span></b> absent at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature"
 source at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature"; source 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature"
 default true at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/observable"
 source at effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/description"; source 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/description"
@@ -121,9 +126,10 @@ The `Sensor` grouping's `reading` Property obtains its data qualities from the o
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document device.sdf.json --pointer /sdfObject/Sensor/sdfProperty/reading device.sdf.json types.sdf.json
 ...
-<b>Inspection</b> effective at "/sdfObject/Sensor/sdfProperty/reading":
+
+<b><span class="h">Inspection</span></b> effective at "/sdfObject/Sensor/sdfProperty/reading":
 {"type":"number","minimum":0}
-<b>Alternatives</b> absent at effective 1 "/sdfObject/Sensor/sdfProperty/reading"
+<b><span class="h">Alternatives</span></b> absent at effective 1 "/sdfObject/Sensor/sdfProperty/reading"
 inherited at effective 1 "/sdfObject/Sensor/sdfProperty/reading"; source 2 "/sdfData/Reading"; source 1 "/sdfObject/Sensor/sdfProperty/reading"; imported at source 1 "/sdfObject/Sensor/sdfProperty/reading/sdfRef"
 default true at effective 1 "/sdfObject/Sensor/sdfProperty/reading/readable"; imported at source 1 "/sdfObject/Sensor/sdfProperty/reading/sdfRef"
 default true at effective 1 "/sdfObject/Sensor/sdfProperty/reading/writable"; imported at source 1 "/sdfObject/Sensor/sdfProperty/reading/sdfRef"
@@ -139,9 +145,10 @@ For a reusable sdfData definition, save [count.sdf.json](https://github.com/pede
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document count.sdf.json --pointer /sdfData/Count count.sdf.json
 ...
-<b>Inspection</b> effective at "/sdfData/Count":
+
+<b><span class="h">Inspection</span></b> effective at "/sdfData/Count":
 {"type":"integer","minimum":0,"maximum":100}
-<b>Alternatives</b> absent at effective 1 "/sdfData/Count"
+<b><span class="h">Alternatives</span></b> absent at effective 1 "/sdfData/Count"
 source at effective 1 "/sdfData/Count"; source 1 "/sdfData/Count"
 default true at effective 1 "/sdfData/Count/nullable"
 source at effective 1 "/sdfData/Count/type"; source 1 "/sdfData/Count/type"
@@ -157,7 +164,8 @@ A finding's source location is a pointer you can inspect directly. Take the draf
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view source --document draft/unfinished.sdf.json --pointer /sdfData/Unfinished draft/unfinished.sdf.json
 ...
-<b>Inspection</b> source at "/sdfData/Unfinished":
+
+<b><span class="h">Inspection</span></b> source at "/sdfData/Unfinished":
 { "type": 7 }
 </code></pre>
 

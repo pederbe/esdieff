@@ -140,7 +140,7 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
     let mut text = HumanText::new(style);
     text.heading("Edit");
     text.push_str(&format!(" {}: ", result.request.key));
-    text.span(
+    text.status(
         Role::disposition(result.outcome.disposition()),
         result.outcome.disposition().as_str(),
     );
@@ -183,11 +183,14 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         text.push_str(&format!(" {}\n", value["request"]["scope"][field]));
     }
     text.heading("Requested editing coverage:");
-    text.push_str(&format!(
-        " total 1, assessed {}, undetermined {}\n",
-        u32::from(result.outcome.complete()),
-        u32::from(!result.outcome.complete())
-    ));
+    text.push_list(
+        &format!(
+            " total 1, assessed {}, undetermined {}\n",
+            u32::from(result.outcome.complete()),
+            u32::from(!result.outcome.complete())
+        ),
+        ", ",
+    );
     text.heading("Checking:");
     if let Some(check) = &result.checking {
         text.push_str(&format!(
@@ -199,25 +202,31 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         ));
         let coverage = &value["result"]["checking"]["coverage"]["requested"];
         text.heading("Requested model coverage:");
-        text.push_str(&format!(
-            " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
-            coverage["total"],
-            coverage["assessed"],
-            coverage["not_applicable"],
-            coverage["unassessed"],
-            coverage["undetermined"]
-        ));
-        if value["result"]["checking"]["coverage"]["requirements"].is_object() {
-            let coverage = &value["result"]["checking"]["coverage"]["requirements"];
-            text.heading("Requested requirements coverage:");
-            text.push_str(&format!(
+        text.push_list(
+            &format!(
                 " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
                 coverage["total"],
                 coverage["assessed"],
                 coverage["not_applicable"],
                 coverage["unassessed"],
                 coverage["undetermined"]
-            ));
+            ),
+            ", ",
+        );
+        if value["result"]["checking"]["coverage"]["requirements"].is_object() {
+            let coverage = &value["result"]["checking"]["coverage"]["requirements"];
+            text.heading("Requested requirements coverage:");
+            text.push_list(
+                &format!(
+                    " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
+                    coverage["total"],
+                    coverage["assessed"],
+                    coverage["not_applicable"],
+                    coverage["unassessed"],
+                    coverage["undetermined"]
+                ),
+                ", ",
+            );
         }
     } else {
         text.push_str(" not requested\n");
@@ -233,9 +242,14 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         .as_array()
         .expect("edit conditions")
     {
+        let severity = condition["severity"].as_str().expect("severity");
+        text.gap();
+        text.status(
+            Role::severity(crate::Severity::from_report(severity)),
+            severity,
+        );
         text.push_str(&format!(
-            "{} {}: {}\n",
-            condition["severity"].as_str().expect("severity"),
+            " {}: {}\n",
             condition["code"].as_str().expect("code"),
             condition["message"].as_str().expect("message")
         ));
@@ -260,6 +274,7 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         }
     }
     if value["diagnostics"]["truncated"] == true {
+        text.gap();
         text.push_str(&format!(
             "Diagnostic details omitted: {}\n",
             value["diagnostics"]["omitted"]

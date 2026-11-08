@@ -4,8 +4,8 @@
 #   { echo '$ esdieff check thermostat.sdf.json'; esdieff --color=always check thermostat.sdf.json; } \
 #     | scripts/ansi-to-html.sh
 #
-# The palette is the one the command-line tool uses: bold headings, cyan syntax and
-# notices, green passed outcomes, yellow unfinished work and red failures. Lines that
+# The palette is the one the command-line tool uses: purple headings, blue syntax and
+# notices, green passed outcomes, amber unfinished work and red failures. Lines that
 # start with `$ ` are shown as prompts.
 set -euo pipefail
 exec cargo run --quiet --locked \

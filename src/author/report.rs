@@ -210,7 +210,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
     let mut text = HumanText::new(style);
     text.heading("Author");
     text.push_str(&format!(" {}: ", result.request.thing));
-    text.span(
+    text.status(
         Role::disposition(result.outcome.disposition()),
         result.outcome.disposition().as_str(),
     );
@@ -290,7 +290,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
                 .unwrap_or("unavailable"),
         ));
         let outcome = check.requested.outcome();
-        text.span(
+        text.status(
             Role::disposition(outcome.disposition()),
             outcome.disposition().as_str(),
         );
@@ -305,27 +305,33 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
             coverage.inventory().unwrap_or("unavailable")
         ));
         text.heading("Requested check coverage");
-        text.push_str(&format!(
-            " ({}): total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
-            coverage.count_unit(),
-            coverage
-                .total()
-                .map_or_else(|| "unavailable".to_owned(), |total| total.to_string()),
-            coverage.assessed(),
-            coverage.not_applicable(),
-            coverage.unassessed(),
-            coverage.undetermined()
-        ));
+        text.push_list(
+            &format!(
+                " ({}): total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
+                coverage.count_unit(),
+                coverage
+                    .total()
+                    .map_or_else(|| "unavailable".to_owned(), |total| total.to_string()),
+                coverage.assessed(),
+                coverage.not_applicable(),
+                coverage.unassessed(),
+                coverage.undetermined()
+            ),
+            "; ",
+        );
         if let Some(requirements) = check.requested.requirements() {
             text.heading("Requirement coverage:");
-            text.push_str(&format!(
-                " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
-                requirements.total().expect("full requirement inventory"),
-                requirements.assessed(),
-                requirements.not_applicable(),
-                requirements.unassessed(),
-                requirements.undetermined()
-            ));
+            text.push_list(
+                &format!(
+                    " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
+                    requirements.total().expect("full requirement inventory"),
+                    requirements.assessed(),
+                    requirements.not_applicable(),
+                    requirements.unassessed(),
+                    requirements.undetermined()
+                ),
+                "; ",
+            );
         }
     } else {
         text.heading("Checking:");
@@ -333,7 +339,8 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
     }
     for condition in value["diagnostics"]["items"].as_array().expect("items") {
         let severity = condition["severity"].as_str().expect("severity");
-        text.span(
+        text.gap();
+        text.status(
             Role::severity(crate::Severity::from_report(severity)),
             severity,
         );
@@ -360,6 +367,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         }
     }
     if value["diagnostics"]["truncated"] == true {
+        text.gap();
         text.heading("Diagnostic details omitted:");
         text.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
     }

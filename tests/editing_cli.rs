@@ -562,9 +562,9 @@ fn document_stdout_is_pure_json_under_every_color_and_report_mode() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    let human = cli_color_support::plain(&output.stdout);
+    let human = cli_color_support::readable(&output.stdout);
     assert!(
-        human.contains("Requested editing coverage: total 1, assessed 1, undetermined 0"),
+        human.contains("Requested editing coverage: total 1; assessed 1; undetermined 0"),
         "{human}"
     );
 }

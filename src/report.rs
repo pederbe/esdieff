@@ -1569,7 +1569,7 @@ impl Report<'_> {
         let mut output = HumanText::new(style);
         output.heading("Esdieff:");
         output.push(' ');
-        output.span(
+        output.status(
             Role::disposition(self.outcome.disposition()),
             self.outcome.disposition().as_str(),
         );
@@ -1595,7 +1595,7 @@ impl Report<'_> {
         .enumerate()
         {
             if index != 0 {
-                output.push_str("; ");
+                output.separator("; ");
             }
             output.heading(label);
             output.push_str(&format!(" {count}"));
@@ -1637,7 +1637,7 @@ impl Report<'_> {
                 }
                 use crate::units::Counter;
                 output.heading("Unit counts:");
-                writeln!(output," known_primary {}; known_secondary {}; unknown {}; unavailable {}; legacy {}; uri_names {}",state.count(Counter::KnownPrimary),state.count(Counter::KnownSecondary),state.count(Counter::Unknown),state.count(Counter::Unavailable),state.count(Counter::Legacy),state.count(Counter::UriNames)).expect("String write");
+                output.push_list(&format!(" known_primary {}; known_secondary {}; unknown {}; unavailable {}; legacy {}; uri_names {}\n",state.count(Counter::KnownPrimary),state.count(Counter::KnownSecondary),state.count(Counter::Unknown),state.count(Counter::Unavailable),state.count(Counter::Legacy),state.count(Counter::UriNames)), "; ");
                 for reason in state.unavailable_reasons() {
                     output.heading("Unit query unavailable:");
                     writeln!(output, " {reason}").expect("String write");
@@ -1696,10 +1696,11 @@ impl Report<'_> {
         output.push_str(" rfc9880/base-1 (RFC 9880)\n");
         output.heading("Acceptance restrictions:");
         output.push_str(if matches!(self.operation, Operation::Check(_)) {
-            " A001, A002; "
+            " A001, A002"
         } else {
-            " A002; "
+            " A002"
         });
+        output.separator("; ");
         output.heading("strict warnings:");
         output.push_str(&format!(" {}\n", self.outcome.strict));
         output.heading("Requested sources:");
@@ -1715,26 +1716,32 @@ impl Report<'_> {
                 coverage.inventory.expect("known inventory")
             ));
             output.heading("Requested coverage (assessment_area):");
-            output.push_str(&format!(
-                " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
-                coverage.total.expect("known inventory"),
-                coverage.assessed,
-                coverage.not_applicable,
-                coverage.unassessed,
-                coverage.undetermined
-            ));
+            output.push_list(
+                &format!(
+                    " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
+                    coverage.total.expect("known inventory"),
+                    coverage.assessed,
+                    coverage.not_applicable,
+                    coverage.unassessed,
+                    coverage.undetermined
+                ),
+                "; ",
+            );
             if crate::assessment::profile(profile).enabled.full {
                 let requirements = self.requirement_counts();
                 output.heading("Requirement inventory:");
                 output.push_str(&format!(" {}\n", crate::inventory::INVENTORY));
                 output.heading("Requirement coverage:");
-                output.push_str(&format!(
+                output.push_list(
+    &format!(
                     " total 54; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
                     requirements.assessed,
                     requirements.not_applicable,
                     requirements.unassessed,
                     requirements.undetermined
-                ));
+                ),
+    "; ",
+);
             }
         }
         if let Some(state) = &self.sample {
@@ -1747,7 +1754,7 @@ impl Report<'_> {
             ));
             output.heading("Sample");
             output.push_str(&format!(" {}: ", state.sample.get()));
-            output.span(
+            output.status(
                 match state.admission {
                     crate::Admission::Admitted => Role::Passed,
                     crate::Admission::Rejected => Role::Failed,
@@ -1755,7 +1762,8 @@ impl Report<'_> {
                 },
                 state.admission.as_str(),
             );
-            output.push_str("; context ");
+            output.separator("; ");
+            output.push_str("context ");
             output.span(
                 (state.context != crate::ContextState::Available).then_some(Role::Incomplete),
                 state.context.as_str(),
@@ -1763,13 +1771,16 @@ impl Report<'_> {
             output.push('\n');
             let coverage = self.requested_coverage();
             output.heading("Requested coverage (sample_area):");
-            output.push_str(&format!(
-                " total 9; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
-                coverage.assessed,
-                coverage.not_applicable,
-                coverage.unassessed,
-                coverage.undetermined
-            ));
+            output.push_list(
+                &format!(
+                    " total 9; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
+                    coverage.assessed,
+                    coverage.not_applicable,
+                    coverage.unassessed,
+                    coverage.undetermined
+                ),
+                "; ",
+            );
             for (area, status) in crate::sample::AREAS.into_iter().zip(state.areas) {
                 output.heading("Sample area");
                 output.push_str(&format!(" {area}: "));
@@ -1935,11 +1946,12 @@ impl Report<'_> {
                     .collect::<Vec<_>>()
             ));
         }
-        for condition in value["diagnostics"]["items"]
+        let conditions = value["diagnostics"]["items"]
             .as_array()
-            .expect("condition array")
-        {
-            output.span(
+            .expect("condition array");
+        for condition in conditions {
+            output.gap();
+            output.status(
                 Role::severity(Severity::from_report(
                     condition["severity"].as_str().expect("severity"),
                 )),
@@ -1972,6 +1984,9 @@ impl Report<'_> {
                 human_location(location, &mut output);
                 output.push('\n');
             }
+        }
+        if !conditions.is_empty() {
+            output.gap();
         }
         output.heading("Diagnostic details omitted:");
         output.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
@@ -2007,6 +2022,7 @@ impl Report<'_> {
             if output.len() + payload.raw_json().len() + pointer.len() * 6 + 128
                 <= self.catalogue.limits.report_bytes
             {
+                output.gap();
                 output.heading("Inspection");
                 output.push_str(&format!(
                     " {} at {}:\n",
@@ -2016,6 +2032,7 @@ impl Report<'_> {
                 output.push_str(payload.raw_json());
                 output.push('\n');
             } else {
+                output.gap();
                 output.heading("Inspection content omitted:");
                 output.push_str(" report_limit\n");
             }
@@ -2034,6 +2051,7 @@ impl Report<'_> {
             if output.len() + payload.len() + pointer.len() * 6 + 128
                 <= self.catalogue.limits.report_bytes
             {
+                output.gap();
                 output.heading("Inspection");
                 output.push_str(&format!(
                     " effective at {}:\n",
@@ -2042,6 +2060,7 @@ impl Report<'_> {
                 output.push_str(payload);
                 output.push('\n');
             } else {
+                output.gap();
                 output.heading("Inspection content omitted:");
                 output.push_str(" report_limit\n");
             }

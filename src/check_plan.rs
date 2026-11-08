@@ -758,7 +758,7 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
                     write!(
                         output,
                         "\n{} ",
-                        color.stdout().span(Role::Failure, "Case request error:")
+                        color.stdout().failure("Case request error:")
                     )
                     .expect("String write");
                 }
@@ -818,7 +818,7 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             let broader: BTreeMap<&str, &RawValue> =
                 serde_json::from_str(coverage["broader"].get())
                     .map_err(|e| host(format!("cannot disclose broader coverage: {e}")))?;
-            output.push_str(&format!("\n{} {}\nOperation: {}\nScope/profile/selector: {}\nDisposition: {}\nComplete: {}\nOutcome: {}\nBroader RFC coverage: {}\nBaseline: {}\nPolicy: {}\n", color.stdout().span(Role::Heading, "Case:"), encode_text(case.name), case.operation.name(), fields["request"].get(), disposition.as_str(), complete, fields["outcome"].get(), broader["state"].get().trim_matches('"'), fields["baseline"].get(), fields["policy"].get()));
+            output.push_str(&format!("\n{} {}\nOperation: {}\nScope/profile/selector: {}\nDisposition: {}\nComplete: {}\nOutcome: {}\nBroader RFC coverage: {}\nBaseline: {}\nPolicy: {}\n", color.stdout().span(Role::Heading, "Case:"), encode_text(case.name), case.operation.name(), fields["request"].get(), color.stdout().disposition(disposition), complete, fields["outcome"].get(), broader["state"].get().trim_matches('"'), fields["baseline"].get(), fields["policy"].get()));
             if let Some((_, heading, value)) = tag {
                 output.push_str(&format!("{heading}: {value}\n"));
             }

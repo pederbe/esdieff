@@ -1,6 +1,6 @@
 //! Human styling preserves the independent facts in ADR 0011 and ADR 0013.
 mod cli_color_support;
-use cli_color_support::{closed_stdout, plain, run};
+use cli_color_support::{closed_stdout, readable, run};
 use esdieff::{
     Assessment, Catalogue, CheckRequest, Disposition, HumanStyle, InspectRequest, SampleKind,
     SampleRequest, SourceInput, View,
@@ -34,7 +34,7 @@ fn styled(report: &esdieff::Report<'_>) -> String {
     assert!(!default.contains('\x1b'));
     assert_eq!(default, report.to_human_with_style(HumanStyle::Plain));
     let output = report.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(plain(output.as_bytes()), default);
+    assert_eq!(readable(output.as_bytes()), readable(default.as_bytes()));
     output
 }
 
@@ -49,23 +49,27 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
         assert!(report.outcome().complete());
         let output = styled(&report);
         assert!(output.starts_with(if strict {
-            "\x1b[1mEsdieff:\x1b[0m \x1b[31mfailed\x1b[0m\n"
+            "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"
         } else {
-            "\x1b[1mEsdieff:\x1b[0m \x1b[32mpassed\x1b[0m\n"
+            "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;90;247;142m✔ passed\x1b[0m\n"
         }));
-        assert!(output.contains("\x1b[33mmetadata.info_absent\x1b[0m: "));
-        assert!(output.contains("\x1b[1mBroader RFC coverage:\x1b[0m partial\n"));
+        // Each finding starts after a blank line, and counts share one middle-dot list.
+        assert!(output.contains("\n\n\x1b[1;38;2;243;156;18m⚠ metadata.info_absent\x1b[0m: "));
+        assert!(output.contains(" · \x1b[1;38;2;189;147;249mwarnings:\x1b[0m 1 · "));
+        assert!(output.contains("\x1b[1;38;2;189;147;249mBroader RFC coverage:\x1b[0m partial\n"));
         assert!(output.contains("[\"passed error\"]"));
-        assert!(!output.contains("\x1b[32massessed"));
-        assert!(!output.contains("\x1b[32mnot_applicable"));
+        assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));
+        assert!(!output.contains("\x1b[1;38;2;90;247;142mnot_applicable"));
         for condition in report.diagnostics().conditions() {
             let sequence = match condition.severity() {
-                esdieff::Severity::Error => "31",
-                esdieff::Severity::Warning | esdieff::Severity::Incomplete => "33",
-                esdieff::Severity::Notice => "36",
+                esdieff::Severity::Error => "\x1b[1;38;2;255;92;87m✗ ",
+                esdieff::Severity::Warning | esdieff::Severity::Incomplete => {
+                    "\x1b[1;38;2;243;156;18m⚠ "
+                }
+                esdieff::Severity::Notice => "\x1b[1;38;2;92;184;255m▶ ",
                 _ => unreachable!(),
             };
-            assert!(output.contains(&format!("\x1b[{sequence}m{}\x1b[0m: ", condition.code())));
+            assert!(output.contains(&format!("{sequence}{}\x1b[0m: ", condition.code())));
         }
     }
     let catalogue = Catalogue::from_inputs(&[
@@ -77,14 +81,18 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
     assert_eq!(report.outcome().disposition(), Disposition::Failed);
     assert!(!report.outcome().complete());
     let output = styled(&report);
-    assert!(output.contains("\x1b[31mfailed\x1b[0m"));
-    assert!(output.contains("\x1b[1mComplete:\x1b[0m \x1b[33mfalse\x1b[0m"));
+    assert!(output.contains("\x1b[1;38;2;255;92;87m✗ failed\x1b[0m"));
+    assert!(
+        output.contains(
+            "\x1b[1;38;2;189;147;249mComplete:\x1b[0m \x1b[1;38;2;243;156;18mfalse\x1b[0m"
+        )
+    );
     let diagnostics = report.diagnostics();
     let error = diagnostics
         .conditions()
         .find(|condition| condition.severity() == esdieff::Severity::Error)
         .unwrap();
-    assert!(output.contains(&format!("\x1b[31m{}\x1b[0m", error.code())));
+    assert!(output.contains(&format!("\x1b[1;38;2;255;92;87m✗ {}\x1b[0m", error.code())));
 }
 
 #[test]
@@ -100,8 +108,8 @@ fn assessment_completion_is_plain_even_when_completed_work_has_errors() {
     let output = styled(&report);
     assert_eq!(report.outcome().disposition(), Disposition::Failed);
     assert!(output.contains(" unit-spelling/1: assessed\n"));
-    assert!(!output.contains("\x1b[32massessed"));
-    assert!(!output.contains("\x1b[32mcomplete"));
+    assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));
+    assert!(!output.contains("\x1b[1;38;2;90;247;142mcomplete"));
 }
 
 #[test]
@@ -118,8 +126,8 @@ fn notice_codes_and_unfinished_requiredness_keep_their_separate_roles() {
         )
         .unwrap();
     let output = styled(&report);
-    assert!(output.contains("\x1b[36mrequired.target_missing\x1b[0m: "));
-    assert!(output.contains("\x1b[1mRequired declarations:\x1b[0m"));
+    assert!(output.contains("\x1b[1;38;2;92;184;255m▶ required.target_missing\x1b[0m: "));
+    assert!(output.contains("\x1b[1;38;2;189;147;249mRequired declarations:\x1b[0m"));
 }
 
 #[test]
@@ -132,7 +140,7 @@ fn source_and_effective_inspection_keep_payload_names_and_exact_values_plain() {
             .inspect(InspectRequest::new(id, "/sdfData/passed").view(view))
             .unwrap();
         let output = styled(&report);
-        assert!(output.contains("\x1b[1mInspection\x1b[0m"));
+        assert!(output.contains("\x1b[1;38;2;189;147;249mInspection\x1b[0m"));
         assert!(output.contains("{\"type\":\"number\",\"const\":1.000e+200,\"description\":\"failed error warning passed\"}"));
         assert!(output.contains("\"/sdfData/passed\""));
     }
@@ -144,15 +152,30 @@ fn source_and_effective_inspection_keep_payload_names_and_exact_values_plain() {
         ))
         .unwrap();
     assert_eq!(report.outcome().disposition(), Disposition::Undetermined);
-    assert!(styled(&report).contains("\x1b[33mundetermined\x1b[0m"));
+    assert!(styled(&report).contains("\x1b[1;38;2;243;156;18m⚠ undetermined\x1b[0m"));
 }
 
 #[test]
 fn samples_style_admission_without_turning_assessed_or_inapplicable_into_validity() {
     for (input, admission, disposition, sequence) in [
-        (Some(b"2".as_slice()), "admitted", Disposition::Passed, "32"),
-        (Some(b"0".as_slice()), "rejected", Disposition::Failed, "31"),
-        (None, "undetermined", Disposition::Undetermined, "33"),
+        (
+            Some(b"2".as_slice()),
+            "admitted",
+            Disposition::Passed,
+            "\x1b[1;38;2;90;247;142m✔ ",
+        ),
+        (
+            Some(b"0".as_slice()),
+            "rejected",
+            Disposition::Failed,
+            "\x1b[1;38;2;255;92;87m✗ ",
+        ),
+        (
+            None,
+            "undetermined",
+            Disposition::Undetermined,
+            "\x1b[1;38;2;243;156;18m⚠ ",
+        ),
     ] {
         let model = br#"{"info":{},"sdfData":{"passed":{"type":"integer","minimum":1}}}"#;
         let sample = input
@@ -175,9 +198,9 @@ fn samples_style_admission_without_turning_assessed_or_inapplicable_into_validit
             .unwrap();
         assert_eq!(report.outcome().disposition(), disposition);
         let output = styled(&report);
-        assert!(output.contains(&format!("\x1b[{sequence}m{admission}\x1b[0m; context ")));
-        assert!(!output.contains("\x1b[32massessed"));
-        assert!(!output.contains("\x1b[32mnot_applicable"));
+        assert!(output.contains(&format!("{sequence}{admission}\x1b[0m · context ")));
+        assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));
+        assert!(!output.contains("\x1b[1;38;2;90;247;142mnot_applicable"));
         assert!(output.contains("Sample area"));
     }
 }
@@ -341,7 +364,7 @@ fn color_modes_preserve_reports_and_json_for_all_three_commands() {
             selected.push(&color);
             let output = run(&selected, b"", &[("NO_COLOR", "1"), ("TERM", "dumb")]);
             assert_eq!(output.status.code(), expected.status.code());
-            assert_eq!(plain(&output.stdout), plain(&expected.stdout));
+            assert_eq!(readable(&output.stdout), readable(&expected.stdout));
             assert_eq!(output.stdout.contains(&0x1b), mode == "always");
             assert!(output.stderr.is_empty());
             selected.extend(["--format", "json"]);

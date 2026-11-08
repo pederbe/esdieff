@@ -97,8 +97,8 @@ esdieff diff --old reuse-walkthrough/earlier --new reuse-walkthrough/later --col
 The command reports:
 
 ```text
-Revision comparison esdieff.revision-comparison/4: breaking
-Client interactions only. Context metadata compatibility is not assessed.
+Revision comparison esdieff.revision-comparison/10: breaking
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 Documents: 2 compared, 0 removed, 0 added
 Differences: 1 breaking, 0 undetermined, 0 compatible
 Breaking differences:

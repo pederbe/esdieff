@@ -47,15 +47,15 @@ A **check plan** is a JSON file that names the model and sample files to supply 
 Paths are relative to the plan, so the directory moves as a unit. Each case keeps its own scope, assessment level and warning policy. Copy the example directory and run it. The human report prints each case in full, so this command keeps the summary lines:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --plan plan.json | grep -E '^(Case|Disposition|Admission|Check case summary)'
-<b>Case:</b> "Catalogue"
-Disposition: passed
-<b>Case:</b> "Thermostat model"
-Disposition: passed
-<b>Case:</b> "Comfortable target"
-Disposition: passed
+<b><span class="h">Case:</span></b> "Catalogue"
+Disposition: <b><span class="g">✔ passed</span></b>
+<b><span class="h">Case:</span></b> "Thermostat model"
+Disposition: <b><span class="g">✔ passed</span></b>
+<b><span class="h">Case:</span></b> "Comfortable target"
+Disposition: <b><span class="g">✔ passed</span></b>
 Admission: admitted
-<b>Case:</b> "Too hot target"
-Disposition: failed
+<b><span class="h">Case:</span></b> "Too hot target"
+Disposition: <b><span class="r">✗ failed</span></b>
 Admission: rejected
 Check case summary: {"admission_undetermined":0,"admitted":1,"complete":true,"complete_cases":4,"failed":1,"incomplete_cases":0,"omitted_reports":0,"passed":3,"rejected":1,"request_errors":0,"total":4,"undetermined":0,"verdict":"failed"}
 </code></pre>
@@ -75,13 +75,15 @@ The run exits 1, because the rejected sample is a failed case. A plan has no exp
 `--recursive` descends into subdirectories and `--exclude` prunes a literal file or subtree relative to each directory. Sample files, plans and a `.bak` lookalike are not selected. Without the exclusion, the draft's broken type fails the run:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --directory examples/directory-check --recursive
-<b>Esdieff:</b> <span class="r">failed</span>
-<b>Complete:</b> true
-<b>Errors:</b> 1; <b>warnings:</b> 0; <b>notices:</b> 0; <b>incomplete checks:</b> 0
+<b><span class="h">Esdieff:</span></b> <b><span class="r">✗ failed</span></b>
+<b><span class="h">Complete:</span></b> true
+<b><span class="h">Errors:</span></b> 1 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
 ...
-<span class="r">data.string</span>: A textual data quality must contain a string
+
+<b><span class="r">✗ data.string</span></b>: A textual data quality must contain a string
 source 2 "/sdfData/Unfinished/type"
-<b>Diagnostic details omitted:</b> 0
+
+<b><span class="h">Diagnostic details omitted:</span></b> 0
 </code></pre>
 
 Repeat `--directory` for several collections, add explicit files beside them, and name a discovered root by its joined path, such as `--root examples/directory-check/device.sdf.json`. [Check a local model collection](../directory-discovery.md) states the selection rules and limits.

@@ -50,9 +50,23 @@ fn unsupported_controls_do_not_become_styles_or_text() {
 }
 
 #[test]
-fn captured_esdieff_outputs_keep_the_existing_html() {
+fn the_esdieff_palette_becomes_classes_and_other_colours_stay_plain() {
+    assert_eq!(
+        convert(
+            "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n\
+             \x1b[38;2;92;184;255m--color\x1b[0m \x1b[1;38;2;243;156;18m⚠\x1b[0m \x1b[1;38;2;90;247;142m✔\x1b[0m\n\
+             \x1b[31;48;2;189;147;249mred\x1b[38;2;189;147;250m plain\x1b[0m"
+        ),
+        "<pre class=\"terminal\"><code><b><span class=\"h\">Esdieff:</span></b> <b><span class=\"r\">✗ failed</span></b>\n\
+         <span class=\"c\">--color</span> <b><span class=\"y\">⚠</span></b> <b><span class=\"g\">✔</span></b>\n\
+         <span class=\"r\">red</span> plain</code></pre>\n"
+    );
+}
+
+#[test]
+fn captured_esdieff_outputs_keep_their_reviewed_html() {
     // Captured with --color=always: check examples/thermostat-check/thermostat.sdf.json,
-    // and the first three lines of --help. Expected HTML comes from the old launcher.
+    // and the first three lines of --help.
     for (input, expected) in [
         (
             include_str!("fixtures/check.ansi"),

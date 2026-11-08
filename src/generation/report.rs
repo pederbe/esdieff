@@ -374,7 +374,7 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
     text.heading("Generated values");
     text.push_str(&format!(" {GENERATION_CONTRACT}: "));
     let disposition = result.disposition();
-    text.span(Role::disposition(disposition), disposition.as_str());
+    text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
     text.heading("Values:");
     for (index, admission) in [
@@ -385,7 +385,11 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
     .into_iter()
     .enumerate()
     {
-        text.push_str(if index == 0 { " " } else { ", " });
+        if index == 0 {
+            text.push(' ');
+        } else {
+            text.separator(", ");
+        }
         text.push_str(&format!("{} ", result.count(admission)));
         text.span(admission_role(admission), admission.as_str());
     }
@@ -422,7 +426,7 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
             GenerationState::Complete => Role::Passed,
             _ => Role::Incomplete,
         };
-        text.span(role, description.state.as_str());
+        text.status(role, description.state.as_str());
         text.push('\n');
         let counts = evidence_counts(description);
         text.push_str(&human_evidence(counts));

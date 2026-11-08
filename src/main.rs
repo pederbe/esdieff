@@ -23,8 +23,9 @@ mod edit_cli;
 mod generate_cli;
 mod reference_cli;
 mod schema_cli;
+mod terminal_palette;
 mod trace_cli;
-use cli_style::{ColorMode, Role};
+use cli_style::ColorMode;
 
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -35,7 +36,7 @@ fn main() -> ExitCode {
             let _ = writeln!(
                 std::io::stderr().lock(),
                 "{} {message}",
-                color.stderr().span(Role::Failure, "esdieff:")
+                color.stderr().failure("esdieff:")
             );
             ExitCode::from(code)
         }

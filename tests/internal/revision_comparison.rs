@@ -582,9 +582,12 @@ fn the_human_report_orders_breaking_undetermined_and_compatible_differences() {
         human.contains("  added sdfObject\n    later moved/thermostat /sdfObject/Thermostat\n")
     );
     let styled = comparison.to_human_with_style(esdieff::HumanStyle::Ansi);
-    assert!(styled.contains("\x1b[31mbreaking\x1b[0m"));
-    assert!(styled.contains("\x1b[31mthermostat\x1b[0m"));
-    assert!(styled.contains("\x1b[32mmoved/thermostat\x1b[0m"));
+    assert!(styled.starts_with(
+        "\x1b[1;38;2;189;147;249mRevision comparison\x1b[0m esdieff.revision-comparison/10: \x1b[1;38;2;255;92;87m✗ breaking\x1b[0m\n"
+    ));
+    assert!(styled.contains("\x1b[1;38;2;255;92;87mbreaking\x1b[0m"));
+    assert!(styled.contains("\x1b[1;38;2;255;92;87mthermostat\x1b[0m"));
+    assert!(styled.contains("\x1b[1;38;2;90;247;142mmoved/thermostat\x1b[0m"));
 }
 
 #[test]

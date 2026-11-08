@@ -127,18 +127,26 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
     text.heading("Recorded trace");
     text.push_str(&format!(" {TRACE_CONTRACT}: "));
     let disposition = result.disposition();
-    text.span(Role::disposition(disposition), disposition.as_str());
+    text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
     text.heading("Entries:");
     for (index, outcome) in TraceOutcome::ALL.into_iter().enumerate() {
-        text.push_str(if index == 0 { " " } else { ", " });
+        if index == 0 {
+            text.push(' ');
+        } else {
+            text.separator(", ");
+        }
         text.push_str(&format!("{} ", result.count(outcome)));
         text.span(outcome_role(outcome), outcome.as_str());
     }
     text.push('\n');
     text.heading("Admissions:");
     for (index, admission) in super::ADMISSIONS.into_iter().enumerate() {
-        text.push_str(if index == 0 { " " } else { ", " });
+        if index == 0 {
+            text.push(' ');
+        } else {
+            text.separator(", ");
+        }
         text.push_str(&format!(
             "{} {}",
             result.admissions(admission),
@@ -153,7 +161,7 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         let (heading, rest) = lines.split_at(end);
         let outcome = entry.outcome.as_str();
         text.push_str(&heading[..heading.len() - outcome.len()]);
-        text.span(outcome_role(entry.outcome), outcome);
+        text.status(outcome_role(entry.outcome), outcome);
         text.push_str(rest);
     }
     if result.omitted > 0 {

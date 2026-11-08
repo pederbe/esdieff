@@ -40,6 +40,7 @@ mod scalar;
 mod schema;
 mod source;
 mod structure;
+mod terminal_palette;
 mod trace;
 mod units;
 mod uri;

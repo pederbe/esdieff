@@ -290,7 +290,7 @@ fn the_human_report_lists_acknowledged_differences_and_unused_entries() {
     );
     let styled = comparison.to_human_with_style(esdieff::HumanStyle::Ansi);
     assert!(
-        styled.contains("Disposition:\x1b[0m \x1b[31mfailed\x1b[0m"),
+        styled.contains("Disposition:\x1b[0m \x1b[1;38;2;255;92;87m✗ failed\x1b[0m"),
         "{styled}"
     );
 }
