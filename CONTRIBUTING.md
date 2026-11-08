@@ -91,7 +91,11 @@ that workflow on `main` with the same release tag and submission enabled to fini
 an interrupted submission or description update. Manual runs default to preparation
 without public changes. Existing matching PRs are reused, and manual description
 edits are preserved. Submission requires `WINGET_ENABLED=true` and `WINGET_TOKEN`
-in the `distribution` environment. The CLA checkbox reflects Microsoft's check
+in the `distribution` environment. A separate `WINGET_FORK_TOKEN`, restricted to
+the submission fork with Contents and Workflows write permissions, synchronizes
+that fork before submission. Keep the submission token public-only. Preparation
+does not use the fork credential. Synchronization does not force or overwrite a
+divergent fork. The CLA checkbox reflects Microsoft's check
 and never signs an agreement.
 
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
