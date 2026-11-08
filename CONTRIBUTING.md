@@ -84,6 +84,16 @@ again for that tag with publishing enabled. Release-plz compares `main` with the
 version published on crates.io, so later releases wait until this one is
 published.
 
+After publication, the Distribution updates workflow validates and installs the
+published WinGet manifest, submits it with Komac, and completes the PR
+description from its check evidence. Microsoft controls catalog admission. Retry
+that workflow on `main` with the same release tag and submission enabled to finish
+an interrupted submission or description update. Manual runs default to preparation
+without public changes. Existing matching PRs are reused, and manual description
+edits are preserved. Submission requires `WINGET_ENABLED=true` and `WINGET_TOKEN`
+in the `distribution` environment. The CLA checkbox reflects Microsoft's check
+and never signs an agreement.
+
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
 fine-grained personal access token for this repository, with read and write
 access to Contents and Pull requests. GitHub does not run CI for pull requests
