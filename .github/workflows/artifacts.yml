@@ -272,15 +272,46 @@ jobs:
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
           target/release-tool/esdieff-release.exe winget target/distrib "$version"
-      - name: Prepare the qualified WinGet client
+      # The WinGet client and its x64 dependencies are about 300 MB, so they are cached by
+      # version instead of being downloaded from GitHub on every run.
+      - id: winget-client
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/winget-client
+          key: winget-client-1.29.380-x64
+      - name: Download the qualified WinGet client
+        if: steps.winget-client.outputs.cache-hit != 'true'
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          Install-PSResource -Name Microsoft.WinGet.Client -Version '1.29.380' -Scope CurrentUser -Repository PSGallery -TrustRepository
-          Import-Module Microsoft.WinGet.Client
-          Repair-WinGetPackageManager -Version '1.29.380' -Force
+          $ProgressPreference = 'SilentlyContinue'
+          $release = 'https://github.com/microsoft/winget-cli/releases/download/v1.29.380'
+          $client = "$env:RUNNER_TEMP/winget-client"
+          $download = "$env:RUNNER_TEMP/winget-download"
+          New-Item -ItemType Directory -Force "$client/dependencies", $download | Out-Null
+          $files = @{
+            'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' = '65dea9c01ce08ee7b763366b27c0e651f97db857c11ca9b9c301826c10092f2e'
+            'DesktopAppInstaller_Dependencies.zip' = 'ba875afe9d190f61218985ac0292a99d1db710bf93e13c68944ca9d89f0d82d1'
+          }
+          foreach ($name in $files.Keys) {
+            Invoke-WebRequest "$release/$name" -OutFile "$download/$name" -MaximumRetryCount 3 -RetryIntervalSec 5
+            if ((Get-FileHash "$download/$name" -Algorithm SHA256).Hash.ToLowerInvariant() -ne $files[$name]) { throw "$name checksum mismatch" }
+          }
+          Move-Item "$download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" $client
+          Expand-Archive "$download/DesktopAppInstaller_Dependencies.zip" "$download/dependencies"
+          Get-ChildItem "$download/dependencies" -Recurse -File -Filter *.appx | Where-Object { $_.DirectoryName -match 'x64$' } | Move-Item -Destination "$client/dependencies"
+          if (-not (Get-ChildItem "$client/dependencies" -Filter *.appx)) { throw 'No x64 WinGet dependencies found' }
+          Remove-Item $download -Recurse -Force
+      - name: Prepare the qualified WinGet client
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $client = "$env:RUNNER_TEMP/winget-client"
+          foreach ($dependency in Get-ChildItem "$client/dependencies" -Filter *.appx) {
+            # A framework the image already has at a newer version needs no install.
+            try { Add-AppxPackage -Path $dependency.FullName } catch { Write-Warning "$($dependency.Name): $($_.Exception.Message)" }
+          }
+          Add-AppxPackage -Path "$client/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
           $version = winget --version
           if ($LASTEXITCODE -ne 0 -or $version.Trim() -ne 'v1.29.380') { throw 'WinGet 1.29.380 is unavailable' }
       - name: Check WinGet against the retained ZIP
