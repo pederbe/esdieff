@@ -13,7 +13,16 @@ use crate::comparison::{CLIENT, Direction, Revision, THING, UndeterminedReason, 
 /// and the recorded link draft.
 const CONVENTIONS: [&str; 3] = ["byte-string", "unix-time", "link"];
 
-/// A change between the two conventions is breaking. Any other change awaits `rule`.
+/// A value outside one convention's JSON representation.
+#[derive(Clone, Copy)]
+enum Outside {
+    /// A string, or for `unix-time` a non-number.
+    Text(&'static str),
+    /// The map `{"X":""}`, outside a link's lowercase member names.
+    UppercaseMember,
+}
+
+/// A change between two conventions is breaking. Any other change awaits `rule`.
 pub(super) fn changed(members: [Option<EffectiveJson<'_>>; 2]) -> Verdict {
     match members.map(|json| json.and_then(|json| json.text().present())) {
         [Some(earlier), Some(later)]
@@ -41,25 +50,24 @@ pub(super) fn rule(descriptions: &mut Descriptions<'_, '_>) -> Result<Rule, Unde
         let Some(json) = descriptions.member(revision, "sdfType")? else {
             continue;
         };
-        let text = match json.text().present() {
+        let outside = match json.text().present() {
             // `!` is outside the base64url alphabet of a byte string.
-            Some("byte-string") => "!",
+            Some("byte-string") => Outside::Text("!"),
             // A Unix time is a number.
-            Some("unix-time") => "",
-            // A link member name has its lowercase form, so `{"X":""}` is outside a link.
-            Some("link") => "{}",
+            Some("unix-time") => Outside::Text(""),
+            // A link member name has its lowercase form.
+            Some("link") => Outside::UppercaseMember,
             _ => {
                 rule.unclassified = CLIENT | THING;
                 return Ok(rule);
             }
         };
-        *candidate = Some((text, direction));
+        *candidate = Some((outside, direction));
     }
-    for (text, direction) in candidates.into_iter().flatten() {
-        let value = if text == "{}" {
-            descriptions.uppercase_member()?
-        } else {
-            descriptions.text(text)?
+    for (outside, direction) in candidates.into_iter().flatten() {
+        let value = match outside {
+            Outside::Text(text) => descriptions.text(text)?,
+            Outside::UppercaseMember => descriptions.uppercase_member()?,
         };
         if let Some(value) = value {
             descriptions.add(&mut rule, Candidate { value, direction })?;

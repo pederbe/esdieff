@@ -70,7 +70,9 @@ not SDF qualities, so each receives a `quality.unfamiliar` warning and no range
 meaning. With `--assessment full-baseline` the export exits 3, because Full
 keeps the meaning of unfamiliar qualities unavailable under
 [ADR 0037: Undeclared extension vocabulary](../../docs/adr/0037-undeclared-extension-vocabulary.md).
-Its link meaning is complete in either assessment.
+Its link meaning is complete in either assessment, so the Check plan checks this
+export with the default assessment. A Full check of Appendix A.1 therefore does
+not complete, for reasons unrelated to links.
 
 Appendix A.2's `objlink` declares no `href`. Esdieff requires `href` only when
 a description's `required` lists it, so object links without a target URI are

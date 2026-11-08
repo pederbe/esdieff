@@ -1772,27 +1772,9 @@ fn link_members<'a>(
             state.abstract_unfinished(3);
             return;
         }
-        let typed = match properties {
-            Field::Absent => false,
-            Field::Present(properties) => match properties.lookup(name, budget) {
-                Field::Absent => false,
-                Field::Present(declared) => match declared.lookup("type", budget) {
-                    Field::Absent => false,
-                    Field::Present(_) => true,
-                    Field::Unavailable(_) => {
-                        state.abstract_unfinished(0);
-                        return;
-                    }
-                },
-                Field::Unavailable(_) => {
-                    state.abstract_unfinished(0);
-                    return;
-                }
-            },
-            Field::Unavailable(_) => {
-                state.abstract_unfinished(0);
-                return;
-            }
+        let Some(typed) = declared_type(properties, name, budget) else {
+            state.abstract_unfinished(0);
+            return;
         };
         let violation = if !crate::link::member_name_admitted(name) {
             Some((
@@ -1832,6 +1814,28 @@ fn link_members<'a>(
     }
     if state.areas[8] == Status::Assessed {
         state.abstract_established();
+    }
+}
+/// Whether the effective `properties` entry `name` declares a `type`, or `None` when that
+/// is unavailable. An undeclared member has no `type`.
+fn declared_type(
+    properties: Field<EffectiveJson<'_>>,
+    name: &str,
+    budget: &mut OperationBudget,
+) -> Option<bool> {
+    let declared = match properties {
+        Field::Absent => return Some(false),
+        Field::Present(properties) => properties.lookup(name, budget),
+        Field::Unavailable(_) => return None,
+    };
+    match declared {
+        Field::Absent => Some(false),
+        Field::Present(declared) => match declared.lookup("type", budget) {
+            Field::Absent => Some(false),
+            Field::Present(_) => Some(true),
+            Field::Unavailable(_) => None,
+        },
+        Field::Unavailable(_) => None,
     }
 }
 fn text_lengths(

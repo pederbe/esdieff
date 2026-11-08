@@ -1830,26 +1830,29 @@ impl Report<'_> {
                 output.push('\n');
             }
         }
+        // Each recorded draft keeps one line naming its support and one naming its limits.
         for row in value["baseline"]["extensions"]
             .as_array()
             .into_iter()
             .flatten()
         {
-            if row["id"] == crate::context::DRAFT {
-                output.heading("Draft support:");
-                output.push_str(&format!(
-                    " {} (Context checking, composition, inspection and selected-value checking)\n",
-                    crate::context::DRAFT
-                ));
-                output.push_str("Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined and reuse outside Context unavailable\n");
+            let (id, scope, limits) = if row["id"] == crate::context::DRAFT {
+                (
+                    crate::context::DRAFT,
+                    "Context checking, composition, inspection and selected-value checking",
+                    "Context limits: absent nullable defaults unresolved, sdfRequired meaning undefined and reuse outside Context unavailable",
+                )
             } else if row["id"] == crate::link::DRAFT {
-                output.heading("Draft support:");
-                output.push_str(&format!(
-                    " {} (link checking, inspection and selected-value checking)\n",
-                    crate::link::DRAFT
-                ));
-                output.push_str("Link limits: link meaning requires type object, attribute value case is not assessed and links are not followed\n");
-            }
+                (
+                    crate::link::DRAFT,
+                    "link checking, inspection, selected-value checking, generation, trace replay and revision comparison",
+                    "Link limits: link meaning requires type object, attribute value case is not assessed and links are not followed",
+                )
+            } else {
+                continue;
+            };
+            output.heading("Draft support:");
+            output.push_str(&format!(" {id} ({scope})\n{limits}\n"));
         }
         if value["baseline"]["temporal_knowledge"].is_object() {
             output.heading("Temporal knowledge:");

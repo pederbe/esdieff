@@ -12,7 +12,9 @@ spell ranges as `minvalue` and `maxvalue`. The Context draft adopted in
 [ADR 0046: Inline Context draft support](0046-inline-context-draft-support.md)
 uses links in its Figure 6, and the digital twin draft uses the same pattern.
 Before this decision every link-bearing description was inspectable, but its
-meaning was unavailable.
+meaning was unavailable. This record supersedes the statement in ADR 0046 that
+general `sdfType: "link"` meaning remains unavailable. The rest of ADR 0046,
+including its nullability boundary, is unchanged.
 
 ## Decision
 
