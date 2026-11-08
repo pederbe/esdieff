@@ -676,6 +676,9 @@ impl ModifiedScope {
 #[derive(Default)]
 pub(crate) struct Structure<'a> {
     pub(crate) context_used: bool,
+    /// A checked description names `sdfType: "link"`, under ADR 0060: Link sdfType draft
+    /// support.
+    pub(crate) link_used: bool,
     pub(crate) temporal_use: u8,
     pub(crate) format_use: u8,
     pub(crate) abstract_use: u8,
@@ -2194,7 +2197,10 @@ impl<'a, 'view> Checker<'a, 'view, '_> {
                             value,
                             "date-time" | "date" | "time" | "uri" | "uri-reference" | "uuid"
                         ),
-                        "sdfType" => matches!(value, "byte-string" | "unix-time"),
+                        "sdfType" => {
+                            self.result.link_used |= value == "link";
+                            matches!(value, "byte-string" | "unix-time" | "link")
+                        }
                         _ => unreachable!(),
                     };
                     if !understood {

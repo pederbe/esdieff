@@ -681,7 +681,7 @@ A companion document describing how abstract SDF concepts map to network interac
 
 ## Draft extension vocabulary
 
-These terms come from the named Internet-Drafts. Context is defined under [Things and interactions](#things-and-interactions); its recorded revision-06 support is described in [the Context contract](docs/context-contract.md). The remaining draft terms retain their own support limits in [the model coverage boundaries](docs/model-coverage-boundaries.md).
+These terms come from the named Internet-Drafts. Context is defined under [Things and interactions](#things-and-interactions); its recorded revision-06 support is described in [the Context contract](docs/context-contract.md). Link value support is described in [the sample contract](docs/sample-contract.md#conventional-abstract-samples). The remaining draft terms retain their own support limits in [the model coverage boundaries](docs/model-coverage-boundaries.md).
 
 **Supplement**:
 A companion document supplying amendments to an SDF model, proposed in the expired [SDF Supplements draft, revision 01](https://www.ietf.org/archive/id/draft-ietf-asdf-sdf-mapping-01.html#section-4).
@@ -690,7 +690,7 @@ A companion document supplying amendments to an SDF model, proposed in the expir
 The abstract model resulting from applying a Supplement to a copy of an SDF model. The Supplements draft distinguishes this operation from `sdfRef` resolution and instantiation.
 
 **Link value**:
-A runtime data value representing a Web Link under the proposed `sdfType: "link"` in [Link sdfType, revision 02](https://www.ietf.org/archive/id/draft-ietf-asdf-sdftype-link-02.html#section-3).
+A runtime JSON map representing a Web Link under `sdfType: "link"` in [Link sdfType, revision 02](https://www.ietf.org/archive/id/draft-ietf-asdf-sdftype-link-02.html#section-2). Its lowercase members are named after Web Link target attributes, and `href` carries the target. Esdieff checks link values under [ADR 0060: Link sdfType draft support](docs/adr/0060-link-sdftype-draft-support.md) without following them.
 _Avoid_: `sdfRef`, which reuses a definition during model composition.
 
 ## Conformance

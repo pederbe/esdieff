@@ -35,6 +35,18 @@ representation errors. Independent integer, null and other constraints retain
 their own conclusions. These conventions follow ADR 0007 and do not establish
 formal CDDL or protocol-payload admission.
 
+`sdfType: "link"` with `type: "object"` selects a link value from
+`draft-ietf-asdf-sdftype-link-02`, following ADR 0060: Link sdfType draft
+support. The value is a map checked like any other, so `href` is required only
+when `required` lists it and other members are admitted. Every member name must
+be lowercase, which rejects `{"Href":"/a"}` with `sample.link_member_name`. A
+member whose description gives no `type`, including an undeclared member, must
+be a string, which rejects `{"rel":3}` with `sample.link_member`. These
+conclusions belong to `sample-abstract-values/1`, with an `interpretation` basis
+naming the draft. Attribute values are not checked for case. A link with another
+or absent `type`, or beside `format` or `contentFormat`, leaves its meaning
+unfinished.
+
 Both const operands must establish their denotations in a common compatible
 context before equality or difference is concluded. Const, enum, compound
 values, uniqueness and consistency use that shared comparator. Applicable byte

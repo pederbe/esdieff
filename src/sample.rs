@@ -533,10 +533,9 @@ pub(crate) fn ordinary_context(json: EffectiveJson<'_>, budget: &mut OperationBu
         if !charge(&mut budget.work, 5 * (key.len() + 1) + 40) {
             return false;
         }
-        if matches!(
-            key,
-            "enum" | "sdfChoice" | "sdfType" | "format" | "contentFormat"
-        ) {
+        if key == "sdfType" && !crate::link::established(json, budget)
+            || matches!(key, "enum" | "sdfChoice" | "format" | "contentFormat")
+        {
             return false;
         }
         if child.n().donor_unavailable.is_some() && !matches!(key, "items" | "properties") {
@@ -562,6 +561,8 @@ pub(crate) fn ordinary_map_context(json: EffectiveJson<'_>, budget: &mut Operati
             | "nullable" | "const" | "minimum" | "maximum" | "exclusiveMinimum"
             | "exclusiveMaximum" | "multipleOf" | "minLength" | "maxLength" | "pattern"
             | "properties" | "required" | "items" | "minItems" | "maxItems" | "uniqueItems" => true,
+            // `ordinary_context` admits only an established link convention.
+            "sdfType" => true,
             "readable" | "writable" | "observable" => matches!(
                 json.n().role,
                 Some(crate::role::Role::Definition(Class::Property))
@@ -1348,6 +1349,9 @@ fn evaluate_leaf<'a>(
     let abstract_value = ["sdfType", "format", "contentFormat"]
         .into_iter()
         .any(|key| exists(json, key, budget));
+    // An ordinary context admits `sdfType` only as an established link convention.
+    let link = scalar_context == Context::Ordinary && exists(json, "sdfType", budget);
+    let abstract_known = scalar_format_known || link;
     match json.lookup("const", budget) {
         Field::Absent => {}
         Field::Present(constant) => {
@@ -1382,7 +1386,7 @@ fn evaluate_leaf<'a>(
         }
         Field::Unavailable(_) => state.areas[4] = Status::Undetermined,
     }
-    if abstract_value && !scalar_format_known {
+    if abstract_value && !abstract_known {
         state.areas[8] = Status::Unassessed;
         state.abstract_unknown |= 1;
     }
@@ -1406,7 +1410,7 @@ fn evaluate_leaf<'a>(
         state.context = ContextState::Partial;
     }
     if (!known_type && !absent_type)
-        || abstract_value && !scalar_format_known
+        || abstract_value && !abstract_known
         || !ordinary
         || unsupported_structure
         || !map_ordinary
@@ -1479,6 +1483,9 @@ fn evaluate_leaf<'a>(
         return state.finish_value();
     }
     // A malformed nullable quality is needed only for a supplied null value.
+    if link {
+        state.begin_abstract_meaning(Basis::Link);
+    }
     let abstract_context = matches!(scalar_context, Context::Bytes | Context::Unix);
     if abstract_context {
         abstract_sample_value(json, sample, scalar_context, state, budget, work, equality);
@@ -1709,6 +1716,9 @@ fn evaluate_leaf<'a>(
             if sample.kind() == expected {
                 if expected == JsonKind::Map && !absent_type {
                     state.areas[6] = Status::Assessed;
+                    if link {
+                        link_members(json, sample, state, budget);
+                    }
                 } else if !absent_type {
                     state.areas[7] = Status::Assessed;
                     array_counts(json, sample, state, budget, work);
@@ -1738,6 +1748,91 @@ fn evaluate_leaf<'a>(
         _ => {}
     }
     state.finish_value()
+}
+/// The member rules of ADR 0060: Link sdfType draft support. Every member name is lowercase,
+/// and a member whose effective description gives no `type` is a string. Declared members
+/// otherwise keep their own descriptions, checked as ordinary map entries.
+fn link_members<'a>(
+    json: EffectiveJson<'a>,
+    sample: BorrowedValue<'a>,
+    state: &mut Evaluation,
+    budget: &mut OperationBudget,
+) {
+    let parameter = json
+        .lookup("sdfType", budget)
+        .present()
+        .map(|value| value.node);
+    let properties = json.lookup("properties", budget);
+    for member in sample.children() {
+        let Field::Present(name) = member.member_name() else {
+            state.abstract_unfinished(0);
+            return;
+        };
+        if !charge(&mut budget.work, 2 * name.len() + 8) {
+            state.abstract_unfinished(3);
+            return;
+        }
+        let typed = match properties {
+            Field::Absent => false,
+            Field::Present(properties) => match properties.lookup(name, budget) {
+                Field::Absent => false,
+                Field::Present(declared) => match declared.lookup("type", budget) {
+                    Field::Absent => false,
+                    Field::Present(_) => true,
+                    Field::Unavailable(_) => {
+                        state.abstract_unfinished(0);
+                        return;
+                    }
+                },
+                Field::Unavailable(_) => {
+                    state.abstract_unfinished(0);
+                    return;
+                }
+            },
+            Field::Unavailable(_) => {
+                state.abstract_unfinished(0);
+                return;
+            }
+        };
+        let violation = if !crate::link::member_name_admitted(name) {
+            Some((
+                "sample.link_member_name",
+                "Link member name is not in lowercase form",
+            ))
+        } else if !typed && member.kind() != JsonKind::String {
+            Some((
+                "sample.link_member",
+                "Link member without a declared type is not a string",
+            ))
+        } else {
+            None
+        };
+        let Some((code, message)) = violation else {
+            continue;
+        };
+        state.abstract_excluded(Basis::Link);
+        if push(
+            &mut state.findings,
+            Finding {
+                sample_node: member.node(),
+                paired_sample: None,
+                basis: Basis::Link,
+                code,
+                constraint: "sdfType",
+                message,
+                parameter,
+                alternative: None,
+            },
+            &mut budget.allocation,
+        )
+        .is_err()
+        {
+            state.storage_omitted = true;
+        }
+    }
+    if state.areas[8] == Status::Assessed {
+        state.abstract_established();
+    }
 }
 fn text_lengths(
     json: EffectiveJson<'_>,

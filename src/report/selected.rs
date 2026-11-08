@@ -19,6 +19,8 @@ pub(crate) struct SelectedScope {
     relocation: bool,
     /// A requested selector names Context, including when its details are omitted.
     pub(crate) context: bool,
+    /// The composed model names `sdfType: "link"`, under ADR 0060: Link sdfType draft support.
+    link: bool,
     /// The value interpretations the checks relied on.
     pub(crate) interpretations: ValueInterpretations,
     /// The extension vocabulary composition and the checks set aside.
@@ -33,6 +35,7 @@ impl SelectedScope {
             unavailable: Vec::new(),
             relocation: false,
             context: false,
+            link: false,
             interpretations: ValueInterpretations::default(),
             set_aside: SetAside::default(),
         }
@@ -55,6 +58,7 @@ impl SelectedScope {
             }
         }
         self.relocation = model.relocation_interpretation;
+        self.link |= crate::link::used(model);
     }
 
     /// The request's selected scope: the document as its one root, the other model sources
@@ -81,8 +85,8 @@ impl SelectedScope {
         }
         let mut baseline = json!({"id":"rfc9880/base-1","rfc":"9880","corrections":[],
             "interpretations":interpretations,"deviations":[],"registry_knowledge":[]});
-        if self.context {
-            baseline["extensions"] = crate::context::support();
+        if let Some(extensions) = crate::link::extensions(self.context, self.link) {
+            baseline["extensions"] = extensions;
         }
         baseline
     }

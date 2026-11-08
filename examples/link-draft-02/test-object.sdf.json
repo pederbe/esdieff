@@ -1,0 +1,40 @@
+{
+  "info": {
+    "title": "OMA LwM2M LwM2M v1.1 Test Object (Object ID 3442)",
+    "version": "2025-05-05",
+    "copyright": "Copyright (c) 2018-2020 IPSO",
+    "license": "BSD-3-Clause"
+  },
+  "namespace": {
+    "oma": "https://models.openmobilealliance.org/",
+    "omatypes": "https://models.openmobilealliance.org/#/sdfData/"
+  },
+  "defaultNamespace": "oma",
+  "sdfObject": {
+    "LwM2M_v1.1_Test_Object": {
+      "label": "LwM2M v1.1 Test Object",
+      "$comment": "Simplified version of OMA Test Object with only two link type resources",
+      "oma:id": 3442,
+      "sdfProperty": {
+        "ObjLink_Value": {
+          "label": "ObjLnk Value",
+          "description": "Initial value must be a link to instance 0 of Device Object 3 (3:0).",
+          "oma:id": 170,
+          "sdfRef": "omatypes:objlink",
+          "properties": {
+            "object-instance-id": {
+              "$comment": "Example of refinement of link attribute",
+              "maximum": 42
+            }
+          }
+        },
+        "CoreLnk_Value": {
+          "label": "CoreLnk Value",
+          "description": "Initial value must be \"</3442>\".",
+          "oma:id": 180,
+          "sdfRef": "omatypes:corelink"
+        }
+      }
+    }
+  }
+}

@@ -50,7 +50,7 @@ esdieff sample --document examples/context-reuse/device.sdf.json --kind context 
 esdieff check --plan examples/context-samples/check-plan.json
 ```
 
-Both values are admitted. Replacing the tag with `"A-18"` rejects it against the constant. A location with no `room` is rejected, as is a floor below the refined minimum of 2. Reports retain separate sample and model locations, the Context selector and the existing admission and coverage results. Add `--format json` for the structured report. An unavailable reference, applicable unsupported link meaning or exhausted limit leaves affected work incomplete. A null value with absent `nullable` remains undetermined under the draft policy below.
+Both values are admitted. Replacing the tag with `"A-18"` rejects it against the constant. A location with no `room` is rejected, as is a floor below the refined minimum of 2. Reports retain separate sample and model locations, the Context selector and the existing admission and coverage results. Add `--format json` for the structured report. An unavailable reference or exhausted limit leaves affected work incomplete. A null value with absent `nullable` remains undetermined under the draft policy below.
 
 Rust callers use `SampleKind::Context` with `SampleRequest::new`. An effective Context's `data_description()` also supports `SampleRequest::from_description`, without rebuilding a pointer or interpreting constraints. These follow the [selected-sample contract](sample-contract.md).
 
@@ -67,7 +67,7 @@ esdieff trace --document examples/context-reuse/device.sdf.json --trace context-
 
 The vectors identify `kind: "context"` and the selected pointer. Their targets include the inherited minimum of -10, the refined maximum of 5 and values just outside those bounds. Every vector passes replay against the same model because `expected` records its checked admission. Changing an admitted value to 6 fails replay. Removing the selected Context fails with `trace.unselectable`. To generate compound values with required entries and nested constraints, select the neighboring `location` Context instead.
 
-Use `--format human` or `--format json` on generation to inspect targets, admissions and omissions. Generation exits 3 when values remain undetermined or limits omit work. JSON Lines includes only settled values, so successful replay of that file does not establish that generation completed. Absent `nullable` can leave a generated null undetermined, and general link meaning remains unsupported. An authored trace entry requiring either meaning stays undetermined even with an expected admission.
+Use `--format human` or `--format json` on generation to inspect targets, admissions and omissions. Generation exits 3 when values remain undetermined or limits omit work. JSON Lines includes only settled values, so successful replay of that file does not establish that generation completed. Absent `nullable` can leave a generated null undetermined. An authored trace entry requiring that default stays undetermined even with an expected admission.
 
 Rust callers use `GenerationRequest::new(document).select(SampleKind::Context, pointer)`, then pass the result of `to_json_lines()` to `TraceRequest::new(document, vectors.as_bytes())` and `Catalogue::check_trace`. These reuse the [generation](generation-contract.md) and [trace](trace-contract.md) contracts and limits. This round trip checks values against definitions without device access or a runtime metadata protocol.
 
@@ -85,7 +85,7 @@ The draft imports RFC data qualities but also says absent qualities have no assu
 
 The draft leaves Context use in `sdfRequired` undefined. Context does not become a mandatory affordance or satisfy an affordance requirement just by sharing its name. Explicit Context requirements receive `context.required_undefined` with an incomplete draft basis. The `required` quality inside map data remains supported.
 
-Context does not acquire readable, writable or observable Property characteristics. No device endpoints are implied. A link-bearing description stays inspectable, but general `sdfType: "link"` meaning is unavailable. Knowing Context does not establish an unrelated critical feature listed in `info.features`.
+Context does not acquire readable, writable or observable Property characteristics. No device endpoints are implied. Link-typed Context entries, such as the datasheet and certification links in Figure 6 of the draft, are checked as [link values](sample-contract.md#conventional-abstract-samples) under [ADR 0060: Link sdfType draft support](adr/0060-link-sdftype-draft-support.md). A link Context with absent `nullable` keeps the unresolved null default, and Esdieff does not follow its `href`. Knowing Context does not establish an unrelated critical feature listed in `info.features`.
 
 Context-to-Context reuse preserves the same defaults boundary, including nested descriptions. Inherited explicit `nullable` values work normally. Deleting `nullable` restores the unresolved default. Reusing a Context description in a non-Context role remains unavailable, so it cannot silently acquire a withheld default. Factor descriptions intended for sharing across roles or models into `sdfData`, as the draft recommends.
 

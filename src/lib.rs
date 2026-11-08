@@ -23,6 +23,7 @@ mod inventory;
 mod json;
 mod json_emit;
 mod limits;
+mod link;
 mod modified;
 mod numeric;
 mod pattern;

@@ -1,0 +1,17 @@
+{
+  "namespaces": {
+    "org": "https://models.example.com/",
+    "orgtypes": "https://models.example.com/#/sdfData/"
+  },
+  "defaultNamespace": "org",
+  "sdfObject": {
+    "myObj": {
+      "sdfProperty": {
+        "linkToInformation": {
+          "description": "More info about foo",
+          "sdfRef": "orgtypes:idlink"
+        }
+      }
+    }
+  }
+}

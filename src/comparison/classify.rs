@@ -522,6 +522,10 @@ impl<'s, 'c> Descriptions<'s, 'c> {
     fn null(&mut self) -> Result<Option<JsonValue>, UndeterminedReason> {
         self.value(4, JsonBuilder::null)
     }
+    /// The map `{"X":""}`, whose member name a link value excludes.
+    fn uppercase_member(&mut self) -> Result<Option<JsonValue>, UndeterminedReason> {
+        self.value(8, |builder| builder.map(vec![("X", builder.text("")?)]))
+    }
     /// An array of `length` copies of the first representative value of one revision's
     /// `items`, or of `null` without an `items` description, or `None` when that item has no
     /// representative value or the array exceeds the value capabilities.

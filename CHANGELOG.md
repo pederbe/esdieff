@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- Check link values from the Link sdfType draft, `draft-ietf-asdf-sdftype-link-02`.
+  A description with `sdfType: "link"` and `type: "object"` now has meaning in
+  model checks, `sample`, `generate` and `trace`. Member names must be lowercase,
+  and members without a declared `type` must be strings. `href` is required only
+  when `required` lists it. Reports list the draft and its digest in
+  `baseline.extensions`. The saved Context draft plan now exits 0, and new
+  [Link draft examples](examples/link-draft-02/README.md) check the draft's own
+  examples offline. Esdieff does not follow links.
+
+### Changed
+
+- Classify adding, removing or swapping `sdfType: "link"` in revision comparison.
+  Comparison contract `/10` replaces `/9`, retaining diff envelope `1.7` and
+  acknowledgement format `1`. Diff reports list both recorded drafts. Regenerate
+  old undetermined acknowledgements for these differences where needed.
+
 ## [0.3.0] - 2026-11-02
 
 ### Development

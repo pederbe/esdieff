@@ -71,6 +71,7 @@ pub(super) fn scalar(
     let mut kind = None;
     let mut observations = [NotApplicable; 4];
     let mut byte_string = false;
+    let mut link = false;
     let mut set_aside = SetAside::default();
     for child in json.children() {
         let name = child.member_name().present();
@@ -127,6 +128,9 @@ pub(super) fn scalar(
                     context = Undetermined;
                 }
             }
+            // An object link compares as an ordinary map under ADR 0060: Link sdfType draft
+            // support. Its placement is checked once `type` is known, below.
+            "sdfType" if matches!(child.text(), Field::Present("link")) => link = true,
             "sdfType" | "format" | "contentFormat" => {
                 ordinary = false;
                 byte_string |=
@@ -168,6 +172,11 @@ pub(super) fn scalar(
             }
             _ => {}
         }
+    }
+    if link && (kind != Some("object") || !ordinary) {
+        // Link meaning needs an object without another abstract selector.
+        context = Undetermined;
+        ordinary = false;
     }
     if !ordinary {
         // A recognized abstract selector alone cannot establish the actual

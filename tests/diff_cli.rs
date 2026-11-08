@@ -37,7 +37,7 @@ fn declaration_obligations_share_classifications_across_reports_and_saved_plans(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/9"
+            "esdieff.revision-comparison/10"
         );
         assert_eq!(wire["policy"]["perspective"], "implementer");
         assert_eq!(wire["result"]["differences"][0]["quality"], "sdfRequired");
@@ -868,7 +868,7 @@ fn an_acknowledged_breaking_difference_exits_0_while_the_reports_say_breaking() 
     assert_eq!(human.status.code(), Some(0));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.starts_with(
-        "Revision comparison esdieff.revision-comparison/9: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
+        "Revision comparison esdieff.revision-comparison/10: breaking\nDisposition: passed, with 1 breaking and 0 undetermined differences acknowledged\n"
     ));
     assert!(human.contains(
         "Acknowledged differences:\n  removed sdfProperty, breaking\n    earlier lock.sdf.json /sdfObject/Lock/sdfProperty/credential\n"
@@ -1054,7 +1054,7 @@ fn an_acknowledged_undetermined_difference_exits_0_and_reports_complete() {
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(
         human.starts_with(
-            "Revision comparison esdieff.revision-comparison/9: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
+            "Revision comparison esdieff.revision-comparison/10: undetermined\nDisposition: passed, with 0 breaking and 1 undetermined differences acknowledged\n"
         ),
         "{human}"
     );
@@ -1586,7 +1586,7 @@ fn declaration_presence_agrees_across_formats_plans_and_acknowledgement_exports(
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/9"
+            "esdieff.revision-comparison/10"
         );
         let differences = wire["result"]["differences"].as_array().unwrap();
         assert_eq!(differences.len(), 1);
@@ -1724,7 +1724,7 @@ fn grouping_counts_share_perspective_exits_reports_plans_and_acknowledgements() 
         let wire = report(&diff(old.as_os_str(), new.as_os_str(), &options), exit);
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/9"
+            "esdieff.revision-comparison/10"
         );
         assert_eq!(wire["version"], "1.7");
         assert_eq!(wire["policy"]["perspective"], "implementer");
@@ -1890,7 +1890,7 @@ fn property_capabilities_share_cli_plan_and_acknowledgement_classifications() {
         assert_eq!(wire["version"], "1.7");
         assert_eq!(
             wire["request"]["comparison"],
-            "esdieff.revision-comparison/9"
+            "esdieff.revision-comparison/10"
         );
         let rows = wire["result"]["differences"].as_array().unwrap();
         assert_eq!(rows.len(), 1);

@@ -1,0 +1,53 @@
+{
+  "schema": "esdieff.check-plan",
+  "version": "1",
+  "sources": [
+    {"key": "section2", "path": "section-2-link.sdf.json", "role": "model"},
+    {"key": "orgtypes", "path": "org-types.sdf.json", "role": "model"},
+    {"key": "test", "path": "test-object.sdf.json", "role": "model"},
+    {"key": "omatypes", "path": "oma-types.sdf.json", "role": "model"},
+    {"key": "object-link", "path": "object-link.json", "role": "sample"},
+    {"key": "core-link", "path": "core-link.json", "role": "sample"}
+  ],
+  "cases": [
+    {
+      "name": "Section 2: temperature link",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["section2"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Appendix A.1: exported idlink",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["orgtypes"]}
+    },
+    {
+      "name": "Appendix A.2: OMA link types",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["omatypes"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Appendix A.2: test object",
+      "operation": "check",
+      "scope": {"kind": "selected", "roots": ["test"]},
+      "assessment": "full-baseline"
+    },
+    {
+      "name": "Object link value",
+      "operation": "sample",
+      "document": "test",
+      "kind": "property",
+      "pointer": "/sdfObject/LwM2M_v1.1_Test_Object/sdfProperty/ObjLink_Value",
+      "sample": "object-link"
+    },
+    {
+      "name": "CoRE link value",
+      "operation": "sample",
+      "document": "test",
+      "kind": "property",
+      "pointer": "/sdfObject/LwM2M_v1.1_Test_Object/sdfProperty/CoreLnk_Value",
+      "sample": "core-link"
+    }
+  ]
+}

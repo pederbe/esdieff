@@ -1,0 +1,105 @@
+{
+  "info": {
+    "description":
+      "Common data type definitions for OMA LwM2M models",
+    "copyright": "Copyright 2025 Open Mobile Alliance",
+    "license": "BSD-3-Clause"
+  },
+  "namespace": {
+    "oma": "https://models.openmobilealliance.org/"
+  },
+  "defaultNamespace": "oma",
+  "sdfData": {
+    "corelink": {
+      "description": "CoRE link format link",
+      "$comment": "See https://md2html-tool.com/docs/OpenMobileAlliance/LwM2M/master/e58dc1c/TS_Core/OMA-TS-LightweightM2M_Core-V1_2_2-20240613-A_full.html#Table-732-1-lessNOTIFICATIONgreater-class-Attributes",
+      "type": "object",
+      "sdfType": "link",
+      "properties": {
+        "href": {
+          "type": "string"
+        },
+        "pmin": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pmax": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gt": {
+          "type": "number"
+        },
+        "lt": {
+          "type": "number"
+        },
+        "st": {
+          "type": "number"
+        },
+        "epmin": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "epmax": {
+          "type": "integer"
+        },
+        "edge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "con": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "hqmax": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dim": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "ssid": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "uri": {
+          "type": "string"
+        },
+        "ver": {
+          "type": "string"
+        },
+        "lwm2m": {
+          "type": "string"
+        },
+        "_other": {
+          "type": "array",
+          "items":{
+            "type": "string"
+          }
+        }
+      }
+    },
+    "objlink": {
+      "description": "OMA LwM2M Object link",
+      "type": "object",
+      "sdfType": "link",
+      "properties": {
+        "object-id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "object-instance-id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      }
+    }
+  }
+}

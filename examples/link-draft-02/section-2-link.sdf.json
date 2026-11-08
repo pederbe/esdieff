@@ -1,0 +1,13 @@
+{
+ "sdfProperty": {
+  "temp-c-link": {
+   "type": "object",
+   "sdfType": "link",
+   "properties": {
+     "href": { "type": "string"},
+     "rt": { "type": "string", "const": "temperature-c"},
+     "if": { "type": "string", "const": "sensor"}
+   }
+  }
+ }
+}
