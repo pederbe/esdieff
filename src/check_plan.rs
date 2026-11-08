@@ -733,7 +733,8 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             output.push_str(fields["sources"].get());
             output.push_str(",\"cases\":[");
         } else {
-            output.push_str("Esdieff check run\nPlan: ");
+            output.push_str(&color.stdout().span(Role::Heading, "Esdieff check run"));
+            output.push_str("\nPlan: ");
             output.push_str(&identity);
             output.push_str("\nSources: ");
             output.push_str(fields["sources"].get());

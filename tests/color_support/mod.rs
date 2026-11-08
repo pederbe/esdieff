@@ -32,6 +32,10 @@ pub fn plain(bytes: &[u8]) -> String {
 /// symbols, added blank lines and middle dots where the plain report separates a list with
 /// `; ` or `, `. Output without style sequences must equal the plain report exactly.
 pub fn assert_presents(styled: &[u8], ordinary: &[u8]) {
+    assert!(
+        !ordinary.contains(&0x1b),
+        "the plain report contains styling"
+    );
     let ordinary = plain(ordinary);
     if !styled.contains(&0x1b) {
         assert_eq!(plain(styled), ordinary);

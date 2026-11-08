@@ -1910,6 +1910,7 @@ fn human_run_output_shows_each_diff_case_classification_and_native_report() {
     let colored = run(&plan, &["--color", "always"]);
     assert_eq!(colored.status.code(), Some(1));
     let colored = String::from_utf8(colored.stdout).unwrap();
+    assert!(colored.starts_with("\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m\nPlan: "));
     for disposition in [
         "\x1b[1;38;2;255;92;87m✗ failed\x1b[0m",
         "\x1b[1;38;2;90;247;142m✔ passed\x1b[0m",
