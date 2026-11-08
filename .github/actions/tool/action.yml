@@ -56,8 +56,5 @@ runs:
         BINARY: ${{ inputs.binary }}
       run: |
         set -euo pipefail
+        test -x "$TOOL_DIR/$BINARY" || test -x "$TOOL_DIR/$BINARY.exe"
         echo "$TOOL_DIR" >> "$GITHUB_PATH"
-        directory=$TOOL_DIR
-        # Git Bash on Windows runs programs by their Unix-style path.
-        if command -v cygpath > /dev/null; then directory=$(cygpath -u "$TOOL_DIR"); fi
-        "$directory/$BINARY" --version
