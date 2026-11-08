@@ -535,7 +535,7 @@ fn the_json_report_matches_the_library_result_and_repeats_byte_for_byte() {
     assert_eq!(wire["operation"], "generate");
     assert_eq!(
         wire["request"]["generation"]["contract"],
-        "esdieff.generation/2"
+        "esdieff.generation/3"
     );
     assert_eq!(wire["request"]["generation"]["document"], 1);
     assert!(wire["request"]["generation"].get("selector").is_none());
@@ -1149,5 +1149,99 @@ fn nested_values_stay_within_the_value_capabilities_and_the_ceiling() {
         !targets
             .iter()
             .any(|target| target.starts_with("n.n.n.n.n.n."))
+    );
+}
+
+#[test]
+fn a_link_description_offers_one_rejection_for_each_member_rule() {
+    let values = property(
+        r#"{"type":"object","sdfType":"link","required":["href"],"properties":{"href":{"type":"string"},"rel":{"type":"integer"}}}"#,
+    );
+    use Admission::Rejected;
+    has(
+        &values,
+        "uppercase_member",
+        r#"{"Href":"","href":""}"#,
+        Rejected,
+    );
+    // The declared `rel` is typed, so the undeclared member takes a fresh name.
+    has(
+        &values,
+        "nonstring_member",
+        r#"{"rel_":0,"href":""}"#,
+        Rejected,
+    );
+    let order = targets(&values);
+    let position = |target| order.iter().position(|name| *name == target).unwrap();
+    assert!(position("missing_entry") < position("uppercase_member"));
+    assert!(position("uppercase_member") < position("nonstring_member"));
+    assert!(position("nonstring_member") < position("wrong_type"));
+}
+
+#[test]
+fn link_member_rejections_name_the_member_rule_behind_them() {
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied(
+        "model",
+        br#"{"sdfProperty":{"link":{"type":"object","sdfType":"link"}}}"#,
+    )])
+    .unwrap();
+    let document = catalogue.source_id("model").unwrap();
+    let result = catalogue
+        .generate(
+            GenerationRequest::new(document).select(SampleKind::Property, "/sdfProperty/link"),
+        )
+        .unwrap();
+    let description = result.descriptions().next().unwrap();
+    let codes = |target: &str| {
+        let value = description
+            .values()
+            .find(|value| value.target() == target)
+            .unwrap();
+        (
+            value.to_json().to_owned(),
+            value.codes().collect::<Vec<_>>(),
+        )
+    };
+    assert_eq!(
+        codes("uppercase_member"),
+        (r#"{"Href":""}"#.to_owned(), vec!["sample.link_member_name"])
+    );
+    assert_eq!(
+        codes("nonstring_member"),
+        (r#"{"rel":0}"#.to_owned(), vec!["sample.link_member"])
+    );
+}
+
+#[test]
+fn only_established_link_meaning_offers_member_rejections() {
+    for description in [
+        r#"{"type":"object","properties":{"href":{"type":"string"}}}"#,
+        r#"{"sdfType":"link"}"#,
+        r#"{"type":"object","sdfType":"link","format":"uri"}"#,
+    ] {
+        let values = property(description);
+        let order = targets(&values);
+        assert!(
+            !order.contains(&"uppercase_member") && !order.contains(&"nonstring_member"),
+            "{description}: {order:?}"
+        );
+    }
+}
+
+#[test]
+fn a_nested_link_names_its_member_rejections_after_its_entry() {
+    let values =
+        property(r#"{"type":"object","properties":{"target":{"type":"object","sdfType":"link"}}}"#);
+    has(
+        &values,
+        "target.uppercase_member",
+        r#"{"target":{"Href":""}}"#,
+        Admission::Rejected,
+    );
+    has(
+        &values,
+        "target.nonstring_member",
+        r#"{"target":{"rel":0}}"#,
+        Admission::Rejected,
     );
 }

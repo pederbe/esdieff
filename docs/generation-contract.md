@@ -18,7 +18,7 @@ assert_eq!((below.to_json(), below.admission()), ("9", Admission::Rejected));
 # Ok::<(), &'static str>(())
 ```
 
-The generation contract identity is `esdieff.generation/2`. It binds the Generation targets, their order and the rules that build their values, so a release that changes any of them gets a new identity and a report keeps its meaning. Candidate construction is deterministic, with no randomness or seed. Identical inputs and settings give the same values in the same order when the same work completes. Pattern matching retains its timing-sensitive limits, so admissions and completed output can vary when a limit is reached.
+The generation contract identity is `esdieff.generation/3`. It binds the Generation targets, their order and the rules that build their values, so a release that changes any of them gets a new identity and a report keeps its meaning. Candidate construction is deterministic, with no randomness or seed. Identical inputs and settings give the same values in the same order when the same work completes. Pattern matching retains its timing-sensitive limits, so admissions and completed output can vary when a limit is reached.
 
 ## Command line
 
@@ -181,7 +181,7 @@ Each atom chooses its lowest ASCII character, using `0` for `\d` and `\w`, and s
 
 Unsupported syntax, unreadable `maxLength`, impossible lengths or overflowing repetition counts keep the ordinary `minLength` copies of `a` fallback. An unreadable or unsupported `minLength` prevents even that fallback. No satisfying candidate is promised in those cases, and failure to synthesize is not a proof that the description admits no string. Conventional format values retain precedence, and const, enum and default candidates retain their existing order. Boundary and outside length targets still use copies of `a`, so another constraint can reject them. Exhausted synthesis work or allocation leaves the description partial rather than silently replenishing its allowance. The parser storage, parse work and constructed text are charged to that description's existing allowance before they are used.
 
-This is contract `esdieff.generation/2`, superseding `/1` for the changed string representative rules. The target names, order, report version and trace format stay the same. [ADR 0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md) records the decision.
+Contract `esdieff.generation/2` superseded `/1` for these string representative rules, keeping the target names, order, report version and trace format. [ADR 0051: Bounded pattern-aware representatives](adr/0051-bounded-pattern-aware-representatives.md) records that decision. Contract `esdieff.generation/3` supersedes `/2` by adding the `uppercase_member` and `nonstring_member` targets for link descriptions, recorded in [ADR 0060: Link sdfType draft support](adr/0060-link-sdftype-draft-support.md). The report version and trace format stay the same.
 
 ### Target order
 
@@ -221,6 +221,8 @@ The third group holds values just outside the admitted range:
 | `too_many_items` | `maxItems` | an array of one item more than `maxItems` | `{"type":"array","maxItems":4,"uniqueItems":true,"items":{"type":"integer","minimum":0}}` gives `[0,1,2,3,4]` |
 | `duplicate_items` | `uniqueItems` is `true` | an array repeating the first item, twice or as often as `minItems` requires | `{"type":"array","uniqueItems":true,"items":{"type":"integer","minimum":0}}` gives `[0,0]` |
 | `missing_entry` | `required` | one value for each required entry, in order: a map holding every other required entry, filled as for `all_entries`, and lacking that one | `{"type":"object","required":["mode","level"],...}` gives `{"level":5}` and `{"mode":"off"}` when `mode` and `level` are an enum starting with `"off"` and an integer with a minimum of `5` |
+| `uppercase_member` | link meaning, from `sdfType: "link"` with `type: "object"` | a map holding every required entry, filled as for `all_entries`, beside an undeclared `Href` holding `""`, so the lowercase member name rule rejects it | `{"type":"object","sdfType":"link","required":["href"],"properties":{"href":{"type":"string"}}}` gives `{"Href":"","href":""}` |
+| `nonstring_member` | link meaning | the same map beside an undeclared `rel` holding `0`, so the rule that an untyped member is a string rejects it. Either name gains `_` until no entry is described or required under it | the same description gives `{"rel":0,"href":""}`, and one that declares `rel` gives `{"rel_":0,"href":""}` |
 | `wrong_type` | a `type` that is one of the base types | one value of each base type it does not admit, from `0`, `""`, `true`, `{}` and `[]`, where integer data admits `0` | `{"type":"integer"}` gives `""`, `true`, `{}` and `[]` |
 
 ### Array items
@@ -271,7 +273,7 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"generate"
 | Object | Required fields and types | Meaning |
 | --- | --- | --- |
 | Generate request | assessment:null; inventory:null; generation:Generation; scope:Scope | Generation names its own contract. Scope is `selected` with the document as its one root, the other model sources its composition used as dependencies, both as assessed, and the needed sources it could not use as unavailable. |
-| Generation | contract:`"esdieff.generation/2"`; document:Id | selector:SampleSelector, present only for an explicit selector. |
+| Generation | contract:`"esdieff.generation/3"`; document:Id | selector:SampleSelector, present only for an explicit selector. |
 | Generate outcome | Outcome fields | `errors`, `warnings` and `notices` are 0. `incomplete_checks` counts descriptions that are not complete, descriptions left out beyond the ceiling or for the report byte limit, and 1 more when the selection is partial. The disposition is passed or undetermined. |
 | Generate requested coverage | inventory:null; count_unit:`"description"`; total:Count|null; assessed:Count; not_applicable:0; unassessed:Count; undetermined:Count | Complete descriptions are assessed, partial and unavailable ones undetermined, and those left out beyond the ceiling or for the report byte limit unassessed. total is null when the selection is partial, since some descriptions may be missing. |
 | GenerateResult | kind:`"generate"`; summary:GenerateSummary; selection:`"complete"|"partial"`; descriptions:GeneratedDescription[]; descriptions_omitted:Count; omissions:Omission[] | descriptions_omitted counts descriptions beyond the ceiling and those whose details did not fit the report. omissions has a `count_limit` record for the first, a `report_limit` record for the second, and for values a `count_limit` record for those beyond the ceiling and a `byte_limit` record for those that did not fit. The `report_limit` and `byte_limit` records also appear in `diagnostics.omissions`, which makes the report truncated. |

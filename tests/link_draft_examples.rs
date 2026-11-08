@@ -191,7 +191,7 @@ fn generated_link_vectors_replay_against_the_same_model() {
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
-    assert_eq!(lines.len(), 25);
+    assert_eq!(lines.len(), 27);
     let expected = |value: &str| {
         let value: Value = serde_json::from_str(value).unwrap();
         lines
@@ -210,6 +210,21 @@ fn generated_link_vectors_replay_against_the_same_model() {
     );
     assert_eq!(expected(r#"{"object-id":-1}"#).as_deref(), Some("rejected"));
     assert_eq!(expected(r#"{"object-id":""}"#).as_deref(), Some("rejected"));
+    // One rejection for each member rule of the draft.
+    let target = |label: &str| {
+        lines
+            .iter()
+            .find(|line| line["label"] == label)
+            .map(|line| (line["value"].to_string(), line["expected"].clone()))
+    };
+    assert_eq!(
+        target("uppercase_member"),
+        Some((r#"{"Href":""}"#.to_owned(), Value::from("rejected")))
+    );
+    assert_eq!(
+        target("nonstring_member"),
+        Some((r#"{"rel":0}"#.to_owned(), Value::from("rejected")))
+    );
     let directory = tempfile_dir();
     let trace = directory.join("link-vectors.jsonl");
     std::fs::write(&trace, &vectors).unwrap();

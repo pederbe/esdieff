@@ -1,5 +1,5 @@
 //! The Generation targets of one effective data description, in the order the contract
-//! `esdieff.generation/2` fixes, each settled by Sample-value checking as soon as it is kept.
+//! `esdieff.generation/3` fixes, each settled by Sample-value checking as soon as it is kept.
 //! Settling each value before generating the next keeps every kept admission, even when later
 //! generation runs out of the description's allowance.
 //!
@@ -216,6 +216,7 @@ impl<'m> Run<'_, 'm, '_> {
             self.offer("duplicate_items", value)?;
         }
         self.missing_entries(description)?;
+        self.link_members(description)?;
         self.wrong_type(description)?;
         self.nested(description)
     }
@@ -453,6 +454,54 @@ impl<'m> Run<'_, 'm, '_> {
             names.remove(missing);
             let value = self.filled(&names, &described)?;
             self.offer("missing_entry", value)?;
+        }
+        Ok(())
+    }
+
+    /// For a description with link meaning, one value rejected by each member rule of
+    /// ADR 0060: Link sdfType draft support. Each is the map of required entries beside an
+    /// undeclared member, `Href` holding a string for the lowercase name rule and `rel`
+    /// holding a number for the string rule, renamed with `_` until no entry is described or
+    /// required under that name.
+    fn link_members(&mut self, description: EffectiveJson<'_>) -> Result<(), Exhausted> {
+        self.generator.work(64)?;
+        if !crate::link::established(description, &mut self.generator.allowance.budget) {
+            return Ok(());
+        }
+        let Some((described, required)) = self.entries(description)? else {
+            return Ok(());
+        };
+        for (base, target) in [("Href", "uppercase_member"), ("rel", "nonstring_member")] {
+            let mut name = base.to_owned();
+            loop {
+                let mut taken = false;
+                for other in described
+                    .iter()
+                    .map(|(other, _)| *other)
+                    .chain(required.iter().copied())
+                {
+                    self.generator.work(name.len().min(other.len()) + 1)?;
+                    taken |= other == name;
+                }
+                if !taken {
+                    break;
+                }
+                self.generator.work(name.len() + 1)?;
+                name.push('_');
+            }
+            let value = if target == "uppercase_member" {
+                self.text(0)?
+            } else {
+                self.generator.lexeme("0")?
+            };
+            let Some(value) = value else {
+                continue;
+            };
+            let depth = self.path.len();
+            let value = self
+                .generator
+                .map(description, Some((&name, value)), None, depth)?;
+            self.offer(target, value)?;
         }
         Ok(())
     }

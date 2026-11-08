@@ -85,6 +85,9 @@ esdieff generate --document examples/link-draft-02/test-object.sdf.json --kind p
 esdieff trace --document examples/link-draft-02/test-object.sdf.json --trace link-vectors.jsonl examples/link-draft-02/test-object.sdf.json examples/link-draft-02/oma-types.sdf.json
 ```
 
-Generation exits 0 with 25 settled values. Their targets include object
-instance 42, which is admitted, and 43, which is rejected. Replay passes every
-entry against the same model.
+Generation exits 0 with 27 settled values. Their targets include object
+instance 42, which is admitted, and 43, which is rejected. Two more test the
+draft's member rules. `uppercase_member` gives `{"Href":""}`, rejected because
+member names must be lowercase, and `nonstring_member` gives `{"rel":0}`,
+rejected because a member without a declared type must be a string. Replay
+passes every entry against the same model.

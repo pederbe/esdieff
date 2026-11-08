@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Generate one rejected value for each Link draft member rule: an undeclared
+  uppercase member name, `uppercase_member`, and an undeclared member that is not
+  a string, `nonstring_member`. Generation contract `esdieff.generation/3`
+  replaces `/2`, retaining the report version and trace format. Consumers
+  checking the identity must accept the new value.
+
 ## [0.3.0] - 2026-11-02
 
 ### Development
