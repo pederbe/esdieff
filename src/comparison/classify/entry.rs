@@ -7,8 +7,10 @@
 //! that the earlier revision requires narrows it. The candidates hold the entry with one value
 //! of each JSON kind, beside representative values of the other entries that either revision
 //! requires, and Sample-value checking settles which of them the description rejects.
+//! An entry of a link without a description is a string instead, following ADR 0060: Link
+//! sdfType draft support, so its relation is unknown and both directions offer candidates.
 use super::choice::{self, Choices};
-use super::{Candidate, Descriptions, Relation, Rule, enclosing};
+use super::{Candidate, Descriptions, Relation, Rule, enclosing, sdf_type};
 use crate::EffectiveJson;
 use crate::allowance::OperationBudget;
 use crate::comparison::{Direction, Revision, UndeterminedReason, read};
@@ -79,9 +81,32 @@ pub(super) fn rule(
         Revision::Earlier => (Relation::Wider, Direction::ThingSupplied),
         Revision::Later => (Relation::Narrower, Direction::ClientSupplied),
     };
-    let mut rule = Rule::of(relation);
+    let mut link = false;
+    for owner in descriptions.descriptions {
+        link |= sdf_type::link(owner, &mut descriptions.allowance.budget)?;
+    }
+    if !link {
+        let mut rule = Rule::of(relation);
+        candidates(descriptions, &mut rule, name, direction)?;
+        return Ok(rule);
+    }
+    let mut rule = Rule::of(Relation::Unknown);
+    for direction in [Direction::ClientSupplied, Direction::ThingSupplied] {
+        candidates(descriptions, &mut rule, name, direction)?;
+    }
+    Ok(rule)
+}
+
+/// Adds the maps holding the entry `name` with one value of each JSON kind, breaking in
+/// `direction`.
+fn candidates(
+    descriptions: &mut Descriptions<'_, '_>,
+    rule: &mut Rule,
+    name: &str,
+    direction: Direction,
+) -> Result<(), UndeterminedReason> {
     for kind in KINDS {
-        if descriptions.room(&rule, direction) == 0 {
+        if descriptions.room(rule, direction) == 0 {
             break;
         }
         let Some(value) = descriptions.value(4, kind)? else {
@@ -94,12 +119,12 @@ pub(super) fn rule(
             break;
         };
         descriptions.add(
-            &mut rule,
+            rule,
             Candidate {
                 value: map,
                 direction,
             },
         )?;
     }
-    Ok(rule)
+    Ok(())
 }

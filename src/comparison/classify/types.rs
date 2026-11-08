@@ -5,6 +5,8 @@
 //! integer data, so it is the candidate witness of that change. Any other change of type
 //! has no monotone relation. Every change between base types other than integer and number
 //! may be witnessed by a representative value of the revision that must admit it.
+//! An untyped `properties` entry of a link is a string, following ADR 0060: Link sdfType
+//! draft support, so adding or removing its type changes between string and that type.
 use super::bounds::{self, End};
 use super::{Candidate, Descriptions, Relation, Rule};
 use crate::JsonValue;
@@ -17,6 +19,10 @@ pub(super) fn rule(descriptions: &mut Descriptions<'_, '_>) -> Result<Rule, Unde
     let mut types = [None, None];
     for revision in [Revision::Earlier, Revision::Later] {
         let Some(json) = descriptions.member(revision, "type")? else {
+            let description = descriptions.description(revision);
+            if super::sdf_type::link_member(description, &mut descriptions.allowance.budget)? {
+                types[revision.index()] = Some("string");
+            }
             continue;
         };
         match json.text().present() {
@@ -27,6 +33,7 @@ pub(super) fn rule(descriptions: &mut Descriptions<'_, '_>) -> Result<Rule, Unde
     // A type added as a whole may reject an earlier value, one removed as a whole admit a
     // later value, and unrelated types, such as string and boolean, admit no common value.
     let (relation, directions): (_, &[Direction]) = match types {
+        [Some(earlier), Some(later)] if earlier == later => (Relation::Same, &[]),
         [None, Some(_)] => (Relation::Narrower, &[Direction::ClientSupplied]),
         [Some(_), None] => (Relation::Wider, &[Direction::ThingSupplied]),
         [Some("integer"), Some("number")] => {

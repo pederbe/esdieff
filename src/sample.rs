@@ -1772,16 +1772,24 @@ fn link_members<'a>(
             state.abstract_unfinished(3);
             return;
         }
-        let Some(typed) = declared_type(properties, name, budget) else {
-            state.abstract_unfinished(0);
-            return;
+        let string = member.kind() == JsonKind::String;
+        let typed = match declared_type(properties, name, budget) {
+            Some(MemberType::Declared) => true,
+            Some(MemberType::Default) => false,
+            // A string satisfies every alternative's default, and typed alternatives judge
+            // other values on their own.
+            Some(MemberType::Mixed) if string => true,
+            Some(MemberType::Mixed) | None => {
+                state.abstract_unfinished(0);
+                return;
+            }
         };
         let violation = if !crate::link::member_name_admitted(name) {
             Some((
                 "sample.link_member_name",
                 "Link member name is not in lowercase form",
             ))
-        } else if !typed && member.kind() != JsonKind::String {
+        } else if !typed && !string {
             Some((
                 "sample.link_member",
                 "Link member without a declared type is not a string",
@@ -1816,27 +1824,62 @@ fn link_members<'a>(
         state.abstract_established();
     }
 }
-/// Whether the effective `properties` entry `name` declares a `type`, or `None` when that
-/// is unavailable. An undeclared member has no `type`.
+/// Whether a link member's effective description declares its `type`.
+enum MemberType {
+    /// The description, or each of its effective alternatives, declares a `type`.
+    Declared,
+    /// No `type` is declared, so the member must be a string.
+    Default,
+    /// Some effective alternatives declare a `type` and others do not.
+    Mixed,
+}
+/// How the effective `properties` entry `name` declares its `type`, or `None` when that is
+/// unavailable. An undeclared member has no `type`. Without a shared `type`, the effective
+/// alternatives of its `sdfChoice` declare it.
 fn declared_type(
     properties: Field<EffectiveJson<'_>>,
     name: &str,
     budget: &mut OperationBudget,
-) -> Option<bool> {
+) -> Option<MemberType> {
     let declared = match properties {
-        Field::Absent => return Some(false),
+        Field::Absent => return Some(MemberType::Default),
         Field::Present(properties) => properties.lookup(name, budget),
         Field::Unavailable(_) => return None,
     };
-    match declared {
-        Field::Absent => Some(false),
-        Field::Present(declared) => match declared.lookup("type", budget) {
-            Field::Absent => Some(false),
-            Field::Present(_) => Some(true),
-            Field::Unavailable(_) => None,
-        },
-        Field::Unavailable(_) => None,
+    let declared = match declared {
+        Field::Absent => return Some(MemberType::Default),
+        Field::Present(declared) => declared,
+        Field::Unavailable(_) => return None,
+    };
+    match declared.lookup("type", budget) {
+        Field::Absent => {}
+        Field::Present(_) => return Some(MemberType::Declared),
+        Field::Unavailable(_) => return None,
     }
+    match declared.lookup("sdfChoice", budget) {
+        Field::Absent => return Some(MemberType::Default),
+        Field::Present(_) => {}
+        Field::Unavailable(_) => return None,
+    }
+    let Field::Present(derived) = alternatives(declared, budget) else {
+        return None;
+    };
+    let [mut typed, mut untyped] = [false, false];
+    for (_, alternative) in derived {
+        let Field::Present(alternative) = alternative else {
+            return None;
+        };
+        match alternative.0.lookup("type", budget) {
+            Field::Absent => untyped = true,
+            Field::Present(_) => typed = true,
+            Field::Unavailable(_) => return None,
+        }
+    }
+    Some(match (typed, untyped) {
+        (true, false) => MemberType::Declared,
+        (false, _) => MemberType::Default,
+        (true, true) => MemberType::Mixed,
+    })
 }
 fn text_lengths(
     json: EffectiveJson<'_>,

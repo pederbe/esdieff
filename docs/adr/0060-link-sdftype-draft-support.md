@@ -62,7 +62,10 @@ can revise later.
 Selected-value checking, generation and trace replay share these rules. Link
 conclusions belong to the existing `sample-abstract-values/1` area, beside
 `byte-string` and `unix-time`. Revision comparison classifies changed
-constraints inside a link description like other data constraints. A change
+constraints inside a link description like other data constraints, except that
+an untyped member is a string. Adding or removing a member's `type` or
+description therefore changes between string and that type, and witnesses settle
+it. A change
 between `link` and another convention is breaking, and adding or removing `link`
 is breaking with a Breaking witness, a map with an uppercase member name.
 Contract `esdieff.revision-comparison/10` supersedes `/9` for these

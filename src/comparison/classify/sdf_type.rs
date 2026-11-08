@@ -7,7 +7,8 @@
 //! rejects under it. Any other value is not classified.
 use super::{Candidate, Descriptions, Relation, Rule};
 use crate::EffectiveJson;
-use crate::comparison::{CLIENT, Direction, Revision, THING, UndeterminedReason, Verdict};
+use crate::allowance::OperationBudget;
+use crate::comparison::{CLIENT, Direction, Revision, THING, UndeterminedReason, Verdict, read};
 
 /// Semantic types from RFC 9880 Section 4.7.1 with Esdieff's recorded JSON representations,
 /// and the recorded link draft.
@@ -74,4 +75,39 @@ pub(super) fn rule(descriptions: &mut Descriptions<'_, '_>) -> Result<Rule, Unde
         }
     }
     Ok(rule)
+}
+
+/// Whether `json` names the link convention of ADR 0060: Link sdfType draft support, which
+/// restricts its untyped `properties` entries to strings.
+pub(super) fn link(
+    json: EffectiveJson<'_>,
+    budget: &mut OperationBudget,
+) -> Result<bool, UndeterminedReason> {
+    Ok(read::member(json, "sdfType", budget)?
+        .is_some_and(|name| name.text().present() == Some("link")))
+}
+
+/// Whether `json` describes a `properties` entry of a description naming the link convention,
+/// so that an absent `type` restricts it to strings.
+pub(super) fn link_member(
+    json: EffectiveJson<'_>,
+    budget: &mut OperationBudget,
+) -> Result<bool, UndeterminedReason> {
+    let parent = |node: usize| json.model.nodes[node].parent;
+    let Some(properties) = json.n().parent else {
+        return Ok(false);
+    };
+    if json.model.nodes[properties].key != Some("properties") {
+        return Ok(false);
+    }
+    match parent(properties) {
+        Some(owner) => link(
+            EffectiveJson {
+                model: json.model,
+                node: owner,
+            },
+            budget,
+        ),
+        None => Ok(false),
+    }
 }

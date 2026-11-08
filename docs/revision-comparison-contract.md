@@ -426,7 +426,10 @@ The `link` convention follows [ADR 0060: Link sdfType draft support](adr/0060-li
 and is classified the same way. Its candidate is the map `{"X":""}`, whose
 member name is not in the lowercase form a link requires. Constraints inside a
 link description, such as a member's `maximum` or `const`, are classified like
-any other data constraints. Any other `sdfType` value is not classified.
+any other data constraints. A link member without a `type` is a string, so
+adding or removing a member's `type`, or a member's whole description, changes
+between string and that type rather than widening or narrowing. Witnesses settle
+those changes. Any other `sdfType` value is not classified.
 
 ## Requiredness
 

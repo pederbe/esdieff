@@ -391,3 +391,65 @@ fn authored_trace_entries_replay_link_values_against_figure_6() {
         "{wire}"
     );
 }
+
+#[test]
+fn member_types_declared_by_alternatives_govern_their_members() {
+    let typed = r#"{"type":"object","sdfType":"link","properties":{"id":{"sdfChoice":{"numeric":{"type":"integer"}}}}}"#;
+    let (admission, complete, wire) = property(typed, r#"{"id":7}"#);
+    assert_eq!((admission, complete), (Admission::Admitted, true), "{wire}");
+    let (admission, _, wire) = property(typed, r#"{"id":"7"}"#);
+    assert_eq!(admission, Admission::Rejected, "{wire}");
+    assert!(
+        !codes(&wire).contains(&"sample.link_member".to_owned()),
+        "{wire}"
+    );
+    // Alternatives without a type keep the string default.
+    let untyped = r#"{"type":"object","sdfType":"link","properties":{"id":{"sdfChoice":{"short":{"maxLength":3}}}}}"#;
+    let (admission, _, wire) = property(untyped, r#"{"id":7}"#);
+    assert_eq!(admission, Admission::Rejected, "{wire}");
+    assert!(
+        codes(&wire).contains(&"sample.link_member".to_owned()),
+        "{wire}"
+    );
+    assert_eq!(property(untyped, r#"{"id":"7"}"#).0, Admission::Admitted);
+    // With typed and untyped alternatives, a string satisfies the default.
+    let mixed = r#"{"type":"object","sdfType":"link","properties":{"id":{"sdfChoice":{"numeric":{"type":"integer"},"text":{"maxLength":3}}}}}"#;
+    let (admission, complete, wire) = property(mixed, r#"{"id":"7"}"#);
+    assert_eq!((admission, complete), (Admission::Admitted, true), "{wire}");
+}
+
+/// A Property carrying data in one direction, whose link member `id` has `entry`.
+fn directed(version: &str, link: &str, writable: bool, entry: &str) -> String {
+    let characteristics = if writable {
+        r#""readable":false,"observable":false"#
+    } else {
+        r#""writable":false"#
+    };
+    format!(
+        r#"{{"info":{{"title":"Links","version":"{version}"}},"sdfObject":{{"Device":{{"sdfProperty":{{"link":{{{characteristics},"type":"object"{link},"properties":{{{entry}"rt":{{"type":"string"}}}}}}}}}}}}}}"#
+    )
+}
+
+#[test]
+fn untyped_link_members_are_strings_in_revision_comparison() {
+    const LINK: &str = r#","sdfType":"link""#;
+    const INTEGER: &str = r#""id":{"type":"integer"},"#;
+    const UNTYPED: &str = r#""id":{"description":"Identifier"},"#;
+    let classification = |link: &str, writable: bool, earlier: &str, later: &str| {
+        let wire = compare(
+            &directed("1", link, writable, earlier),
+            &directed("2", link, writable, later),
+        );
+        wire["result"]["differences"][0]["classification"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    // Removing a member's type, or its whole description, restricts it to strings.
+    for later in [UNTYPED, ""] {
+        assert_eq!(classification(LINK, true, INTEGER, later), "breaking");
+        assert_eq!(classification("", true, INTEGER, later), "compatible");
+    }
+    // Adding a type to an untyped member admits values that are not strings.
+    assert_eq!(classification(LINK, false, UNTYPED, INTEGER), "breaking");
+}
