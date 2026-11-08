@@ -57,37 +57,15 @@ jobs:
             . -> target
             tools/release -> target
           key: artifact-${{ matrix.target }}
-      - uses: taiki-e/install-action@v2
+      - uses: ./.github/actions/tool
         with:
           tool: cargo-about@0.9.3
-      - name: Install dist on Unix
-        if: runner.os != 'Windows'
-        run: |
-          set -euo pipefail
-          installer=$RUNNER_TEMP/cargo-dist-installer.sh
-          curl --proto '=https' --tlsv1.2 -fsSL https://github.com/axodotdev/cargo-dist/releases/download/v0.33.1/cargo-dist-installer.sh -o "$installer"
-          checksum=a7b3b0812d624a09a534ba272aa8e04c801e56a83d553327a4a8632bc03abb94
-          if [ "$RUNNER_OS" = macOS ]; then
-            printf '%s  %s\n' "$checksum" "$installer" | shasum -a 256 -c -
-          else
-            printf '%s  %s\n' "$checksum" "$installer" | sha256sum -c -
-          fi
-          CARGO_DIST_UNMANAGED_INSTALL="$RUNNER_TEMP/dist" sh "$installer"
-          echo "$RUNNER_TEMP/dist" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/dist/dist" --version
-      - name: Install dist on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $installer = "$env:RUNNER_TEMP/cargo-dist-installer.ps1"
-          Invoke-WebRequest https://github.com/axodotdev/cargo-dist/releases/download/v0.33.1/cargo-dist-installer.ps1 -OutFile $installer
-          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'c0f180726e9045bfb2837e15f40330d8453a1f93338be48d4f48efcb09a5c0d4') { throw 'dist installer checksum mismatch' }
-          $env:CARGO_DIST_UNMANAGED_INSTALL = "$env:RUNNER_TEMP/dist"
-          & $installer
-          if (-not (Test-Path "$env:RUNNER_TEMP/dist/dist.exe")) { throw 'dist installation failed' }
-          "$env:RUNNER_TEMP/dist" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          & "$env:RUNNER_TEMP/dist/dist.exe" --version
+          binary: cargo-about
+      - uses: ./.github/actions/tool
+        with:
+          tool: dist@0.33.1
+          binary: dist
+          script: bash scripts/install-dist.sh
       - name: Build the retained archive
         run: |
           set -euo pipefail
@@ -143,6 +121,13 @@ jobs:
             target/distrib/esdieff-${{ matrix.target }}.*
           if-no-files-found: error
           retention-days: 30
+      # Later jobs reuse this build of the release helper instead of compiling it again.
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: release-tool-${{ matrix.target }}
+          path: tools/release/target/debug/esdieff-release${{ matrix.ext }}
+          if-no-files-found: error
+          retention-days: 1
 
   packages:
     name: Signed package installation on ${{ matrix.os }}
@@ -168,12 +153,10 @@ jobs:
         with:
           name: archives-${{ matrix.target }}
           path: target/distrib
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8.0.2
         with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@v2.9.3
-        with:
-          workspaces: tools/release -> target
+          name: release-tool-${{ matrix.target }}
+          path: target/release-tool
       - name: Install standard package tools
         run: |
           sudo apt-get update -q
@@ -183,8 +166,8 @@ jobs:
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
-          cargo build --locked --manifest-path tools/release/Cargo.toml
-          tool=$PWD/tools/release/target/debug/esdieff-release
+          tool=$PWD/target/release-tool/esdieff-release
+          chmod +x "$tool"
           archive=$PWD/target/distrib/esdieff-$TARGET.tar.xz
           mkdir -p "$RUNNER_TEMP/packages" "$RUNNER_TEMP/previous"
           "$tool" package-linux "$archive" "$TARGET" "$version" "$RUNNER_TEMP/packages"
@@ -227,9 +210,10 @@ jobs:
           pattern: archives-*
           path: target/distrib
           merge-multiple: true
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8.0.2
         with:
-          toolchain: stable
+          name: release-tool-${{ matrix.target }}
+          path: target/release-tool
       - uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # main
         with:
           stable: true
@@ -239,7 +223,9 @@ jobs:
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
-          cargo run --locked --manifest-path tools/release/Cargo.toml -- homebrew target/distrib "$version"
+          tool=$PWD/target/release-tool/esdieff-release
+          chmod +x "$tool"
+          "$tool" homebrew target/distrib "$version"
           git config --global user.name 'github-actions[bot]'
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           brew tap-new esdieff/check
@@ -264,7 +250,7 @@ jobs:
           cp "$RUNNER_TEMP/current.rb" "$formula"
           brew upgrade esdieff/check/esdieff
           brew test esdieff/check/esdieff
-          cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke "$(brew --prefix)/bin/esdieff"
+          "$tool" smoke "$(brew --prefix)/bin/esdieff"
           brew uninstall esdieff/check/esdieff
           test ! -e "$(brew --prefix)/bin/esdieff"
 
@@ -281,23 +267,55 @@ jobs:
         with:
           name: archives-x86_64-pc-windows-msvc
           path: target/distrib
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8.0.2
         with:
-          toolchain: stable
+          name: release-tool-x86_64-pc-windows-msvc
+          path: target/release-tool
       - name: Generate the portable manifest
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
-          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget target/distrib "$version"
-      - name: Prepare the qualified WinGet client
+          target/release-tool/esdieff-release.exe winget target/distrib "$version"
+      # The WinGet client and its x64 dependencies are about 300 MB, so they are cached by
+      # version instead of being downloaded from GitHub on every run.
+      - id: winget-client
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/winget-client
+          key: winget-client-1.29.380-x64
+      - name: Download the qualified WinGet client
+        if: steps.winget-client.outputs.cache-hit != 'true'
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          Install-PSResource -Name Microsoft.WinGet.Client -Version '1.29.380' -Scope CurrentUser -Repository PSGallery -TrustRepository
-          Import-Module Microsoft.WinGet.Client
-          Repair-WinGetPackageManager -Version '1.29.380' -Force
+          $ProgressPreference = 'SilentlyContinue'
+          $release = 'https://github.com/microsoft/winget-cli/releases/download/v1.29.380'
+          $client = "$env:RUNNER_TEMP/winget-client"
+          $download = "$env:RUNNER_TEMP/winget-download"
+          New-Item -ItemType Directory -Force "$client/dependencies", $download | Out-Null
+          $files = @{
+            'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' = '65dea9c01ce08ee7b763366b27c0e651f97db857c11ca9b9c301826c10092f2e'
+            'DesktopAppInstaller_Dependencies.zip' = 'ba875afe9d190f61218985ac0292a99d1db710bf93e13c68944ca9d89f0d82d1'
+          }
+          foreach ($name in $files.Keys) {
+            Invoke-WebRequest "$release/$name" -OutFile "$download/$name" -MaximumRetryCount 3 -RetryIntervalSec 5
+            if ((Get-FileHash "$download/$name" -Algorithm SHA256).Hash.ToLowerInvariant() -ne $files[$name]) { throw "$name checksum mismatch" }
+          }
+          Move-Item "$download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" $client
+          Expand-Archive "$download/DesktopAppInstaller_Dependencies.zip" "$download/dependencies"
+          Get-ChildItem "$download/dependencies" -Recurse -File -Filter *.appx | Where-Object { $_.DirectoryName -match 'x64$' } | Move-Item -Destination "$client/dependencies"
+          if (-not (Get-ChildItem "$client/dependencies" -Filter *.appx)) { throw 'No x64 WinGet dependencies found' }
+          Remove-Item $download -Recurse -Force
+      - name: Prepare the qualified WinGet client
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $client = "$env:RUNNER_TEMP/winget-client"
+          foreach ($dependency in Get-ChildItem "$client/dependencies" -Filter *.appx) {
+            # A framework the image already has at a newer version needs no install.
+            try { Add-AppxPackage -Path $dependency.FullName } catch { Write-Warning "$($dependency.Name): $($_.Exception.Message)" }
+          }
+          Add-AppxPackage -Path "$client/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" -ForceApplicationShutdown -ForceUpdateFromAnyVersion
           $version = winget --version
           if ($LASTEXITCODE -ne 0 -or $version.Trim() -ne 'v1.29.380') { throw 'WinGet 1.29.380 is unavailable' }
       - name: Check WinGet against the retained ZIP
@@ -310,7 +328,7 @@ jobs:
           $manifest = "target/distrib/winget/manifests/p/PederBergan/Esdieff/$version"
           winget validate --manifest $manifest
           if ($LASTEXITCODE -ne 0) { throw 'Manifest validation failed' }
-          $tool = (Resolve-Path tools/release/target/debug/esdieff-release.exe).Path
+          $tool = (Resolve-Path target/release-tool/esdieff-release.exe).Path
           $portFile = "$env:RUNNER_TEMP/artifact-port"
           $server = Start-Process -FilePath $tool -ArgumentList @('serve-artifacts', (Resolve-Path target/distrib).Path, $portFile) -PassThru -NoNewWindow
           try {
@@ -387,12 +405,17 @@ jobs:
         with:
           name: archives-${{ matrix.target }}
           path: target/distrib
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: release-tool-${{ matrix.target }}
+          path: target/release-tool
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - uses: taiki-e/install-action@v2
+      - uses: ./.github/actions/tool
         with:
           tool: cargo-binstall@1.26.1
+          binary: cargo-binstall
       - name: Install the exact upstream archive layout without source fallback
         env:
           TARGET: ${{ matrix.target }}
@@ -402,10 +425,10 @@ jobs:
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
-          cargo build --locked --manifest-path tools/release/Cargo.toml
           suffix=''
           [[ "$TARGET" != *windows* ]] || suffix=.exe
-          tool=$PWD/tools/release/target/debug/esdieff-release$suffix
+          tool=$PWD/target/release-tool/esdieff-release$suffix
+          chmod +x "$tool"
           "$tool" serve-artifacts target/distrib "$RUNNER_TEMP/binstall-port" &
           server=$!
           trap 'kill "$server" 2>/dev/null || true' EXIT

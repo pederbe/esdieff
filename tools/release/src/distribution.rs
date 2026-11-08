@@ -674,8 +674,8 @@ fn winget(args: &[String]) -> Result<()> {
         .join("winget/manifests/p/PederBergan/Esdieff")
         .join(version);
     fs::create_dir_all(&out)?;
-    // The community repository currently accepts the 1.12 manifest schema.
-    let schema = "1.12.0";
+    // Use the community repository's current recommended manifest schema.
+    let schema = "1.28.0";
     let identity = format!("PackageIdentifier: PederBergan.Esdieff\nPackageVersion: {version}\n");
     let header = |kind| {
         format!(
@@ -700,7 +700,7 @@ fn winget(args: &[String]) -> Result<()> {
     fs::write(
         out.join("PederBergan.Esdieff.locale.en-US.yaml"),
         format!(
-            "{}{identity}PackageLocale: en-US\nPublisher: Peder Bergan\nPublisherUrl: https://github.com/pederbe\nPublisherSupportUrl: https://github.com/pederbe/esdieff/issues\nPackageName: Esdieff\nPackageUrl: https://esdieff.com\nLicense: MIT OR Apache-2.0\nLicenseUrl: https://github.com/pederbe/esdieff/blob/v{version}/README.md#license\nShortDescription: An SDF toolkit for connected-device models\nMoniker: esdieff\nReleaseNotesUrl: https://github.com/pederbe/esdieff/releases/tag/v{version}\nManifestType: defaultLocale\nManifestVersion: {schema}\n",
+            "{}{identity}PackageLocale: en-US\nPublisher: Peder Bergan\nPublisherUrl: https://github.com/pederbe\nPublisherSupportUrl: https://github.com/pederbe/esdieff/issues\nPackageName: Esdieff\nPackageUrl: https://esdieff.com/\nLicense: MIT OR Apache-2.0\nLicenseUrl: https://github.com/pederbe/esdieff/blob/v{version}/README.md#license\nShortDescription: An SDF toolkit for connected-device models\nMoniker: esdieff\nReleaseNotesUrl: https://github.com/pederbe/esdieff/releases/tag/v{version}\nManifestType: defaultLocale\nManifestVersion: {schema}\n",
             header("defaultLocale")
         ),
     )?;
@@ -784,10 +784,10 @@ mod tests {
             assert_eq!(
                 text.lines().next().unwrap(),
                 format!(
-                    "# yaml-language-server: $schema=https://aka.ms/winget-manifest.{kind}.1.12.0.schema.json"
+                    "# yaml-language-server: $schema=https://aka.ms/winget-manifest.{kind}.1.28.0.schema.json"
                 )
             );
-            assert!(text.contains(&format!("ManifestType: {kind}\nManifestVersion: 1.12.0\n")));
+            assert!(text.contains(&format!("ManifestType: {kind}\nManifestVersion: 1.28.0\n")));
             if kind == "installer" {
                 assert!(text.contains("InstallerSha256: BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD\n"));
                 assert!(text.contains("NestedInstallerType: portable\n"));

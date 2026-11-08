@@ -17,16 +17,19 @@ that passes the required hosted `CI` check. The maintainer uses a `contrib/`
 branch in this repository. Other contributors use a branch in their fork.
 Explain the problem, the resulting behavior and the relevant validation.
 
-CI validates pull requests before merging. After merging, it only builds and
-deploys the website when relevant files change. Manual CI and release validation
-continue to run the full checks.
+CI validates pull requests before merging. After merging, it builds and deploys
+the website when relevant files change and refills the shared build and tool
+caches when they are out of date. Manual CI and release validation continue to
+run the full checks.
 
 Release-helper-only changes reuse the platform jobs with
 `bash scripts/check.sh --release-tools-only`. Changes to the release helper's
-tests and release-notes code skip application builds. Packaging, installation
-and artifact workflow changes retain release installation checks. Application,
-shared-fixture and mixed changes retain full coverage, as do changes to CI
-selection or the check script.
+tests and release-notes code skip application builds. Application changes run
+the checks on every platform. Release installation checks run when what a
+release packages or how it packages it changes: the manifest, lock file,
+toolchain, packaging and license configuration, release workflows and actions,
+and CI selection. CI restores its pinned tools from the Actions cache and
+downloads them only when a version changes.
 
 ## Changelog and releases
 
@@ -80,6 +83,16 @@ sources, such as a flaky job, a secret or a setting, fix the cause and run it
 again for that tag with publishing enabled. Release-plz compares `main` with the
 version published on crates.io, so later releases wait until this one is
 published.
+
+After publication, the Distribution updates workflow validates and installs the
+published WinGet manifest, submits it with Komac, and completes the PR
+description from its check evidence. Microsoft controls catalog admission. Retry
+that workflow on `main` with the same release tag and submission enabled to finish
+an interrupted submission or description update. Manual runs default to preparation
+without public changes. Existing matching PRs are reused, and manual description
+edits are preserved. Submission requires `WINGET_ENABLED=true` and `WINGET_TOKEN`
+in the `distribution` environment. The CLA checkbox reflects Microsoft's check
+and never signs an agreement.
 
 The workflow needs a `RELEASE_PLZ_TOKEN` repository secret holding a
 fine-grained personal access token for this repository, with read and write

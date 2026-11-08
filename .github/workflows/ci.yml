@@ -73,6 +73,18 @@ jobs:
                   release_tools=true
                   artifacts=true
                   ;;
+                .github/actions/*)
+                  artifacts=true
+                  docs=true
+                  website=true
+                  ;;
+                # The checks job builds and tests every application change on each
+                # platform. Release checks rebuild the archives only when what they
+                # package or how they package it changes.
+                .github/workflows/ci.yml|Cargo.toml|Cargo.lock|rust-toolchain.toml|dist-workspace.toml|about.toml|about.hbs|packaging/*|scripts/check-packages.sh|scripts/install-dist.sh)
+                  rust=true
+                  artifacts=true
+                  ;;
                 site/*|tools/site/*)
                   docs=true
                   styles=true
@@ -131,9 +143,67 @@ jobs:
             . -> target
             tools/release -> target
             tools/terminal-html -> target
-          key: checks-${{ matrix.os }}
+          shared-key: checks-${{ matrix.os }}
       - name: Run maintained checks
         run: bash scripts/check.sh ${{ needs.changes.outputs.rust == 'true' && '--all' || '--release-tools-only' }}
+
+  # Pull requests can restore caches only from their own branch and main, and pushes to
+  # main skip the checks. This job refills main's caches when the lock file, toolchain or a
+  # pinned tool changes, so later pull requests restore them instead of rebuilding.
+  warm:
+    name: Warm caches (${{ matrix.os }})
+    needs: changes
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm, macos-15, windows-2022, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: matrix.os == 'ubuntu-26.04'
+        uses: ./.github/actions/tool
+        with:
+          tool: mdbook@0.5.4
+          binary: mdbook
+      - if: matrix.os != 'ubuntu-26.04'
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - if: matrix.os != 'ubuntu-26.04'
+        id: rust
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: |
+            . -> target
+            tools/release -> target
+            tools/terminal-html -> target
+          shared-key: checks-${{ matrix.os }}
+      - name: Compile the checks
+        if: matrix.os != 'ubuntu-26.04' && steps.rust.outputs.cache-hit != 'true'
+        run: bash scripts/check.sh --warm
+      - if: matrix.os != 'ubuntu-26.04'
+        uses: ./.github/actions/tool
+        with:
+          tool: cargo-about@0.9.3
+          binary: cargo-about
+      - if: matrix.os != 'ubuntu-26.04'
+        uses: ./.github/actions/tool
+        with:
+          tool: dist@0.33.1
+          binary: dist
+          script: bash scripts/install-dist.sh
+      - if: matrix.os != 'ubuntu-26.04'
+        uses: ./.github/actions/tool
+        with:
+          tool: cargo-binstall@1.26.1
+          binary: cargo-binstall
 
   docs:
     name: Documentation
@@ -145,15 +215,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install mdBook
-        run: |
-          set -euo pipefail
-          curl --proto '=https' --tlsv1.2 -fsSLo "$RUNNER_TEMP/mdbook.tar.gz" \
-            https://github.com/rust-lang/mdBook/releases/download/v0.5.4/mdbook-v0.5.4-x86_64-unknown-linux-gnu.tar.gz
-          echo "3f28de05dafca9d0f2eab99c662116b0e37b89b1d96a08f8f430b9eeae958cd7  $RUNNER_TEMP/mdbook.tar.gz" | sha256sum -c -
-          mkdir "$RUNNER_TEMP/mdbook"
-          tar -xzf "$RUNNER_TEMP/mdbook.tar.gz" -C "$RUNNER_TEMP/mdbook" mdbook
-          echo "$RUNNER_TEMP/mdbook" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/tool
+        with:
+          tool: mdbook@0.5.4
+          binary: mdbook
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: needs.changes.outputs.styles == 'true'
         with:
@@ -172,7 +237,7 @@ jobs:
   artifacts:
     name: Release checks
     needs: changes
-    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.artifacts == 'true'
+    if: needs.changes.outputs.artifacts == 'true'
     uses: ./.github/workflows/artifacts.yml
     with:
       tag: ${{ inputs.release_tag || '' }}
@@ -215,7 +280,7 @@ jobs:
           else
             test "$CHECKS_RESULT" = skipped
           fi
-          if [ "$RUST_SELECTED" = true ] || [ "$ARTIFACTS_SELECTED" = true ]; then
+          if [ "$ARTIFACTS_SELECTED" = true ]; then
             test "$ARTIFACTS_RESULT" = success
           else
             test "$ARTIFACTS_RESULT" = skipped
