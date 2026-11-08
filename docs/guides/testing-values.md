@@ -12,12 +12,12 @@ A **sample** is one JSON value for one definition. Save `21.5` in `comfortable.j
 
 <pre class="terminal"><code><span class="p">$</span> esdieff sample --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --sample comfortable.json thermostat.sdf.json
 <b><span class="h">Esdieff:</span></b> <b><span class="g">✔ passed</span></b>
-<b><span class="h">Complete:</span></b> true
-<b><span class="h">Errors:</span></b> 0 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
-<b><span class="h">Scope:</span></b> selected
+<b>Complete:</b> true
+<b>Errors:</b> 0 · <b>warnings:</b> 0 · <b>notices:</b> 0 · <b>incomplete checks:</b> 0
+<b>Scope:</b> selected
 ...
-<b><span class="h">Selected</span></b> property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
-<b><span class="h">Sample</span></b> 2: <b><span class="g">✔ admitted</span></b> · context available
+<b>Selected</b> property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
+<b>Sample</b> 2: <b><span class="g">✔ admitted</span></b> · context available
 ...
 </code></pre>
 
@@ -25,10 +25,10 @@ A **sample** is one JSON value for one definition. Save `21.5` in `comfortable.j
 
 <pre class="terminal"><code><span class="p">$</span> esdieff sample --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --sample too-hot.json thermostat.sdf.json
 <b><span class="h">Esdieff:</span></b> <b><span class="r">✗ failed</span></b>
-<b><span class="h">Complete:</span></b> true
-<b><span class="h">Errors:</span></b> 1 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
+<b>Complete:</b> true
+<b>Errors:</b> 1 · <b>warnings:</b> 0 · <b>notices:</b> 0 · <b>incomplete checks:</b> 0
 ...
-<b><span class="h">Sample</span></b> 2: <b><span class="r">✗ rejected</span></b> · context available
+<b>Sample</b> 2: <b><span class="r">✗ rejected</span></b> · context available
 ...
 
 <b><span class="r">✗ sample.bound</span></b>: Sample violates an exact numerical bound
@@ -46,8 +46,8 @@ The reports are trimmed to the lines about the sample. A rejected sample is a fa
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
 <b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">✔ passed</span></b>
-<b><span class="h">Values:</span></b> 2 <b><span class="g">admitted</span></b> · 8 <b><span class="r">rejected</span></b> · 0 <b><span class="y">undetermined</span></b>
-<b><span class="h">Descriptions:</span></b> 1
+<b>Values:</b> 2 <b><span class="g">admitted</span></b> · 8 <b><span class="r">rejected</span></b> · 0 <b><span class="y">undetermined</span></b>
+<b>Descriptions:</b> 1
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
 <b><span class="h">property /sdfObject/Thermostat/sdfProperty/targetTemperature</span></b>: <b><span class="g">✔ complete</span></b>
@@ -104,17 +104,17 @@ Each line carries the selector, the value and its settled result as `expected`. 
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace readings.jsonl thermostat.sdf.json
 <b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">✗ failed</span></b>
-<b><span class="h">Entries:</span></b> 3 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
-<b><span class="h">Admissions:</span></b> 2 admitted · 3 rejected · 0 undetermined
+<b>Entries:</b> 3 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
+<b>Admissions:</b> 2 admitted · 3 rejected · 0 undetermined
 
 line 2 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">✗ failed</span></b>
   label "app bug"
   admission rejected
-  error sample.multiple at "/value" bytes 206..210: Sample is not an exact multiple of the positive step
+  <b><span class="r">✗ error</span></b> sample.multiple at "/value" bytes 206..210: Sample is not an exact multiple of the positive step
 
 line 4 action_input "/sdfObject/Thermostat/sdfAction/configure": <b><span class="r">✗ failed</span></b>
   admission rejected
-  error sample.bound at "/value/targetTemperature" bytes 459..461: Sample violates an exact numerical bound
+  <b><span class="r">✗ error</span></b> sample.bound at "/value/targetTemperature" bytes 459..461: Sample violates an exact numerical bound
 </code></pre>
 
 Only the failed lines are listed here, each with its line number, the byte range
@@ -139,8 +139,8 @@ admissions match the recorded expectations. This thermostat replay passes:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace vectors.jsonl thermostat.sdf.json
 <b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="g">✔ passed</span></b>
-<b><span class="h">Entries:</span></b> 10 <b><span class="g">passed</span></b> · 0 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
-<b><span class="h">Admissions:</span></b> 2 admitted · 8 rejected · 0 undetermined
+<b>Entries:</b> 10 <b><span class="g">passed</span></b> · 0 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
+<b>Admissions:</b> 2 admitted · 8 rejected · 0 undetermined
 </code></pre>
 
 Create a revision that raises the maximum to 35 and drops the half-degree step:
@@ -153,18 +153,18 @@ Against this revision, the vectors whose settled admission changed fail:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document revised.sdf.json --trace vectors.jsonl revised.sdf.json
 <b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">✗ failed</span></b>
-<b><span class="h">Entries:</span></b> 8 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
-<b><span class="h">Admissions:</span></b> 4 admitted · 6 rejected · 0 undetermined
+<b>Entries:</b> 8 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 <b><span class="y">undetermined</span></b>
+<b>Admissions:</b> 4 admitted · 6 rejected · 0 undetermined
 
 line 5 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">✗ failed</span></b>
   label "above_maximum"
   admission admitted, expected rejected
-  error trace.expected at "/expected" bytes 648..658: The definite admission differs from the Expected admission
+  <b><span class="r">✗ error</span></b> trace.expected at "/expected" bytes 648..658: The definite admission differs from the Expected admission
 
 line 6 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">✗ failed</span></b>
   label "not_multiple"
   admission admitted, expected rejected
-  error trace.expected at "/expected" bytes 791..801: The definite admission differs from the Expected admission
+  <b><span class="r">✗ error</span></b> trace.expected at "/expected" bytes 791..801: The definite admission differs from the Expected admission
 </code></pre>
 
 This is a quick way to see what a model change does to values you already rely on. [Compare two revisions](revision-comparison.md) explains the same change from the app's point of view, and [Repeat checks and share reports](checks-and-reports.md) saves sample checks in a plan to run again.

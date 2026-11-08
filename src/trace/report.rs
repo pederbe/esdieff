@@ -22,7 +22,9 @@ pub(super) fn reserve(metadata: usize) -> usize {
 pub(super) fn entry_bytes(entry: &Entry, document: SourceId, trace: SourceId) -> usize {
     let mut json = String::new();
     entry_json(&mut json, entry, document, trace);
-    (json.len() + 1).max(human_entry(entry).len())
+    let mut human = HumanText::new(crate::HumanStyle::Plain);
+    human_entry(&mut human, entry);
+    (json.len() + 1).max(human.len())
 }
 
 pub(super) fn to_json(result: &TraceResult<'_>) -> String {
@@ -129,7 +131,7 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
     let disposition = result.disposition();
     text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
-    text.heading("Entries:");
+    text.label("Entries:");
     for (index, outcome) in TraceOutcome::ALL.into_iter().enumerate() {
         if index == 0 {
             text.push(' ');
@@ -140,7 +142,7 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         text.span(outcome_role(outcome), outcome.as_str());
     }
     text.push('\n');
-    text.heading("Admissions:");
+    text.label("Admissions:");
     for (index, admission) in super::ADMISSIONS.into_iter().enumerate() {
         if index == 0 {
             text.push(' ');
@@ -155,14 +157,7 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
     }
     text.push('\n');
     for entry in &result.entries {
-        let lines = human_entry(entry);
-        // The outcome ending the heading line is styled, and the rest is plain.
-        let end = lines[1..].find('\n').map_or(lines.len(), |end| end + 1);
-        let (heading, rest) = lines.split_at(end);
-        let outcome = entry.outcome.as_str();
-        text.push_str(&heading[..heading.len() - outcome.len()]);
-        text.status(outcome_role(entry.outcome), outcome);
-        text.push_str(rest);
+        human_entry(&mut text, entry);
     }
     if result.omitted > 0 {
         text.push_str(&format!(
@@ -177,13 +172,14 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
 }
 
 /// One entry's human lines, which begin with an empty line and a heading ending in its
-/// outcome.
-fn human_entry(entry: &Entry) -> String {
-    let mut lines = format!("\nline {}", entry.line);
+/// outcome. Styling marks the outcome and each condition's severity.
+fn human_entry(lines: &mut HumanText, entry: &Entry) {
+    lines.push_str(&format!("\nline {}", entry.line));
     if let Some((kind, pointer)) = &entry.selector {
         lines.push_str(&format!(" {} {}", kind.as_str(), json!(pointer)));
     }
-    lines.push_str(&format!(": {}", entry.outcome.as_str()));
+    lines.push_str(": ");
+    lines.status(outcome_role(entry.outcome), entry.outcome.as_str());
     if let Some(label) = &entry.label {
         lines.push_str(&format!("\n  label {}", json!(label)));
     }
@@ -198,11 +194,12 @@ fn human_entry(entry: &Entry) -> String {
         lines.push_str(&format!("\n  {}", settled.join(", ")));
     }
     for condition in &entry.conditions {
-        lines.push_str(&format!(
-            "\n  {} {}",
+        lines.push_str("\n  ");
+        lines.status(
+            Role::severity(condition.severity),
             condition.severity.as_str(),
-            condition.code
-        ));
+        );
+        lines.push_str(&format!(" {}", condition.code));
         if let Some(pointer) = &condition.pointer {
             lines.push_str(&format!(" at {}", json!(pointer)));
         }
@@ -218,7 +215,6 @@ fn human_entry(entry: &Entry) -> String {
         ));
     }
     lines.push('\n');
-    lines
 }
 
 fn outcome_role(outcome: TraceOutcome) -> Role {

@@ -92,18 +92,19 @@ Terminal examples in the docs keep the tool's own colours. Capture the output
 with `--color=always`, prefix the command line with `$ `, and pipe the text through
 `scripts/ansi-to-html.sh`, which writes a `<pre class="terminal">` block to paste into
 the Markdown. `docs/theme/esdieff.css` maps the terminal palette (purple
-headings, blue syntax and notices, green passed, amber unfinished, red failed)
-to readable colours in the light and dark docs themes. The dark theme uses the
-terminal colours themselves. Plain ```` ```console ```` fences remain fine for
-output without colour.
+headings, bold labels, blue syntax and notices, green passed, amber unfinished,
+red failed, gray metadata) to readable colours in the light and dark docs themes.
+The dark theme uses the terminal colours themselves, with a slightly lighter gray
+for contrast. Plain ```` ```console ```` fences remain fine for output without
+colour.
 
 The launcher builds the unpublished Rust helper in `tools/terminal-html` on its
 first run using the repository's Rust toolchain. Cargo caches it in
 `tools/terminal-html/target` and reuses the build on later runs. Perl is not
 needed. This is an authoring tool, with no extra runtime requirement for
-Esdieff users or site visitors. It handles bold, the five palette colours above
-and the basic terminal colours, including combined styles and resets. Other
-colours, unsupported SGR styles and other CSI controls are discarded. It does
+Esdieff users or site visitors. It handles bold, the six palette colours above
+and basic red, green, yellow and cyan, including combined styles and resets.
+Other colours, unsupported SGR styles and other CSI controls are discarded. It does
 not emulate cursor movement.
 
 For example, from the repository root after building Esdieff:

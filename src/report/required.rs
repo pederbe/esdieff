@@ -96,7 +96,7 @@ fn prefix_human(
     omission: Option<&str>,
 ) {
     let start = output.len();
-    output.heading("Required declarations:");
+    output.label("Required declarations:");
     output.push(' ');
     output.span(
         match state {
@@ -117,28 +117,28 @@ fn prefix_human(
         if complete { "true" } else { "false" },
     );
     output.push('\n');
-    output.heading("Owners:");
+    output.label("Owners:");
     writeln!(
         output,
         " known {}; retained {}; omitted {}",
         counts.owners_known, counts.owners_retained, counts.owners_omitted
     )
     .expect("String write");
-    output.heading("References:");
+    output.label("References:");
     writeln!(
         output,
         " known {}; retained {}",
         counts.references_known, counts.references_retained
     )
     .expect("String write");
-    output.heading("Targets:");
+    output.label("Targets:");
     writeln!(
         output,
         " known {}; retained {}",
         counts.targets_known, counts.targets_retained
     )
     .expect("String write");
-    output.heading("Unavailable reason:");
+    output.label("Unavailable reason:");
     output.push(' ');
     if let Some(reason) = reason {
         assert!(reason.len() <= 96);
@@ -148,7 +148,7 @@ fn prefix_human(
     }
     output.push('\n');
     if let Some(reason) = omission {
-        output.heading("Owner details omitted:");
+        output.label("Owner details omitted:");
         writeln!(output, " {} ({reason})", counts.owners_omitted).expect("String write");
     }
     assert!(output.len() - start <= 512, "fixed required human prefix");

@@ -113,7 +113,7 @@ impl Style {
         if !self.enabled() {
             return Cow::Borrowed(text);
         }
-        Cow::Owned(format!("{sequence}{mark} {text}{}", palette::RESET))
+        Cow::Owned(format!("{sequence}{mark}{text}{}", palette::RESET))
     }
 
     /// The supplied help rows contain only fixed option syntax, never source content.

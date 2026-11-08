@@ -109,8 +109,8 @@ Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/t
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json thermostat.sdf.json
 <b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">✔ passed</span></b>
-<b><span class="h">Values:</span></b> 15 <b><span class="g">admitted</span></b> · 60 <b><span class="r">rejected</span></b> · 0 <b><span class="y">undetermined</span></b>
-<b><span class="h">Descriptions:</span></b> 4
+<b>Values:</b> 15 <b><span class="g">admitted</span></b> · 60 <b><span class="r">rejected</span></b> · 0 <b><span class="y">undetermined</span></b>
+<b>Descriptions:</b> 4
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
 <b><span class="h">property /sdfObject/Thermostat/sdfProperty/currentTemperature</span></b>: <b><span class="g">✔ complete</span></b>
@@ -150,29 +150,29 @@ Next, check the model itself. `--assessment full-baseline` requests every model 
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --assessment full-baseline thermostat.sdf.json
 <b><span class="h">Esdieff:</span></b> <b><span class="g">✔ passed</span></b>
-<b><span class="h">Complete:</span></b> true
-<b><span class="h">Errors:</span></b> 0 · <b><span class="h">warnings:</span></b> 0 · <b><span class="h">notices:</span></b> 0 · <b><span class="h">incomplete checks:</span></b> 0
-<b><span class="h">Scope:</span></b> catalogue
-<b><span class="h">Broader RFC coverage:</span></b> complete
-<b><span class="h">Recorded registry policy:</span></b> use_recorded
-<b><span class="h">Unit guidance:</span></b> complete
-<b><span class="h">Assessment area</span></b> unit-spelling/1: assessed
-<b><span class="h">Assessment area</span></b> unit-registry-guidance/1: assessed
-<b><span class="h">Unit counts:</span></b> known_primary 4 · known_secondary 0 · unknown 0 · unavailable 0 · legacy 0 · uri_names 0
-<b><span class="h">Assessment area</span></b> content-format-syntax/1: not_applicable
-<b><span class="h">Assessment area</span></b> content-format-registry/1: not_applicable
-<b><span class="h">Registry</span></b> iana.senml-units: available; snapshot iana.senml-units/2026-10-05/6246352c590e933b; scope senml-units; entries_count 67
-<b><span class="h">Registry extraction_policy</span></b> esdieff.unit-section-positives/1; digest 6246352c590e933b72c25ef9f363171e40fea347bb7e23d08b04f9436894ed34; raw_digest 3eff03640c5a5d2abd09e330488aeb9fae0b2766ea69b1114295bbec5c44e754; source_updated 2026-02-02; retrieved_at 2026-10-05T16:49:51Z
-<b><span class="h">Requested assessment:</span></b> rfc9880/base-1
-<b><span class="h">Baseline:</span></b> rfc9880/base-1 (RFC 9880)
-<b><span class="h">Acceptance restrictions:</span></b> A001, A002 · <b><span class="h">strict warnings:</span></b> false
-<b><span class="h">Requested sources:</span></b> [1]
-<b><span class="h">Requested inventory:</span></b> esdieff.full-model/1
-<b><span class="h">Requested coverage (assessment_area):</span></b> total 13 · assessed 10 · not applicable 3 · unassessed 0 · undetermined 0
-<b><span class="h">Requirement inventory:</span></b> rfc9880.model/1
-<b><span class="h">Requirement coverage:</span></b> total 54 · assessed 28 · not applicable 26 · unassessed 0 · undetermined 0
-<b><span class="h">Source</span></b> 1 ["input1"]: acquired / usable (1932 retained bytes, content complete: true)
-<b><span class="h">Diagnostic details omitted:</span></b> 0
+<b>Complete:</b> true
+<b>Errors:</b> 0 · <b>warnings:</b> 0 · <b>notices:</b> 0 · <b>incomplete checks:</b> 0
+<b>Scope:</b> catalogue
+<b>Broader RFC coverage:</b> complete
+<span class="m">Recorded registry policy: use_recorded</span>
+<b>Unit guidance:</b> complete
+<b>Assessment area</b> unit-spelling/1: assessed
+<b>Assessment area</b> unit-registry-guidance/1: assessed
+<b>Unit counts:</b> known_primary 4 · known_secondary 0 · unknown 0 · unavailable 0 · legacy 0 · uri_names 0
+<b>Assessment area</b> content-format-syntax/1: not_applicable
+<b>Assessment area</b> content-format-registry/1: not_applicable
+<span class="m">Registry iana.senml-units: available; snapshot iana.senml-units/2026-10-05/6246352c590e933b; scope senml-units; entries_count 67</span>
+<span class="m">Registry extraction_policy esdieff.unit-section-positives/1; digest 6246352c590e933b72c25ef9f363171e40fea347bb7e23d08b04f9436894ed34; raw_digest 3eff03640c5a5d2abd09e330488aeb9fae0b2766ea69b1114295bbec5c44e754; source_updated 2026-02-02; retrieved_at 2026-10-05T16:49:51Z</span>
+<span class="m">Requested assessment: rfc9880/base-1</span>
+<span class="m">Baseline: rfc9880/base-1 (RFC 9880)</span>
+<span class="m">Acceptance restrictions: A001, A002; strict warnings: false</span>
+<span class="m">Requested sources: [1]</span>
+<span class="m">Requested inventory: esdieff.full-model/1</span>
+<b>Requested coverage (assessment_area):</b> total 13 · assessed 10 · not applicable 3 · unassessed 0 · undetermined 0
+<span class="m">Requirement inventory: rfc9880.model/1</span>
+<b>Requirement coverage:</b> total 54 · assessed 28 · not applicable 26 · unassessed 0 · undetermined 0
+<span class="m">Source 1 ["input1"]: acquired / usable (1932 retained bytes, content complete: true)</span>
+<b>Diagnostic details omitted:</b> 0
 </code></pre>
 
 The first line is the verdict. `Complete: true` means the requested work

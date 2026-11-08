@@ -376,7 +376,7 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
     let disposition = result.disposition();
     text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
-    text.heading("Values:");
+    text.label("Values:");
     for (index, admission) in [
         Admission::Admitted,
         Admission::Rejected,
@@ -394,7 +394,7 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         text.span(admission_role(admission), admission.as_str());
     }
     text.push('\n');
-    text.heading("Descriptions:");
+    text.label("Descriptions:");
     text.push_str(&format!(" {}", result.descriptions.len()));
     if result.unselected > 0 {
         text.push_str(&format!(

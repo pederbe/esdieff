@@ -341,7 +341,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     text.push('\n');
     if value["policy"]["acknowledgements"] != 0 {
         let acknowledged = &result["summary"]["acknowledged"];
-        text.heading("Disposition:");
+        text.label("Disposition:");
         text.push(' ');
         let disposition = comparison.disposition();
         text.status(Role::disposition(disposition), disposition.as_str());
@@ -357,7 +357,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     text.push_str(comparison.perspective.scope_notice());
     text.push('\n');
     let documents = &result["summary"]["documents"];
-    text.heading("Documents:");
+    text.label("Documents:");
     text.push_str(&format!(" {} compared", documents["compared"]));
     text.separator(", ");
     text.push_str(&format!("{} removed", documents["removed"]));
@@ -371,14 +371,14 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         if ids.is_empty() {
             continue;
         }
-        text.heading(label);
+        text.label(label);
         for id in ids {
             text.push(' ');
             text.span(role, &key(revision, id));
         }
         text.push('\n');
     }
-    text.heading("Differences:");
+    text.label("Differences:");
     for (index, classification) in ORDER.into_iter().enumerate() {
         if index == 0 {
             text.push(' ');

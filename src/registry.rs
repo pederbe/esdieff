@@ -133,44 +133,36 @@ impl State {
             .iter()
             .filter_map(|&(bit, id)| (self.interpretations & bit != 0).then_some(id))
     }
+    /// Registry evidence is secondary metadata, so styled output shows it muted.
     pub(crate) fn write_human(&self, output: &mut crate::human::HumanText) {
-        use std::fmt::Write;
+        let mut line = |text: String| output.muted_line(&text);
         for index in 0..RECORDS {
             let Some(facts) = facts(index) else { continue };
             let Field::Present(view) = self.view(facts.registry) else {
                 continue;
             };
-            output.heading("Registry");
             if view.available {
-                writeln!(
-                    output,
-                    " {}: available; snapshot {}; scope {}; entries_count {}",
+                line(format!(
+                    "Registry {}: available; snapshot {}; scope {}; entries_count {}",
                     facts.registry, facts.snapshot, facts.scope, facts.entries_count
-                )
-                .expect("String write");
-                output.heading("Registry extraction_policy");
-                writeln!(
-                    output,
-                    " {}; digest {}; raw_digest {}; source_updated {}; retrieved_at {}",
+                ));
+                line(format!(
+                    "Registry extraction_policy {}; digest {}; raw_digest {}; source_updated {}; retrieved_at {}",
                     facts.extraction_policy,
                     facts.digest,
                     facts.raw_digest,
                     facts.source_updated,
                     facts.retrieved_at
-                )
-                .expect("String write");
+                ));
             } else {
-                writeln!(
-                    output,
-                    " {}: unavailable; snapshot null; reason caller_withheld",
+                line(format!(
+                    "Registry {}: unavailable; snapshot null; reason caller_withheld",
                     facts.registry
-                )
-                .expect("String write");
+                ));
             }
         }
         for id in self.interpretation_ids() {
-            output.heading("Interpretation:");
-            writeln!(output, " {id}").expect("String write");
+            line(format!("Interpretation: {id}"));
         }
     }
 }

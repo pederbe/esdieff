@@ -1,6 +1,6 @@
 //! Human styling preserves the independent facts in ADR 0011 and ADR 0013.
 mod cli_color_support;
-use cli_color_support::{closed_stdout, readable, run};
+use cli_color_support::{assert_presents, closed_stdout, run};
 use esdieff::{
     Assessment, Catalogue, CheckRequest, Disposition, HumanStyle, InspectRequest, SampleKind,
     SampleRequest, SourceInput, View,
@@ -34,7 +34,7 @@ fn styled(report: &esdieff::Report<'_>) -> String {
     assert!(!default.contains('\x1b'));
     assert_eq!(default, report.to_human_with_style(HumanStyle::Plain));
     let output = report.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(readable(output.as_bytes()), readable(default.as_bytes()));
+    assert_presents(output.as_bytes(), default.as_bytes());
     output
 }
 
@@ -55,8 +55,13 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
         }));
         // Each finding starts after a blank line, and counts share one middle-dot list.
         assert!(output.contains("\n\n\x1b[1;38;2;243;156;18m⚠ metadata.info_absent\x1b[0m: "));
-        assert!(output.contains(" · \x1b[1;38;2;189;147;249mwarnings:\x1b[0m 1 · "));
-        assert!(output.contains("\x1b[1;38;2;189;147;249mBroader RFC coverage:\x1b[0m partial\n"));
+        assert!(output.contains(" · \x1b[1mwarnings:\x1b[0m 1 · "));
+        assert!(output.contains("\x1b[1mBroader RFC coverage:\x1b[0m partial\n"));
+        // Request metadata is muted as whole lines, keeping its plain separators.
+        assert!(output.contains(concat!(
+            "\n\x1b[38;2;112;120;140mBaseline: rfc9880/base-1 (RFC 9880)\x1b[0m\n",
+            "\x1b[38;2;112;120;140mAcceptance restrictions: A001, A002; strict warnings: ",
+        )));
         assert!(output.contains("[\"passed error\"]"));
         assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));
         assert!(!output.contains("\x1b[1;38;2;90;247;142mnot_applicable"));
@@ -82,11 +87,7 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
     assert!(!report.outcome().complete());
     let output = styled(&report);
     assert!(output.contains("\x1b[1;38;2;255;92;87m✗ failed\x1b[0m"));
-    assert!(
-        output.contains(
-            "\x1b[1;38;2;189;147;249mComplete:\x1b[0m \x1b[1;38;2;243;156;18mfalse\x1b[0m"
-        )
-    );
+    assert!(output.contains("\x1b[1mComplete:\x1b[0m \x1b[1;38;2;243;156;18mfalse\x1b[0m"));
     let diagnostics = report.diagnostics();
     let error = diagnostics
         .conditions()
@@ -127,7 +128,7 @@ fn notice_codes_and_unfinished_requiredness_keep_their_separate_roles() {
         .unwrap();
     let output = styled(&report);
     assert!(output.contains("\x1b[1;38;2;92;184;255m▶ required.target_missing\x1b[0m: "));
-    assert!(output.contains("\x1b[1;38;2;189;147;249mRequired declarations:\x1b[0m"));
+    assert!(output.contains("\x1b[1mRequired declarations:\x1b[0m"));
 }
 
 #[test]
@@ -364,7 +365,7 @@ fn color_modes_preserve_reports_and_json_for_all_three_commands() {
             selected.push(&color);
             let output = run(&selected, b"", &[("NO_COLOR", "1"), ("TERM", "dumb")]);
             assert_eq!(output.status.code(), expected.status.code());
-            assert_eq!(readable(&output.stdout), readable(&expected.stdout));
+            assert_presents(&output.stdout, &expected.stdout);
             assert_eq!(output.stdout.contains(&0x1b), mode == "always");
             assert!(output.stderr.is_empty());
             selected.extend(["--format", "json"]);
@@ -437,4 +438,68 @@ fn automatic_report_styling_uses_actual_stdout_destination() {
         let forced = terminal(&forced_args, &[], true, false);
         assert!(forced.stdout.contains(&0x1b));
     }
+}
+
+#[test]
+fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
+    let model = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/examples/thermostat-check/thermostat.sdf.json"
+    );
+    let pointer = "/sdfObject/Thermostat/sdfProperty/targetTemperature";
+    let generate = |color: &str| {
+        let args = [
+            color,
+            "generate",
+            "--document",
+            model,
+            "--kind",
+            "property",
+            "--pointer",
+            pointer,
+            model,
+        ];
+        let output = run(&args, b"", &[]);
+        assert!(output.status.success(), "{:?}", output.stderr);
+        output.stdout
+    };
+    let styled = generate("--color=always");
+    assert_presents(&styled, &generate("--color=never"));
+    let styled = String::from_utf8(styled).unwrap();
+    assert!(styled.contains(": \x1b[1;38;2;90;247;142m✔ passed\x1b[0m\n"));
+    assert!(styled.contains(concat!(
+        "\x1b[1mValues:\x1b[0m 2 \x1b[1;38;2;90;247;142madmitted\x1b[0m",
+        " · 7 \x1b[1;38;2;255;92;87mrejected\x1b[0m",
+        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+    )));
+    assert!(styled.contains(&format!(
+        "\x1b[1;38;2;189;147;249mproperty {pointer}\x1b[0m: \x1b[1;38;2;90;247;142m✔ complete\x1b[0m\n"
+    )));
+
+    let trace = format!(
+        "{{\"kind\":\"property\",\"pointer\":\"{pointer}\",\"value\":21}}\n\
+         {{\"kind\":\"property\",\"pointer\":\"{pointer}\",\"value\":31}}\n"
+    );
+    let replay = |color: &str| {
+        let args = [color, "trace", "--document", model, "--trace", "-", model];
+        let output = run(&args, trace.as_bytes(), &[]);
+        assert_eq!(output.status.code(), Some(1), "{:?}", output.stderr);
+        output.stdout
+    };
+    let styled = replay("--color=always");
+    assert_presents(&styled, &replay("--color=never"));
+    let styled = String::from_utf8(styled).unwrap();
+    assert!(styled.contains(": \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"));
+    assert!(styled.contains(concat!(
+        "\x1b[1mEntries:\x1b[0m 1 \x1b[1;38;2;90;247;142mpassed\x1b[0m",
+        " · 1 \x1b[1;38;2;255;92;87mfailed\x1b[0m",
+        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+    )));
+    assert!(
+        styled.contains("\x1b[1mAdmissions:\x1b[0m 1 admitted · 1 rejected · 0 undetermined\n")
+    );
+    assert!(styled.contains(&format!(
+        "\n\nline 2 property \"{pointer}\": \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"
+    )));
+    assert!(styled.contains("\n  \x1b[1;38;2;255;92;87m✗ error\x1b[0m sample.bound at "));
 }

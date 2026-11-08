@@ -15,7 +15,12 @@ pub enum HumanStyle {
 
 #[derive(Clone, Copy)]
 pub(crate) enum Role {
+    /// Report titles and section headings.
     Heading,
+    /// Field labels within a line.
+    Label,
+    /// Secondary request, input and knowledge metadata.
+    Muted,
     Passed,
     Failed,
     Warning,
@@ -27,6 +32,8 @@ impl Role {
     fn sequence(self) -> &'static str {
         match self {
             Self::Heading => palette::HEADING,
+            Self::Label => palette::LABEL,
+            Self::Muted => palette::MUTED,
             Self::Passed => palette::PASSED,
             Self::Failed => palette::FAILED,
             Self::Warning | Self::Incomplete => palette::ADVISORY,
@@ -34,10 +41,10 @@ impl Role {
         }
     }
 
-    /// The symbol that introduces a styled outcome, finding or section with this role.
-    fn mark(self) -> &'static str {
+    /// The symbol and space that introduce a styled outcome, finding or section with this role.
+    fn marker(self) -> &'static str {
         match self {
-            Self::Heading => "",
+            Self::Heading | Self::Label | Self::Muted => "",
             Self::Passed => palette::PASSED_MARK,
             Self::Failed => palette::FAILED_MARK,
             Self::Warning | Self::Incomplete => palette::ADVISORY_MARK,
@@ -125,6 +132,16 @@ impl HumanText {
         self.span(Role::Heading, text);
     }
 
+    pub(crate) fn label(&mut self, text: &str) {
+        self.span(Role::Label, text);
+    }
+
+    /// A whole line of secondary request, input or knowledge metadata.
+    pub(crate) fn muted_line(&mut self, text: &str) {
+        self.span(Role::Muted, text);
+        self.push('\n');
+    }
+
     pub(crate) fn assessment(&mut self, status: AssessmentStatus) {
         self.span(Role::assessment(status), status.as_str());
     }
@@ -165,7 +182,7 @@ impl HumanText {
                 let added = match piece {
                     Piece::Span(role) => role.sequence().len() + palette::RESET.len(),
                     Piece::Status(role) => {
-                        role.sequence().len() + role.mark().len() + 1 + palette::RESET.len()
+                        role.sequence().len() + role.marker().len() + palette::RESET.len()
                     }
                     Piece::Text(text) => text.len(),
                 };
@@ -193,8 +210,7 @@ impl HumanText {
                 }
                 Piece::Status(role) => {
                     styled.push_str(role.sequence());
-                    styled.push_str(role.mark());
-                    styled.push(' ');
+                    styled.push_str(role.marker());
                     styled.push_str(&self.plain[range.clone()]);
                     styled.push_str(palette::RESET);
                 }

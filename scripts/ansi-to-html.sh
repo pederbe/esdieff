@@ -5,8 +5,8 @@
 #     | scripts/ansi-to-html.sh
 #
 # The palette is the one the command-line tool uses: purple headings, blue syntax and
-# notices, green passed outcomes, amber unfinished work and red failures. Lines that
-# start with `$ ` are shown as prompts.
+# notices, green passed outcomes, amber unfinished work, red failures and gray
+# metadata. Labels are bold. Lines that start with `$ ` are shown as prompts.
 set -euo pipefail
 exec cargo run --quiet --locked \
     --manifest-path "$(dirname -- "${BASH_SOURCE[0]}")/../tools/terminal-html/Cargo.toml"

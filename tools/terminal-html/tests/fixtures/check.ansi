@@ -1,13 +1,13 @@
 [1;38;2;189;147;249mEsdieff:[0m [1;38;2;90;247;142m✔ passed[0m
-[1;38;2;189;147;249mComplete:[0m true
-[1;38;2;189;147;249mErrors:[0m 0 · [1;38;2;189;147;249mwarnings:[0m 0 · [1;38;2;189;147;249mnotices:[0m 0 · [1;38;2;189;147;249mincomplete checks:[0m 0
-[1;38;2;189;147;249mScope:[0m catalogue
-[1;38;2;189;147;249mBroader RFC coverage:[0m partial
-[1;38;2;189;147;249mRequested assessment:[0m esdieff.initial/1
-[1;38;2;189;147;249mBaseline:[0m rfc9880/base-1 (RFC 9880)
-[1;38;2;189;147;249mAcceptance restrictions:[0m A001, A002 · [1;38;2;189;147;249mstrict warnings:[0m false
-[1;38;2;189;147;249mRequested sources:[0m [1]
-[1;38;2;189;147;249mRequested inventory:[0m esdieff.initial/1
-[1;38;2;189;147;249mRequested coverage (assessment_area):[0m total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
-[1;38;2;189;147;249mSource[0m 1 ["input1"]: acquired / usable (425 retained bytes, content complete: true)
-[1;38;2;189;147;249mDiagnostic details omitted:[0m 0
+[1mComplete:[0m true
+[1mErrors:[0m 0 · [1mwarnings:[0m 0 · [1mnotices:[0m 0 · [1mincomplete checks:[0m 0
+[1mScope:[0m catalogue
+[1mBroader RFC coverage:[0m partial
+[38;2;112;120;140mRequested assessment: esdieff.initial/1[0m
+[38;2;112;120;140mBaseline: rfc9880/base-1 (RFC 9880)[0m
+[38;2;112;120;140mAcceptance restrictions: A001, A002; strict warnings: false[0m
+[38;2;112;120;140mRequested sources: [1][0m
+[38;2;112;120;140mRequested inventory: esdieff.initial/1[0m
+[1mRequested coverage (assessment_area):[0m total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
+[38;2;112;120;140mSource 1 ["input1"]: acquired / usable (425 retained bytes, content complete: true)[0m
+[1mDiagnostic details omitted:[0m 0

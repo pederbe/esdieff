@@ -76,7 +76,7 @@ fn human_sample_basis(
     label: &str,
     mut values: impl ExactSizeIterator<Item = crate::SampleBasisRef>,
 ) {
-    output.heading(&format!("{label}:"));
+    output.label(&format!("{label}:"));
     output.push(' ');
     if values.len() == 0 {
         output.push_str("none");
@@ -1574,7 +1574,7 @@ impl Report<'_> {
             self.outcome.disposition().as_str(),
         );
         output.push('\n');
-        output.heading("Complete:");
+        output.label("Complete:");
         output.push(' ');
         output.span(
             (!self.outcome.complete).then_some(Role::Incomplete),
@@ -1597,18 +1597,18 @@ impl Report<'_> {
             if index != 0 {
                 output.separator("; ");
             }
-            output.heading(label);
+            output.label(label);
             output.push_str(&format!(" {count}"));
         }
         output.push('\n');
-        output.heading("Scope:");
+        output.label("Scope:");
         output.push_str(if self.selected {
             " selected\n"
         } else {
             " catalogue\n"
         });
         // Broader coverage is a scope disclosure, not a finding, so its state stays plain.
-        output.heading("Broader RFC coverage:");
+        output.label("Broader RFC coverage:");
         output.push(' ');
         output.push_str(self.broader_state());
         output.push('\n');
@@ -1618,11 +1618,13 @@ impl Report<'_> {
             .is_some_and(|profile| profile.registry_requested())
         {
             use std::fmt::Write;
-            output.heading("Recorded registry policy:");
-            writeln!(output, " {}", self.registry.policy.as_str()).expect("String write");
+            output.muted_line(&format!(
+                "Recorded registry policy: {}",
+                self.registry.policy.as_str()
+            ));
             if let Some(state) = &self.units {
                 let partial = state.spelling_unknown || state.guidance_unknown;
-                output.heading("Unit guidance:");
+                output.label("Unit guidance:");
                 output.push(' ');
                 output.span(
                     partial.then_some(Role::Incomplete),
@@ -1630,32 +1632,32 @@ impl Report<'_> {
                 );
                 output.push('\n');
                 for (area, id) in crate::units::AREAS.iter().enumerate() {
-                    output.heading("Assessment area");
+                    output.label("Assessment area");
                     write!(output, " {id}: ").expect("String write");
                     output.assessment(state.status(area));
                     output.push('\n');
                 }
                 use crate::units::Counter;
-                output.heading("Unit counts:");
+                output.label("Unit counts:");
                 output.push_list(&format!(" known_primary {}; known_secondary {}; unknown {}; unavailable {}; legacy {}; uri_names {}\n",state.count(Counter::KnownPrimary),state.count(Counter::KnownSecondary),state.count(Counter::Unknown),state.count(Counter::Unavailable),state.count(Counter::Legacy),state.count(Counter::UriNames)), "; ");
                 for reason in state.unavailable_reasons() {
-                    output.heading("Unit query unavailable:");
+                    output.label("Unit query unavailable:");
                     writeln!(output, " {reason}").expect("String write");
                 }
             } else if self
                 .assessment_profile()
                 .is_some_and(|profile| profile.enabled.units)
             {
-                output.heading("Unit guidance:");
+                output.label("Unit guidance:");
                 output.push(' ');
                 output.span(Role::Incomplete, "unavailable");
                 output.push_str(" (owner_limit)\n");
-                output.heading("Unit counts:");
+                output.label("Unit counts:");
                 output.push(' ');
                 output.span(Role::Incomplete, "unavailable");
                 output.push('\n');
                 for id in crate::units::AREAS {
-                    output.heading("Assessment area");
+                    output.label("Assessment area");
                     write!(output, " {id}: ").expect("String write");
                     output.assessment(AssessmentStatus::Undetermined);
                     output.push('\n');
@@ -1670,7 +1672,7 @@ impl Report<'_> {
                         .content
                         .as_ref()
                         .map_or(AssessmentStatus::Undetermined, |state| state.status(area));
-                    output.heading("Assessment area");
+                    output.label("Assessment area");
                     write!(output, " {id}: ").expect("String write");
                     output.assessment(status);
                     output.push('\n');
@@ -1680,42 +1682,38 @@ impl Report<'_> {
         }
         for owner in &required.owners {
             use std::fmt::Write;
-            output.heading("Required owner:");
+            output.label("Required owner:");
             writeln!(output, " {owner}").expect("String write");
         }
-        output.heading("Requested assessment:");
-        output.push_str(&format!(
-            " {}\n",
+        output.muted_line(&format!(
+            "Requested assessment: {}",
             match self.operation {
                 Operation::Sample => "esdieff.sample/1",
                 Operation::Check(profile) => profile.identity(),
                 Operation::Inspect { .. } => "none (one inspection operation)",
             }
         ));
-        output.heading("Baseline:");
-        output.push_str(" rfc9880/base-1 (RFC 9880)\n");
-        output.heading("Acceptance restrictions:");
-        output.push_str(if matches!(self.operation, Operation::Check(_)) {
-            " A001, A002"
-        } else {
-            " A002"
-        });
-        output.separator("; ");
-        output.heading("strict warnings:");
-        output.push_str(&format!(" {}\n", self.outcome.strict));
-        output.heading("Requested sources:");
-        output.push_str(&format!(
-            " {:?}\n",
+        output.muted_line("Baseline: rfc9880/base-1 (RFC 9880)");
+        output.muted_line(&format!(
+            "Acceptance restrictions: {}; strict warnings: {}",
+            if matches!(self.operation, Operation::Check(_)) {
+                "A001, A002"
+            } else {
+                "A002"
+            },
+            self.outcome.strict
+        ));
+        output.muted_line(&format!(
+            "Requested sources: {:?}",
             self.scope.iter().map(|id| id.get()).collect::<Vec<_>>()
         ));
         if let Operation::Check(profile) = self.operation {
             let coverage = self.requested_coverage();
-            output.heading("Requested inventory:");
-            output.push_str(&format!(
-                " {}\n",
+            output.muted_line(&format!(
+                "Requested inventory: {}",
                 coverage.inventory.expect("known inventory")
             ));
-            output.heading("Requested coverage (assessment_area):");
+            output.label("Requested coverage (assessment_area):");
             output.push_list(
                 &format!(
                     " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
@@ -1729,30 +1727,32 @@ impl Report<'_> {
             );
             if crate::assessment::profile(profile).enabled.full {
                 let requirements = self.requirement_counts();
-                output.heading("Requirement inventory:");
-                output.push_str(&format!(" {}\n", crate::inventory::INVENTORY));
-                output.heading("Requirement coverage:");
+                output.muted_line(&format!(
+                    "Requirement inventory: {}",
+                    crate::inventory::INVENTORY
+                ));
+                output.label("Requirement coverage:");
                 output.push_list(
-    &format!(
-                    " total 54; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
-                    requirements.assessed,
-                    requirements.not_applicable,
-                    requirements.unassessed,
-                    requirements.undetermined
-                ),
-    "; ",
-);
+                    &format!(
+                        " total 54; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
+                        requirements.assessed,
+                        requirements.not_applicable,
+                        requirements.unassessed,
+                        requirements.undetermined
+                    ),
+                    "; ",
+                );
             }
         }
         if let Some(state) = &self.sample {
-            output.heading("Selected");
+            output.label("Selected");
             output.push_str(&format!(
                 " {} in model {} at {}\n",
                 state.kind.as_str(),
                 state.model.get(),
                 serde_json::to_string(&state.pointer).expect("selector encoding"),
             ));
-            output.heading("Sample");
+            output.label("Sample");
             output.push_str(&format!(" {}: ", state.sample.get()));
             output.status(
                 match state.admission {
@@ -1770,7 +1770,7 @@ impl Report<'_> {
             );
             output.push('\n');
             let coverage = self.requested_coverage();
-            output.heading("Requested coverage (sample_area):");
+            output.label("Requested coverage (sample_area):");
             output.push_list(
                 &format!(
                     " total 9; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
@@ -1782,7 +1782,7 @@ impl Report<'_> {
                 "; ",
             );
             for (area, status) in crate::sample::AREAS.into_iter().zip(state.areas) {
-                output.heading("Sample area");
+                output.label("Sample area");
                 output.push_str(&format!(" {area}: "));
                 output.assessment(status);
                 output.push('\n');
@@ -1793,7 +1793,7 @@ impl Report<'_> {
                 ("abstract values", meaning.abstract_values()),
                 ("const", meaning.const_values()),
             ] {
-                output.heading(&format!("Sample {name} meaning:"));
+                output.label(&format!("Sample {name} meaning:"));
                 output.push(' ');
                 output.assessment(area.status());
                 output.push('\n');
@@ -1814,7 +1814,7 @@ impl Report<'_> {
                 "Sample admission limitations",
                 meaning.admission().limitations(),
             );
-            output.heading("Consulted sample interpretations:");
+            output.label("Consulted sample interpretations:");
             output.push(' ');
             let consulted = sample.consulted_interpretations();
             if consulted.len() == 0 {
@@ -1835,7 +1835,7 @@ impl Report<'_> {
                 .areas()
                 .filter(|area| matches!(area.status, StatusSource::Modified))
             {
-                output.heading("Assessment area");
+                output.label("Assessment area");
                 output.push_str(&format!(" {}: ", area.id));
                 output.assessment(self.area_status(area));
                 output.push('\n');
@@ -1862,38 +1862,32 @@ impl Report<'_> {
             } else {
                 continue;
             };
-            output.heading("Draft support:");
-            output.push_str(&format!(" {id} ({scope})\n{limits}\n"));
+            output.muted_line(&format!("Draft support: {id} ({scope})"));
+            output.muted_line(limits);
         }
         if value["baseline"]["temporal_knowledge"].is_object() {
-            output.heading("Temporal knowledge:");
-            output.push_str(&format!(
-                " {} (1972-01-01 through 2026-12-31 UTC)\n",
+            output.muted_line(&format!(
+                "Temporal knowledge: {} (1972-01-01 through 2026-12-31 UTC)",
                 crate::scalar::KNOWLEDGE_ID
             ));
-            output.heading("Temporal knowledge SHA256:");
-            output.push_str(&format!(
-                " transitions {}; bulletin {}\n",
+            output.muted_line(&format!(
+                "Temporal knowledge SHA256: transitions {}; bulletin {}",
                 crate::scalar::TRANSITION_SHA256,
                 crate::scalar::BULLETIN_SHA256
             ));
         }
         if let Some(records) = value["baseline"]["format_knowledge"].as_array() {
             for record in records {
-                use std::fmt::Write;
-                output.heading("Format knowledge:");
-                writeln!(
-                    output,
-                    " {} (RFC {} Sections {}): {}",
+                output.muted_line(&format!(
+                    "Format knowledge: {} (RFC {} Sections {}): {}",
                     record["id"].as_str().expect("format ID"),
                     record["rfc"].as_str().expect("format RFC"),
                     record["sections"].as_str().expect("format sections"),
                     record["scope"].as_str().expect("format scope")
-                )
-                .expect("String write");
+                ));
             }
         } else if self.sample.is_some() {
-            output.heading("Format knowledge:");
+            output.label("Format knowledge:");
             output.push(' ');
             output.span(Role::Incomplete, "unavailable");
             output.push_str(" (initial owner)\n");
@@ -1902,14 +1896,10 @@ impl Report<'_> {
             .as_array()
             .expect("interpretations")
         {
-            use std::fmt::Write;
-            output.heading("Interpretation:");
-            writeln!(
-                output,
-                " {}",
+            output.muted_line(&format!(
+                "Interpretation: {}",
                 interpretation.as_str().expect("interpretation ID")
-            )
-            .expect("String write");
+            ));
         }
         if let Some(profile) = self.assessment_profile() {
             for area in profile.areas().filter(|area| {
@@ -1918,16 +1908,15 @@ impl Report<'_> {
                     StatusSource::Pattern | StatusSource::Numeric | StatusSource::Consistency(_)
                 )
             }) {
-                output.heading("Assessment area");
+                output.label("Assessment area");
                 output.push_str(&format!(" {}: ", area.id));
                 output.assessment(self.area_status(area));
                 output.push('\n');
             }
         }
         for source in &self.catalogue.sources {
-            output.heading("Source");
-            output.push_str(&format!(
-                " {} [{}]: {} / {} ({} retained bytes, content complete: {})\n",
+            output.muted_line(&format!(
+                "Source {} [{}]: {} / {} ({} retained bytes, content complete: {})",
                 source.id.get(),
                 serde_json::to_string(&source.key).expect("source key encoding"),
                 source.acquisition.as_str(),
@@ -1937,9 +1926,8 @@ impl Report<'_> {
             ));
         }
         if self.selected && !self.dependencies.is_empty() {
-            output.heading("Dependency sources:");
-            output.push_str(&format!(
-                " {:?}\n",
+            output.muted_line(&format!(
+                "Dependency sources: {:?}",
                 self.dependencies
                     .iter()
                     .map(|id| id.get())
@@ -1973,7 +1961,7 @@ impl Report<'_> {
             }
             if let Some(replacement) = condition["arguments"]["replacement"].as_str() {
                 output.push_str("  ");
-                output.heading("Direct symbol if intended:");
+                output.label("Direct symbol if intended:");
                 output.push_str(&format!(
                     " {}\n",
                     serde_json::to_string(replacement).expect("replacement encoding")
@@ -1988,13 +1976,13 @@ impl Report<'_> {
         if !conditions.is_empty() {
             output.gap();
         }
-        output.heading("Diagnostic details omitted:");
+        output.label("Diagnostic details omitted:");
         output.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
         let reasons = value["diagnostics"]["reasons"]
             .as_array()
             .expect("limit reasons");
         if !reasons.is_empty() {
-            output.heading("Presentation limits:");
+            output.label("Presentation limits:");
             for reason in reasons {
                 output.push(' ');
                 output.push_str(reason.as_str().expect("limit reason"));
@@ -2005,7 +1993,7 @@ impl Report<'_> {
             .as_array()
             .expect("omission array")
         {
-            output.heading("Presentation omitted");
+            output.label("Presentation omitted");
             output.push_str(&format!(
                 " {}: {}\n",
                 omission["field"].as_str().expect("omitted field"),
@@ -2033,7 +2021,7 @@ impl Report<'_> {
                 output.push('\n');
             } else {
                 output.gap();
-                output.heading("Inspection content omitted:");
+                output.label("Inspection content omitted:");
                 output.push_str(" report_limit\n");
             }
         }
@@ -2061,13 +2049,13 @@ impl Report<'_> {
                 output.push('\n');
             } else {
                 output.gap();
-                output.heading("Inspection content omitted:");
+                output.label("Inspection content omitted:");
                 output.push_str(" report_limit\n");
             }
         }
         if let Some(owners) = result["alternatives"].as_array() {
             for owner in owners {
-                output.heading("Alternatives");
+                output.label("Alternatives");
                 output.push(' ');
                 let state = owner["state"].as_str().expect("collection state");
                 output.span((state == "unavailable").then_some(Role::Incomplete), state);
@@ -2082,10 +2070,10 @@ impl Report<'_> {
                     use std::fmt::Write;
                     let id = &branch["id"];
                     if id["kind"] == "enum" {
-                        output.heading("Alternative enum");
+                        output.label("Alternative enum");
                         write!(output, " {}: ", id["index"]).expect("String write");
                     } else {
-                        output.heading("Alternative choice");
+                        output.label("Alternative choice");
                         write!(output, " {}: ", id["name"]).expect("String write");
                     }
                     let state = branch["state"].as_str().expect("branch state");
@@ -2103,7 +2091,7 @@ impl Report<'_> {
                         .as_array()
                         .expect("unavailable qualities")
                     {
-                        output.heading("Unavailable quality");
+                        output.label("Unavailable quality");
                         writeln!(
                             output,
                             " {}: {}",
@@ -2129,7 +2117,7 @@ impl Report<'_> {
                 .as_array()
                 .expect("inspection omissions")
             {
-                output.heading("Inspection detail omitted");
+                output.label("Inspection detail omitted");
                 output.push_str(&format!(
                     " {}: {}\n",
                     omission["field"].as_str().expect("omitted field"),

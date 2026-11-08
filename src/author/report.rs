@@ -215,7 +215,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         result.outcome.disposition().as_str(),
     );
     text.push('\n');
-    text.heading("Generation:");
+    text.label("Generation:");
     text.push(' ');
     text.span(
         match result.generation {
@@ -225,7 +225,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         result.generation.as_str(),
     );
     text.push('\n');
-    text.heading("Fidelity:");
+    text.label("Fidelity:");
     text.push(' ');
     text.span(
         match result.fidelity {
@@ -235,21 +235,23 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         result.fidelity.as_str(),
     );
     text.push('\n');
-    text.heading("Broader RFC coverage:");
+    text.label("Broader RFC coverage:");
     text.push_str(" partial\n");
-    text.push_str(&format!(
-        "Errors: {}; warnings: {}; notices: {}; unfinished authoring units: {}\n",
-        result.outcome.errors(),
-        result.outcome.warnings(),
-        result.outcome.notices(),
-        result.outcome.incomplete_checks()
+    text.push_list(
+        &format!(
+            "Errors: {}; warnings: {}; notices: {}; unfinished authoring units: {}\n",
+            result.outcome.errors(),
+            result.outcome.warnings(),
+            result.outcome.notices(),
+            result.outcome.incomplete_checks()
+        ),
+        "; ",
+    );
+    text.muted_line("Baseline: rfc9880/base-1");
+    text.muted_line(&format!(
+        "Selected generated root: {}",
+        result.generated.get()
     ));
-    text.heading("Baseline:");
-    text.push_str(" rfc9880/base-1\n");
-    text.heading("Selected generated root:");
-    text.push(' ');
-    text.push_str(&result.generated.get().to_string());
-    text.push('\n');
     for (field, label) in [
         ("dependencies", "Dependency sources"),
         ("assessed", "Sources with attempted work"),
@@ -258,9 +260,8 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         let ids = value["request"]["scope"][field]
             .as_array()
             .expect("scope IDs");
-        text.heading(label);
-        text.push_str(&format!(
-            ": {}\n",
+        text.muted_line(&format!(
+            "{label}: {}",
             if ids.is_empty() {
                 "none".to_owned()
             } else {
@@ -272,9 +273,8 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         ));
     }
     for source in result.catalogue().sources() {
-        text.heading("Source");
-        text.push_str(&format!(
-            " {} {}: {:?}, {:?}\n",
+        text.muted_line(&format!(
+            "Source {} {}: {:?}, {:?}",
             source.id().get(),
             serde_json::to_string(source.key()).expect("source key"),
             source.role(),
@@ -282,7 +282,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         ));
     }
     if let Some(check) = &result.checking {
-        text.heading("Requested checking");
+        text.label("Requested checking");
         text.push_str(&format!(
             " {}: ",
             check.wire["request"]["assessment"]
@@ -299,12 +299,11 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
             outcome.incomplete_checks()
         ));
         let coverage = check.requested.coverage();
-        text.heading("Requested check inventory:");
-        text.push_str(&format!(
-            " {}\n",
+        text.muted_line(&format!(
+            "Requested check inventory: {}",
             coverage.inventory().unwrap_or("unavailable")
         ));
-        text.heading("Requested check coverage");
+        text.label("Requested check coverage");
         text.push_list(
             &format!(
                 " ({}): total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
@@ -320,7 +319,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
             "; ",
         );
         if let Some(requirements) = check.requested.requirements() {
-            text.heading("Requirement coverage:");
+            text.label("Requirement coverage:");
             text.push_list(
                 &format!(
                     " total {}; assessed {}; not applicable {}; unassessed {}; undetermined {}\n",
@@ -334,7 +333,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
             );
         }
     } else {
-        text.heading("Checking:");
+        text.label("Checking:");
         text.push_str(" not requested\n");
     }
     for condition in value["diagnostics"]["items"].as_array().expect("items") {
@@ -368,7 +367,7 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
     }
     if value["diagnostics"]["truncated"] == true {
         text.gap();
-        text.heading("Diagnostic details omitted:");
+        text.label("Diagnostic details omitted:");
         text.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
     }
     text.finish(result.catalogue().limits.report_bytes)

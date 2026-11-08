@@ -55,10 +55,12 @@ fn the_esdieff_palette_becomes_classes_and_other_colours_stay_plain() {
         convert(
             "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n\
              \x1b[38;2;92;184;255m--color\x1b[0m \x1b[1;38;2;243;156;18m⚠\x1b[0m \x1b[1;38;2;90;247;142m✔\x1b[0m\n\
+             \x1b[1mScope:\x1b[0m \x1b[38;2;112;120;140mBaseline: rfc9880/base-1\x1b[0m\n\
              \x1b[31;48;2;189;147;249mred\x1b[38;2;189;147;250m plain\x1b[0m"
         ),
         "<pre class=\"terminal\"><code><b><span class=\"h\">Esdieff:</span></b> <b><span class=\"r\">✗ failed</span></b>\n\
          <span class=\"c\">--color</span> <b><span class=\"y\">⚠</span></b> <b><span class=\"g\">✔</span></b>\n\
+         <b>Scope:</b> <span class=\"m\">Baseline: rfc9880/base-1</span>\n\
          <span class=\"r\">red</span> plain</code></pre>\n"
     );
 }
