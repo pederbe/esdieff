@@ -25,6 +25,12 @@ jobs:
     timeout-minutes: 15
     environment: ${{ inputs.submit_winget && 'distribution' || '' }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: stable
       - name: Require automatic submission setup
         if: inputs.submit_winget
         shell: pwsh
@@ -62,66 +68,62 @@ jobs:
           name: winget-update-${{ inputs.tag }}
           path: artifacts/manifests
           if-no-files-found: error
-      - name: Check whether this version already has a catalog submission
-        id: catalog
+      - name: Validate and install the published manifest
         shell: pwsh
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = $env:TAG.Substring(1)
-          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json' }
-          $url = "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/p/PederBergan/Esdieff/$version"
-          $response = Invoke-WebRequest $url -Headers $headers -SkipHttpErrorCheck
-          if ($response.StatusCode -eq 200) {
-            'needed=false' >> $env:GITHUB_OUTPUT
-            "WinGet already contains PederBergan.Esdieff $version." >> $env:GITHUB_STEP_SUMMARY
-            exit 0
-          }
-          if ($response.StatusCode -ne 404) { throw "Cannot check the WinGet catalog: HTTP $($response.StatusCode)" }
-          $search = gh api --method GET search/issues -f 'q=repo:microsoft/winget-pkgs is:pr is:open PederBergan.Esdieff in:title' | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0 -or $search.incomplete_results) { throw 'Cannot check existing WinGet submissions' }
-          $pattern = '(?<![0-9A-Za-z.+-])v?' + [regex]::Escape($version) + '(?![0-9A-Za-z.+-])'
-          $existing = @($search.items | Where-Object { $_.title -match $pattern })
-          if ($existing.Count -gt 0) {
-            'needed=false' >> $env:GITHUB_OUTPUT
-            $existing | ForEach-Object { "Existing WinGet submission: $($_.html_url)" >> $env:GITHUB_STEP_SUMMARY }
-          } else {
-            'needed=true' >> $env:GITHUB_OUTPUT
-            "WinGet submission is needed for PederBergan.Esdieff $version." >> $env:GITHUB_STEP_SUMMARY
+          $manifest = "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))"
+          Install-PSResource -Name Microsoft.WinGet.Client -Scope CurrentUser -Repository PSGallery -TrustRepository
+          Import-Module Microsoft.WinGet.Client
+          Repair-WinGetPackageManager -Latest -Force
+          winget settings --enable LocalManifestFiles
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot enable local manifests' }
+          winget validate --manifest $manifest
+          if ($LASTEXITCODE -ne 0) { throw 'Manifest validation failed' }
+          winget install --manifest $manifest --accept-package-agreements --accept-source-agreements --disable-interactivity
+          if ($LASTEXITCODE -ne 0) { throw 'Manifest installation failed' }
+          try {
+            $env:Path = [Environment]::ExpandEnvironmentVariables([Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'))
+            $binary = (Get-Command esdieff).Source
+            cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke $binary ($env:TAG.Substring(1))
+            if ($LASTEXITCODE -ne 0) { throw 'Installed command check failed' }
+          } finally {
+            winget uninstall --manifest $manifest --disable-interactivity
+            if ($LASTEXITCODE -ne 0) { throw 'WinGet removal failed' }
           }
       - name: Check the official WinGet Create client
-        if: steps.catalog.outputs.needed == 'true'
+        if: inputs.submit_winget
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot select the official WinGet Create release' }
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot select WinGetCreate' }
           $asset = $release.assets | Where-Object name -eq wingetcreate.exe
-          if (!$asset -or $asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw 'Official WinGet Create binary or checksum is unavailable' }
-          $expected = $asset.digest.Substring(7)
+          if (!$asset -or $asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw 'WinGetCreate checksum unavailable' }
           $client = "$env:RUNNER_TEMP/wingetcreate.exe"
           Invoke-WebRequest $asset.browser_download_url -OutFile $client
-          if ((Get-FileHash $client -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'WinGet Create checksum mismatch' }
-          & $client
-          if ($LASTEXITCODE -ne 0) { throw 'WinGet Create cannot start' }
-      - name: Submit through the supported WinGet tool
-        if: inputs.submit_winget && steps.catalog.outputs.needed == 'true'
+          if ((Get-FileHash $client -Algorithm SHA256).Hash.ToLower() -ne $asset.digest.Substring(7)) { throw 'WinGetCreate checksum mismatch' }
+      - name: Prepare or complete the WinGet pull request
         shell: pwsh
         env:
           TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ github.token }}
+          SUBMIT: ${{ inputs.submit_winget }}
+          GH_TOKEN: ${{ inputs.submit_winget && secrets.WINGET_TOKEN || github.token }}
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          WINGET_CHECKED: 'true'
         run: |
           $ErrorActionPreference = 'Stop'
-          if (!$env:WINGET_CREATE_GITHUB_TOKEN) { throw 'WINGET_TOKEN is not configured' }
-          $version = $env:TAG.Substring(1)
-          & "$env:RUNNER_TEMP/wingetcreate.exe" submit --no-open "artifacts/manifests/p/PederBergan/Esdieff/$version"
-          if ($LASTEXITCODE -ne 0) { throw 'WinGet submission failed' }
-      - name: Report preparation-only run
-        if: ${{ !inputs.submit_winget }}
-        shell: pwsh
-        run: "'Checked the published manifests and submission prerequisites. No catalog submission was requested.' >> $env:GITHUB_STEP_SUMMARY"
+          $env:WINGET_CREATE = "$env:RUNNER_TEMP/wingetcreate.exe"
+          $mode = if ($env:SUBMIT -eq 'true') { '--submit' } else { '--prepare' }
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-submit "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))" PederBergan.Esdieff ($env:TAG.Substring(1)) $mode
+          if ($LASTEXITCODE -ne 0) { throw 'WinGet preparation or submission failed; retry this version' }
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: winget-description-${{ inputs.tag }}
+          path: winget-pr-body.md
+          if-no-files-found: ignore
