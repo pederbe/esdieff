@@ -81,7 +81,7 @@ jobs:
                 # The checks job builds and tests every application change on each
                 # platform. Release checks rebuild the archives only when what they
                 # package or how they package it changes.
-                .github/workflows/ci.yml|Cargo.toml|Cargo.lock|rust-toolchain.toml|dist-workspace.toml|about.toml|about.hbs|packaging/*|scripts/check-packages.sh)
+                .github/workflows/ci.yml|Cargo.toml|Cargo.lock|rust-toolchain.toml|dist-workspace.toml|about.toml|about.hbs|packaging/*|scripts/check-packages.sh|scripts/install-dist.sh)
                   rust=true
                   artifacts=true
                   ;;
@@ -194,7 +194,11 @@ jobs:
           tool: cargo-about@0.9.3
           binary: cargo-about
       - if: matrix.os != 'ubuntu-26.04'
-        uses: ./.github/actions/dist
+        uses: ./.github/actions/tool
+        with:
+          tool: dist@0.33.1
+          binary: dist
+          script: bash scripts/install-dist.sh
       - if: matrix.os != 'ubuntu-26.04'
         uses: ./.github/actions/tool
         with:

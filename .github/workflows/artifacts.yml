@@ -61,7 +61,11 @@ jobs:
         with:
           tool: cargo-about@0.9.3
           binary: cargo-about
-      - uses: ./.github/actions/dist
+      - uses: ./.github/actions/tool
+        with:
+          tool: dist@0.33.1
+          binary: dist
+          script: bash scripts/install-dist.sh
       - name: Build the retained archive
         run: |
           set -euo pipefail

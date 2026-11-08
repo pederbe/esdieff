@@ -150,6 +150,7 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         "about.hbs",
         "packaging/homebrew/esdieff.rb",
         "scripts/check-packages.sh",
+        "scripts/install-dist.sh",
         ".github/workflows/ci.yml",
     ] {
         assert_eq!(
