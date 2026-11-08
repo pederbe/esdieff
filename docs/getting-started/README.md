@@ -84,7 +84,7 @@ to remove it.
 ## Check that it works
 
 <pre class="terminal"><code><span class="p">$</span> esdieff --help
-<b>Usage:</b>
+<b><span class="h">Usage:</span></b>
 <span class="c">esdieff</span> <span class="c">check</span> <span class="c">--plan</span> PLAN [<span class="c">--format</span> human|json]
 <span class="c">esdieff</span> <span class="c">check</span> [<span class="c">--directory</span> DIR] [<span class="c">--recursive</span>] [<span class="c">--exclude</span> RELATIVE_PATH] [<span class="c">--root</span> INPUT] [<span class="c">--assessment</span> initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [<span class="c">--registry-knowledge</span> recorded|withheld] [<span class="c">--strict-warnings</span>] [<span class="c">--format</span> human|json|sarif] [INPUT...]
 </code></pre>
@@ -108,28 +108,28 @@ The example is a room thermostat with two properties, one action and one event. 
 Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/thermostat-check/rich.sdf.json) from the repository, or copy it from a checkout, and save it as `thermostat.sdf.json` in an empty directory. Take the rich model, not the smaller `thermostat.sdf.json` next to it in the repository: that one has no half-degree step, so it accepts 5.25. Then generate test values from its rules. The command names the document to generate for, followed by every model file to supply, which here is the same file:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json thermostat.sdf.json
-<b>Generated values</b> esdieff.generation/3: <span class="g">passed</span>
-<b>Values:</b> 15 <span class="g">admitted</span>, 60 <span class="r">rejected</span>, 0 <span class="y">undetermined</span>
+<b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">✔ passed</span></b>
+<b>Values:</b> 15 <b><span class="g">admitted</span></b> · 60 <b><span class="r">rejected</span></b> · 0 <b><span class="y">undetermined</span></b>
 <b>Descriptions:</b> 4
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
-<b>property /sdfObject/Thermostat/sdfProperty/currentTemperature</b>: <span class="g">complete</span>
+<b><span class="h">property /sdfObject/Thermostat/sdfProperty/currentTemperature</span></b>: <b><span class="g">✔ complete</span></b>
   ...
 
-<b>property /sdfObject/Thermostat/sdfProperty/targetTemperature</b>: <span class="g">complete</span>
+<b><span class="h">property /sdfObject/Thermostat/sdfProperty/targetTemperature</span></b>: <b><span class="g">✔ complete</span></b>
   Corpus evidence: 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
-  <span class="r">rejected    </span> null          null (sample.null) [rejected_candidate]
-  <span class="g">admitted    </span> minimum       5 [admitted_boundary]
-  <span class="g">admitted    </span> maximum       30 [admitted_boundary]
-  <span class="r">rejected    </span> below_minimum 4 (sample.bound) [rejected_outside]
-  <span class="r">rejected    </span> above_maximum 31 (sample.bound) [rejected_outside]
-  <span class="r">rejected    </span> not_multiple  5.25 (sample.multiple) [rejected_outside]
-  <span class="r">rejected    </span> wrong_type    "" (sample.type) [rejected_outside]
-  <span class="r">rejected    </span> wrong_type    true (sample.type) [rejected_outside]
-  <span class="r">rejected    </span> wrong_type    {} (sample.type) [rejected_outside]
-  <span class="r">rejected    </span> wrong_type    [] (sample.type) [rejected_outside]
+  <b><span class="r">rejected    </span></b> null          null (sample.null) [rejected_candidate]
+  <b><span class="g">admitted    </span></b> minimum       5 [admitted_boundary]
+  <b><span class="g">admitted    </span></b> maximum       30 [admitted_boundary]
+  <b><span class="r">rejected    </span></b> below_minimum 4 (sample.bound) [rejected_outside]
+  <b><span class="r">rejected    </span></b> above_maximum 31 (sample.bound) [rejected_outside]
+  <b><span class="r">rejected    </span></b> not_multiple  5.25 (sample.multiple) [rejected_outside]
+  <b><span class="r">rejected    </span></b> wrong_type    "" (sample.type) [rejected_outside]
+  <b><span class="r">rejected    </span></b> wrong_type    true (sample.type) [rejected_outside]
+  <b><span class="r">rejected    </span></b> wrong_type    {} (sample.type) [rejected_outside]
+  <b><span class="r">rejected    </span></b> wrong_type    [] (sample.type) [rejected_outside]
 
-<b>action_input /sdfObject/Thermostat/sdfAction/configure</b>: <span class="g">complete</span>
+<b><span class="h">action_input /sdfObject/Thermostat/sdfAction/configure</span></b>: <b><span class="g">✔ complete</span></b>
   ...
 </code></pre>
 
@@ -149,29 +149,29 @@ Esdieff cannot establish is listed as undetermined.
 Next, check the model itself. `--assessment full-baseline` requests every model obligation Esdieff records from RFC 9880:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --assessment full-baseline thermostat.sdf.json
-<b>Esdieff:</b> <span class="g">passed</span>
+<b><span class="h">Esdieff:</span></b> <b><span class="g">✔ passed</span></b>
 <b>Complete:</b> true
-<b>Errors:</b> 0; <b>warnings:</b> 0; <b>notices:</b> 0; <b>incomplete checks:</b> 0
+<b>Errors:</b> 0 · <b>warnings:</b> 0 · <b>notices:</b> 0 · <b>incomplete checks:</b> 0
 <b>Scope:</b> catalogue
 <b>Broader RFC coverage:</b> complete
-<b>Recorded registry policy:</b> use_recorded
+<span class="m">Recorded registry policy: use_recorded</span>
 <b>Unit guidance:</b> complete
 <b>Assessment area</b> unit-spelling/1: assessed
 <b>Assessment area</b> unit-registry-guidance/1: assessed
-<b>Unit counts:</b> known_primary 4; known_secondary 0; unknown 0; unavailable 0; legacy 0; uri_names 0
+<b>Unit counts:</b> known_primary 4 · known_secondary 0 · unknown 0 · unavailable 0 · legacy 0 · uri_names 0
 <b>Assessment area</b> content-format-syntax/1: not_applicable
 <b>Assessment area</b> content-format-registry/1: not_applicable
-<b>Registry</b> iana.senml-units: available; snapshot iana.senml-units/2026-10-05/6246352c590e933b; scope senml-units; entries_count 67
-<b>Registry extraction_policy</b> esdieff.unit-section-positives/1; digest 6246352c590e933b72c25ef9f363171e40fea347bb7e23d08b04f9436894ed34; raw_digest 3eff03640c5a5d2abd09e330488aeb9fae0b2766ea69b1114295bbec5c44e754; source_updated 2026-02-02; retrieved_at 2026-10-05T16:49:51Z
-<b>Requested assessment:</b> rfc9880/base-1
-<b>Baseline:</b> rfc9880/base-1 (RFC 9880)
-<b>Acceptance restrictions:</b> A001, A002; <b>strict warnings:</b> false
-<b>Requested sources:</b> [1]
-<b>Requested inventory:</b> esdieff.full-model/1
-<b>Requested coverage (assessment_area):</b> total 13; assessed 10; not applicable 3; unassessed 0; undetermined 0
-<b>Requirement inventory:</b> rfc9880.model/1
-<b>Requirement coverage:</b> total 54; assessed 28; not applicable 26; unassessed 0; undetermined 0
-<b>Source</b> 1 ["input1"]: acquired / usable (1932 retained bytes, content complete: true)
+<span class="m">Registry iana.senml-units: available; snapshot iana.senml-units/2026-10-05/6246352c590e933b; scope senml-units; entries_count 67</span>
+<span class="m">Registry extraction_policy esdieff.unit-section-positives/1; digest 6246352c590e933b72c25ef9f363171e40fea347bb7e23d08b04f9436894ed34; raw_digest 3eff03640c5a5d2abd09e330488aeb9fae0b2766ea69b1114295bbec5c44e754; source_updated 2026-02-02; retrieved_at 2026-10-05T16:49:51Z</span>
+<span class="m">Requested assessment: rfc9880/base-1</span>
+<span class="m">Baseline: rfc9880/base-1 (RFC 9880)</span>
+<span class="m">Acceptance restrictions: A001, A002; strict warnings: false</span>
+<span class="m">Requested sources: [1]</span>
+<span class="m">Requested inventory: esdieff.full-model/1</span>
+<b>Requested coverage (assessment_area):</b> total 13 · assessed 10 · not applicable 3 · unassessed 0 · undetermined 0
+<span class="m">Requirement inventory: rfc9880.model/1</span>
+<b>Requirement coverage:</b> total 54 · assessed 28 · not applicable 26 · unassessed 0 · undetermined 0
+<span class="m">Source 1 ["input1"]: acquired / usable (1932 retained bytes, content complete: true)</span>
 <b>Diagnostic details omitted:</b> 0
 </code></pre>
 

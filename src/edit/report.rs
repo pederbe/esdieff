@@ -140,12 +140,12 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
     let mut text = HumanText::new(style);
     text.heading("Edit");
     text.push_str(&format!(" {}: ", result.request.key));
-    text.span(
+    text.status(
         Role::disposition(result.outcome.disposition()),
         result.outcome.disposition().as_str(),
     );
     text.push('\n');
-    text.heading("Generation:");
+    text.label("Generation:");
     text.push(' ');
     text.span(
         if result.generation == Generation::Complete {
@@ -156,7 +156,7 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         result.generation.as_str(),
     );
     text.push('\n');
-    text.heading("Fidelity:");
+    text.label("Fidelity:");
     text.push(' ');
     text.span(
         if result.fidelity == Fidelity::Established {
@@ -167,9 +167,8 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         result.fidelity.as_str(),
     );
     text.push_str(&format!(" ({FIDELITY_CONTRACT})\n"));
-    text.heading("Substitution:");
-    text.push_str(&format!(
-        " source {} with generated source {}\n",
+    text.muted_line(&format!(
+        "Substitution: source {} with generated source {}",
         result.request.selected.get(),
         result.generated.get()
     ));
@@ -179,63 +178,81 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         ("Assessed sources:", "assessed"),
         ("Unavailable required sources:", "unavailable_required"),
     ] {
-        text.heading(label);
-        text.push_str(&format!(" {}\n", value["request"]["scope"][field]));
+        text.muted_line(&format!("{label} {}", value["request"]["scope"][field]));
     }
-    text.heading("Requested editing coverage:");
-    text.push_str(&format!(
-        " total 1, assessed {}, undetermined {}\n",
-        u32::from(result.outcome.complete()),
-        u32::from(!result.outcome.complete())
-    ));
-    text.heading("Checking:");
+    text.label("Requested editing coverage:");
+    text.push_list(
+        &format!(
+            " total 1, assessed {}, undetermined {}\n",
+            u32::from(result.outcome.complete()),
+            u32::from(!result.outcome.complete())
+        ),
+        ", ",
+    );
+    text.label("Checking:");
     if let Some(check) = &result.checking {
         text.push_str(&format!(
-            " {}: {}\n",
+            " {}: ",
             value["result"]["checking"]["assessment"]
                 .as_str()
-                .expect("assessment"),
-            check.outcome().disposition().as_str()
+                .expect("assessment")
         ));
+        let disposition = check.outcome().disposition();
+        text.status(Role::disposition(disposition), disposition.as_str());
+        text.push('\n');
         let coverage = &value["result"]["checking"]["coverage"]["requested"];
-        text.heading("Requested model coverage:");
-        text.push_str(&format!(
-            " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
-            coverage["total"],
-            coverage["assessed"],
-            coverage["not_applicable"],
-            coverage["unassessed"],
-            coverage["undetermined"]
-        ));
-        if value["result"]["checking"]["coverage"]["requirements"].is_object() {
-            let coverage = &value["result"]["checking"]["coverage"]["requirements"];
-            text.heading("Requested requirements coverage:");
-            text.push_str(&format!(
+        text.label("Requested model coverage:");
+        text.push_list(
+            &format!(
                 " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
                 coverage["total"],
                 coverage["assessed"],
                 coverage["not_applicable"],
                 coverage["unassessed"],
                 coverage["undetermined"]
-            ));
+            ),
+            ", ",
+        );
+        if value["result"]["checking"]["coverage"]["requirements"].is_object() {
+            let coverage = &value["result"]["checking"]["coverage"]["requirements"];
+            text.label("Requested requirements coverage:");
+            text.push_list(
+                &format!(
+                    " total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}\n",
+                    coverage["total"],
+                    coverage["assessed"],
+                    coverage["not_applicable"],
+                    coverage["unassessed"],
+                    coverage["undetermined"]
+                ),
+                ", ",
+            );
         }
     } else {
         text.push_str(" not requested\n");
     }
-    text.heading("Broader RFC coverage:");
+    text.label("Broader RFC coverage:");
     text.push_str(" partial\n");
-    text.push_str(&format!(
-        "Errors: {}, unfinished editing units: {}\n",
-        result.outcome.errors(),
-        result.outcome.incomplete_checks()
-    ));
+    text.push_list(
+        &format!(
+            "Errors: {}, unfinished editing units: {}\n",
+            result.outcome.errors(),
+            result.outcome.incomplete_checks()
+        ),
+        ", ",
+    );
     for condition in value["diagnostics"]["items"]
         .as_array()
         .expect("edit conditions")
     {
+        let severity = condition["severity"].as_str().expect("severity");
+        text.gap();
+        text.status(
+            Role::severity(crate::Severity::from_report(severity)),
+            severity,
+        );
         text.push_str(&format!(
-            "{} {}: {}\n",
-            condition["severity"].as_str().expect("severity"),
+            " {}: {}\n",
             condition["code"].as_str().expect("code"),
             condition["message"].as_str().expect("message")
         ));
@@ -260,6 +277,7 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         }
     }
     if value["diagnostics"]["truncated"] == true {
+        text.gap();
         text.push_str(&format!(
             "Diagnostic details omitted: {}\n",
             value["diagnostics"]["omitted"]

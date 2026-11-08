@@ -1,5 +1,5 @@
 use super::color_support;
-use color_support::plain;
+use color_support::assert_presents;
 use esdieff::{
     Assessment, AuthorObject, AuthorRequest, Catalogue, HumanStyle, Limits, SourceInput,
 };
@@ -36,8 +36,10 @@ fn generation_limits_and_report_omissions_preserve_the_plain_facts() {
         assert!(result.generated_document().is_none());
         let ordinary = result.to_human();
         let styled = result.to_human_with_style(HumanStyle::Ansi);
-        assert_eq!(plain(styled.as_bytes()), ordinary);
-        assert!(styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[33munavailable\x1b[0m"));
+        assert_presents(styled.as_bytes(), ordinary.as_bytes());
+        assert!(
+            styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[1;38;2;243;156;18munavailable\x1b[0m")
+        );
         assert!(styled.contains(expected_code));
     }
     let source = SOURCE.replace(
@@ -55,7 +57,7 @@ fn generation_limits_and_report_omissions_preserve_the_plain_facts() {
     .unwrap();
     let ordinary = result.to_human();
     let styled = result.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(plain(styled.as_bytes()), ordinary);
+    assert_presents(styled.as_bytes(), ordinary.as_bytes());
     assert!(ordinary.contains("Diagnostic details omitted:"));
     assert!(ordinary.contains("Errors: 1"));
     assert!(ordinary.len() <= limit);

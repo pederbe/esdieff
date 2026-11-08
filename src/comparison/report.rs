@@ -337,14 +337,14 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     text.heading("Revision comparison");
     text.push_str(&format!(" {COMPARISON_CONTRACT}: "));
     let outcome = comparison.outcome();
-    text.span(classification_role(outcome), outcome.as_str());
+    text.status(classification_role(outcome), outcome.as_str());
     text.push('\n');
     if value["policy"]["acknowledgements"] != 0 {
         let acknowledged = &result["summary"]["acknowledged"];
-        text.heading("Disposition:");
+        text.label("Disposition:");
         text.push(' ');
         let disposition = comparison.disposition();
-        text.span(Role::disposition(disposition), disposition.as_str());
+        text.status(Role::disposition(disposition), disposition.as_str());
         text.push_str(&format!(
             ", with {} breaking and {} undetermined differences acknowledged\n",
             acknowledged["breaking"], acknowledged["undetermined"]
@@ -357,11 +357,12 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     text.push_str(comparison.perspective.scope_notice());
     text.push('\n');
     let documents = &result["summary"]["documents"];
-    text.heading("Documents:");
-    text.push_str(&format!(
-        " {} compared, {} removed, {} added\n",
-        documents["compared"], documents["removed"], documents["added"]
-    ));
+    text.label("Documents:");
+    text.push_str(&format!(" {} compared", documents["compared"]));
+    text.separator(", ");
+    text.push_str(&format!("{} removed", documents["removed"]));
+    text.separator(", ");
+    text.push_str(&format!("{} added\n", documents["added"]));
     for (label, field, revision, role) in [
         ("Removed documents:", "removed", "earlier", Role::Failed),
         ("Added documents:", "added", "later", Role::Passed),
@@ -370,16 +371,20 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         if ids.is_empty() {
             continue;
         }
-        text.heading(label);
+        text.label(label);
         for id in ids {
             text.push(' ');
             text.span(role, &key(revision, id));
         }
         text.push('\n');
     }
-    text.heading("Differences:");
+    text.label("Differences:");
     for (index, classification) in ORDER.into_iter().enumerate() {
-        text.push_str(if index == 0 { " " } else { ", " });
+        if index == 0 {
+            text.push(' ');
+        } else {
+            text.separator(", ");
+        }
         text.push_str(&format!("{} ", result["summary"][classification.as_str()]));
         text.span(classification_role(classification), classification.as_str());
     }
@@ -389,6 +394,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     let diagnostics = &value["diagnostics"];
     let warnings = diagnostics["items"].as_array().expect("warnings");
     if !warnings.is_empty() {
+        text.gap();
         text.heading("Warnings:");
         text.push('\n');
     }
@@ -396,7 +402,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         let arguments = &warning["arguments"];
         let quoted = |name: &str| arguments.get(name).map(Value::to_string);
         text.push_str("  ");
-        text.span(Role::Warning, warning["code"].as_str().expect("code"));
+        text.status(Role::Warning, warning["code"].as_str().expect("code"));
         let earlier = quoted("earlier_version").expect("earlier version");
         let breaking = super::wording::breaking_differences(
             arguments["breaking_differences"]
@@ -456,8 +462,9 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         if rows.peek().is_none() {
             continue;
         }
+        text.gap();
         match classification {
-            Some(classification) => text.span(classification_role(classification), heading),
+            Some(classification) => text.status(classification_role(classification), heading),
             None => text.heading(heading),
         }
         text.push('\n');
@@ -531,6 +538,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         }
     }
     if result["differences_omitted"] != 0 {
+        text.gap();
         text.push_str(&format!(
             "Difference details omitted: {}\n",
             result["differences_omitted"]
@@ -540,6 +548,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         .as_array()
         .expect("unused acknowledgements");
     if let (Some(supplied), false) = (comparison.acknowledgements, unused.is_empty()) {
+        text.gap();
         text.heading("Unused acknowledgements:");
         text.push('\n');
         for position in unused {

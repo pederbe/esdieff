@@ -61,7 +61,7 @@ pub fn closed_stdout(args: &[&str], input: &[u8]) -> Output {
 #[path = "../color_support/mod.rs"]
 mod color_support;
 #[allow(unused_imports)]
-pub use color_support::plain;
+pub use color_support::{assert_presents, plain};
 
 /// util-linux script creates a real PTY without unsafe Rust or a runtime dependency.
 #[cfg(target_os = "linux")]

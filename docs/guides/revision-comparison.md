@@ -3,7 +3,7 @@
 This guide compares two revisions of a model before a change is published, reads
 which differences break the apps that use the device, and records the ones you
 intend. It uses a [current-checkout installation](../getting-started/README.md#direct-downloads-and-cargo)
-for the `esdieff.revision-comparison/4` output shown here.
+for the `esdieff.revision-comparison/10` output shown here.
 
 ## Build a before and after pair
 
@@ -48,22 +48,26 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 ## Compare them
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json
-<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
-Client interactions only. Context metadata compatibility is not assessed.
-<b>Documents:</b> 1 compared, 0 removed, 0 added
-<b>Differences:</b> 1 <span class="r">breaking</span>, 1 <span class="y">undetermined</span>, 1 <span class="g">compatible</span>
-<b>Warnings:</b>
-  <span class="y">comparison.version_not_increased</span> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
-<span class="r">Breaking differences:</span>
+<b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">✗ breaking</span></b>
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<b>Documents:</b> 1 compared · 0 removed · 0 added
+<b>Differences:</b> 1 <b><span class="r">breaking</span></b> · 1 <b><span class="y">undetermined</span></b> · 1 <b><span class="g">compatible</span></b>
+
+<b><span class="h">Warnings:</span></b>
+  <b><span class="y">⚠ comparison.version_not_increased</span></b> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
+
+<b><span class="r">✗ Breaking differences:</span></b>
   changed quality maximum (client-supplied and thing-supplied data)
     witness 35 for thing-supplied data: earlier rejected, later admitted
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/maximum
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/maximum
-<span class="y">Undetermined differences:</span>
+
+<b><span class="y">⚠ Undetermined differences:</span></b>
   changed quality multipleOf (client-supplied and thing-supplied data): no breaking witness or compatibility proof
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf (absent)
-<span class="g">Compatible differences:</span>
+
+<b><span class="g">✔ Compatible differences:</span></b>
   changed quality description (client-supplied and thing-supplied data)
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/description
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/description
@@ -127,11 +131,12 @@ lower the shared minimum there from -40 to -50. Keep the original `v1/` and
 ```
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old shared-v1 --new shared-v2
-<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
-Client interactions only. Context metadata compatibility is not assessed.
-<b>Documents:</b> 2 compared, 0 removed, 0 added
-<b>Differences:</b> 1 <span class="r">breaking</span>, 0 <span class="y">undetermined</span>, 0 <span class="g">compatible</span>
-<span class="r">Breaking differences:</span>
+<b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">✗ breaking</span></b>
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<b>Documents:</b> 2 compared · 0 removed · 0 added
+<b>Differences:</b> 1 <b><span class="r">breaking</span></b> · 0 <b><span class="y">undetermined</span></b> · 0 <b><span class="g">compatible</span></b>
+
+<b><span class="r">✗ Breaking differences:</span></b>
   changed quality minimum (thing-supplied data)
     witness -50 for thing-supplied data: earlier rejected, later admitted
     earlier thermostat.sdf.json /sdfObject/Thermostat/sdfProperty/currentTemperature/minimum
@@ -182,22 +187,25 @@ The comparison report and exit status stay as before, and `reviewed.json` lists 
 Review the file, delete any entry you do not intend, add a `note` to each if you like, and keep it with the model. Then supply it:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json
-<b>Revision comparison</b> esdieff.revision-comparison/4: <span class="r">breaking</span>
-Client interactions only. Context metadata compatibility is not assessed.
-<b>Disposition:</b> <span class="g">passed</span>, with 1 breaking and 1 undetermined differences acknowledged
-<b>Documents:</b> 1 compared, 0 removed, 0 added
-<b>Differences:</b> 1 <span class="r">breaking</span>, 1 <span class="y">undetermined</span>, 1 <span class="g">compatible</span>
-<b>Warnings:</b>
-  <span class="y">comparison.version_not_increased</span> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
-<b>Acknowledged differences:</b>
-  changed quality maximum (client-supplied and thing-supplied data), <span class="r">breaking</span>
+<b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">✗ breaking</span></b>
+<b>Disposition:</b> <b><span class="g">✔ passed</span></b>, with 1 breaking and 1 undetermined differences acknowledged
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<b>Documents:</b> 1 compared · 0 removed · 0 added
+<b>Differences:</b> 1 <b><span class="r">breaking</span></b> · 1 <b><span class="y">undetermined</span></b> · 1 <b><span class="g">compatible</span></b>
+
+<b><span class="h">Warnings:</span></b>
+  <b><span class="y">⚠ comparison.version_not_increased</span></b> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
+
+<b><span class="h">Acknowledged differences:</span></b>
+  changed quality maximum (client-supplied and thing-supplied data), <b><span class="r">breaking</span></b>
     witness 35 for thing-supplied data: earlier rejected, later admitted
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/maximum
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/maximum
-  changed quality multipleOf (client-supplied and thing-supplied data), <span class="y">undetermined</span>: no breaking witness or compatibility proof
+  changed quality multipleOf (client-supplied and thing-supplied data), <b><span class="y">undetermined</span></b>: no breaking witness or compatibility proof
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf (absent)
-<span class="g">Compatible differences:</span>
+
+<b><span class="g">✔ Compatible differences:</span></b>
   changed quality description (client-supplied and thing-supplied data)
     earlier document /sdfObject/Thermostat/sdfProperty/targetTemperature/description
     later document /sdfObject/Thermostat/sdfProperty/targetTemperature/description
@@ -222,7 +230,7 @@ version before publishing the intended breaking revision.
 
 Disposition: failed, with 1 breaking, 1 undetermined and 1 compatible differences.
 
-Client interactions only. Context metadata compatibility is not assessed.
+Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Warnings
 

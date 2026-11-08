@@ -267,6 +267,24 @@ fn human_and_json_reports_agree_on_findings_and_unfinished_source_work() {
             plain.contains(&format!("Errors: {}", wire["outcome"]["errors"])),
             "{plain}"
         );
+        // Each styled finding starts after a blank line with its severity symbol.
+        let styled = String::from_utf8_lossy(&human.stdout);
+        let findings = wire["diagnostics"]["items"].as_array().unwrap();
+        assert!(!findings.is_empty());
+        for finding in findings {
+            let severity = finding["severity"].as_str().unwrap();
+            let sequence = match severity {
+                "error" => "\x1b[1;38;2;255;92;87m✗",
+                "warning" | "incomplete" => "\x1b[1;38;2;243;156;18m⚠",
+                "notice" => "\x1b[1;38;2;92;184;255m▶",
+                _ => unreachable!(),
+            };
+            let code = finding["code"].as_str().unwrap();
+            assert!(
+                styled.contains(&format!("\n\n{sequence} {severity}\x1b[0m {code}: ")),
+                "{styled}"
+            );
+        }
         assert!(!fixture.path("json-output.json").exists());
         assert!(!fixture.path("human-output.json").exists());
     }
@@ -562,9 +580,11 @@ fn document_stdout_is_pure_json_under_every_color_and_report_mode() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    let human = cli_color_support::plain(&output.stdout);
+    let human = String::from_utf8(output.stdout).unwrap();
     assert!(
-        human.contains("Requested editing coverage: total 1, assessed 1, undetermined 0"),
+        human.contains(
+            "\x1b[1mRequested editing coverage:\x1b[0m total 1 · assessed 1 · undetermined 0\n"
+        ),
         "{human}"
     );
 }

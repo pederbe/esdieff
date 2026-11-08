@@ -1,7 +1,7 @@
 //! Authoring presentation preserves the independent authoring and checking facts.
 mod cli_color_support;
 
-use cli_color_support::plain;
+use cli_color_support::{assert_presents, plain};
 use esdieff::{Assessment, AuthorObject, AuthorRequest, Catalogue, HumanStyle, SourceInput};
 use std::{fs, path::PathBuf};
 
@@ -25,13 +25,15 @@ fn author_style_is_explicit_and_leaves_names_and_unrequested_checking_plain() {
     let ordinary = result.to_human();
     assert_eq!(ordinary, result.to_human_with_style(HumanStyle::Plain));
     let styled = result.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(plain(styled.as_bytes()), ordinary);
-    assert!(styled.contains("\x1b[1mAuthor\x1b[0m failed: \x1b[32mpassed\x1b[0m"));
-    assert!(styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[32mcomplete\x1b[0m"));
-    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[32mestablished\x1b[0m"));
+    assert_presents(styled.as_bytes(), ordinary.as_bytes());
+    assert!(styled.contains(
+        "\x1b[1;38;2;189;147;249mAuthor\x1b[0m failed: \x1b[1;38;2;90;247;142m✔ passed\x1b[0m"
+    ));
+    assert!(styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[1;38;2;90;247;142mcomplete\x1b[0m"));
+    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[1;38;2;90;247;142mestablished\x1b[0m"));
     assert!(styled.contains("\x1b[1mChecking:\x1b[0m not requested"));
     assert!(styled.contains("\x1b[1mBroader RFC coverage:\x1b[0m partial\n"));
-    assert!(!styled.contains("\x1b[31mfailed"));
+    assert!(!styled.contains("✗ failed"));
     assert!(!ordinary.contains('\x1b'));
 }
 
@@ -105,7 +107,7 @@ fn color_controls_only_change_human_reports_and_never_generated_sdf_or_json_repo
     for mode in ["auto", "always", "never"] {
         let output = fixture.run(&fixture.args("document.json", "-", "human", mode), &[]);
         assert!(output.status.success());
-        assert_eq!(plain(&output.stdout), plain(&never.stdout));
+        assert_presents(&output.stdout, &never.stdout);
         assert_eq!(output.stdout.contains(&0x1b), mode == "always");
         assert_eq!(fs::read(fixture.0.join("document.json")).unwrap(), document);
     }
@@ -124,7 +126,7 @@ fn color_controls_only_change_human_reports_and_never_generated_sdf_or_json_repo
         assert_eq!(output.stdout, document);
         let report_file = fs::read(fixture.0.join("report.txt")).unwrap();
         assert_eq!(report_file.contains(&0x1b), mode == "always");
-        assert_eq!(plain(&report_file), plain(&report.stdout));
+        assert_presents(&report_file, &report.stdout);
         let output = fixture.run(&fixture.args("-", "report.json", "json", mode), &[]);
         assert!(output.status.success());
         assert_eq!(output.stdout, document);
@@ -152,7 +154,7 @@ fn automatic_author_styling_uses_the_report_destination_and_shared_environment_p
         let output = terminal(&args, &environment, false, true);
         assert!(output.status.success());
         assert_eq!(output.stdout.contains(&0x1b), styled);
-        assert_eq!(plain(&output.stdout), plain(&ordinary.stdout));
+        assert_presents(&output.stdout, &ordinary.stdout);
         assert!(output.stderr.is_empty());
     }
     let redirected = terminal(&args, &[], true, false);
@@ -194,7 +196,7 @@ fn automatic_author_styling_uses_the_report_destination_and_shared_environment_p
         assert!(!output.stdout.contains(&0x1b));
         let report = fs::read(fixture.0.join("report.txt")).unwrap();
         assert_eq!(report.contains(&0x1b), styled);
-        assert_eq!(plain(&report), plain(&ordinary.stdout));
+        assert_presents(&report, &ordinary.stdout);
     }
 }
 
@@ -215,14 +217,17 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
     assert!(!result.document_deliverable());
     let ordinary = result.to_human();
     let styled = result.to_human_with_style(HumanStyle::Ansi);
-    assert_eq!(plain(styled.as_bytes()), ordinary);
-    assert!(styled.contains("\x1b[32mcomplete\x1b[0m"));
-    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[33mundetermined\x1b[0m"));
-    assert!(styled.contains("esdieff.initial/1: \x1b[31mfailed\x1b[0m"));
-    assert!(styled.contains("\x1b[31merror\x1b[0m "));
-    assert!(styled.contains("\x1b[33mincomplete\x1b[0m author.fidelity_unknown"));
-    assert!(!styled.contains("\x1b[31merror recipe"));
-    assert!(!styled.contains("\x1b[32massessed"));
+    assert_presents(styled.as_bytes(), ordinary.as_bytes());
+    assert!(styled.contains("\x1b[1;38;2;90;247;142mcomplete\x1b[0m"));
+    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[1;38;2;243;156;18mundetermined\x1b[0m"));
+    assert!(styled.contains("esdieff.initial/1: \x1b[1;38;2;255;92;87m✗ failed\x1b[0m"));
+    assert!(styled.contains("\x1b[1;38;2;255;92;87m✗ error\x1b[0m "));
+    assert!(styled.contains("\x1b[1;38;2;243;156;18m⚠ incomplete\x1b[0m author.fidelity_unknown"));
+    assert!(
+        !styled.contains("✗ error recipe")
+            && !styled.contains("\x1b[1;38;2;255;92;87merror recipe")
+    );
+    assert!(!styled.contains("\x1b[1;38;2;90;247;142massessed"));
 
     let fixture = Fixture::new(&source);
     let plan = fs::read_to_string(fixture.0.join("plan.json")).unwrap().replace(
@@ -231,19 +236,15 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
     );
     fs::write(fixture.0.join("plan.json"), plan).unwrap();
     let mut reference = None;
-    for mode in ["auto", "always", "never"] {
+    for mode in ["never", "auto", "always"] {
         let mut args = fixture.args("document.json", "-", "human", mode);
         args.extend(["--check".to_owned(), "initial-v1".to_owned()]);
         let output = fixture.run(&args, &[]);
         assert_eq!(output.status.code(), Some(1));
         assert!(!fixture.0.join("document.json").exists());
-        let report = plain(&output.stdout);
-        assert!(report.contains("Author request error recipe at /objects/0"));
-        if let Some(reference) = &reference {
-            assert_eq!(&report, reference);
-        } else {
-            reference = Some(report);
-        }
+        assert!(plain(&output.stdout).contains("Author request error recipe at /objects/0"));
+        let reference = reference.get_or_insert_with(|| output.stdout.clone());
+        assert_presents(&output.stdout, reference);
     }
 }
 
@@ -263,7 +264,11 @@ fn delivery_failures_preserve_exit_status_disclosure_and_only_style_the_failure_
             assert_eq!(diagnostic.contains("already delivered"), document_delivered);
             assert_eq!(output.stderr.contains(&0x1b), mode == "always");
             if mode == "always" {
-                assert!(output.stderr.starts_with(b"\x1b[31mesdieff:\x1b[0m "));
+                assert!(
+                    output
+                        .stderr
+                        .starts_with("\x1b[1;38;2;255;92;87m✗ esdieff:\x1b[0m ".as_bytes())
+                );
                 assert_eq!(
                     output.stderr.iter().filter(|&&byte| byte == 0x1b).count(),
                     2

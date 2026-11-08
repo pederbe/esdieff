@@ -1,5 +1,5 @@
 //! Explicit human presentation, independent of the process environment.
-use crate::{AssessmentStatus, Disposition, Severity};
+use crate::{AssessmentStatus, Disposition, Severity, terminal_palette as palette};
 use std::ops::{Deref, Range};
 
 /// Presentation for human reports. Library rendering is plain unless opted in.
@@ -8,13 +8,19 @@ use std::ops::{Deref, Range};
 pub enum HumanStyle {
     #[default]
     Plain,
-    /// ANSI foreground and bold spans, each followed immediately by a reset.
+    /// Terminal colors, bold and status symbols, with each styled span followed immediately
+    /// by a reset, and blank lines and separators that only aid reading.
     Ansi,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) enum Role {
+    /// Report titles and section headings.
     Heading,
+    /// Field labels within a line.
+    Label,
+    /// Secondary request, input and knowledge metadata.
+    Muted,
     Passed,
     Failed,
     Warning,
@@ -25,11 +31,24 @@ pub(crate) enum Role {
 impl Role {
     fn sequence(self) -> &'static str {
         match self {
-            Self::Heading => "\x1b[1m",
-            Self::Passed => "\x1b[32m",
-            Self::Failed => "\x1b[31m",
-            Self::Warning | Self::Incomplete => "\x1b[33m",
-            Self::Notice => "\x1b[36m",
+            Self::Heading => palette::HEADING,
+            Self::Label => palette::LABEL,
+            Self::Muted => palette::MUTED,
+            Self::Passed => palette::PASSED,
+            Self::Failed => palette::FAILED,
+            Self::Warning | Self::Incomplete => palette::ADVISORY,
+            Self::Notice => palette::NOTICE,
+        }
+    }
+
+    /// The symbol and space that introduce a styled outcome, finding or section with this role.
+    fn marker(self) -> &'static str {
+        match self {
+            Self::Heading | Self::Label | Self::Muted => "",
+            Self::Passed => palette::PASSED_MARK,
+            Self::Failed => palette::FAILED_MARK,
+            Self::Warning | Self::Incomplete => palette::ADVISORY_MARK,
+            Self::Notice => palette::NOTICE_MARK,
         }
     }
 
@@ -58,11 +77,22 @@ impl Role {
     }
 }
 
-/// Record spans while building the plain projection so styling never changes
-/// retained detail, omission accounting, or the existing JSON fallback choice.
+/// How styled output presents one range of the plain projection.
+#[derive(Clone, Copy)]
+enum Piece {
+    Span(Role),
+    /// A styled span introduced by its role's symbol.
+    Status(Role),
+    /// Text in place of the plain range, which can be empty.
+    Text(&'static str),
+}
+
+/// Record spans while building the plain projection so styling never changes retained
+/// detail, omission accounting, or the existing JSON fallback choice. Styled output only
+/// adds colors, symbols and blank lines, and replaces plain list separators.
 pub(crate) struct HumanText {
     plain: String,
-    spans: Vec<(Range<usize>, Role)>,
+    pieces: Vec<(Range<usize>, Piece)>,
     style: HumanStyle,
 }
 
@@ -70,19 +100,31 @@ impl HumanText {
     pub(crate) fn new(style: HumanStyle) -> Self {
         Self {
             plain: String::new(),
-            spans: Vec::new(),
+            pieces: Vec::new(),
             style,
         }
     }
 
-    pub(crate) fn span(&mut self, role: impl Into<Option<Role>>, text: &str) {
+    fn piece(&mut self, piece: Option<Piece>, text: &str) {
         let start = self.plain.len();
         self.plain.push_str(text);
         if self.style == HumanStyle::Ansi
-            && let Some(role) = role.into()
-            && !text.is_empty()
+            && let Some(piece) = piece
         {
-            self.spans.push((start..self.plain.len(), role));
+            self.pieces.push((start..self.plain.len(), piece));
+        }
+    }
+
+    pub(crate) fn span(&mut self, role: impl Into<Option<Role>>, text: &str) {
+        if !text.is_empty() {
+            self.piece(role.into().map(Piece::Span), text);
+        }
+    }
+
+    /// An outcome, finding or section heading, introduced by a symbol when styled.
+    pub(crate) fn status(&mut self, role: Role, text: &str) {
+        if !text.is_empty() {
+            self.piece(Some(Piece::Status(role)), text);
         }
     }
 
@@ -90,8 +132,38 @@ impl HumanText {
         self.span(Role::Heading, text);
     }
 
+    pub(crate) fn label(&mut self, text: &str) {
+        self.span(Role::Label, text);
+    }
+
+    /// A whole line of secondary request, input or knowledge metadata.
+    pub(crate) fn muted_line(&mut self, text: &str) {
+        self.span(Role::Muted, text);
+        self.push('\n');
+    }
+
     pub(crate) fn assessment(&mut self, status: AssessmentStatus) {
         self.span(Role::assessment(status), status.as_str());
+    }
+
+    /// A blank line separating sections, in styled output only.
+    pub(crate) fn gap(&mut self) {
+        self.piece(Some(Piece::Text("\n")), "");
+    }
+
+    /// A list separator, which styled output replaces with a middle dot.
+    pub(crate) fn separator(&mut self, plain: &str) {
+        self.piece(Some(Piece::Text(palette::SEPARATOR)), plain);
+    }
+
+    /// Fixed wording and counts whose every `separator` divides list items.
+    pub(crate) fn push_list(&mut self, text: &str, separator: &str) {
+        for (index, item) in text.split(separator).enumerate() {
+            if index != 0 {
+                self.separator(separator);
+            }
+            self.push_str(item);
+        }
     }
 
     pub(crate) fn push(&mut self, character: char) {
@@ -103,26 +175,47 @@ impl HumanText {
     }
 
     pub(crate) fn finish(self, limit: usize) -> String {
-        const RESET: &str = "\x1b[0m";
         let styled_len = self
-            .spans
+            .pieces
             .iter()
-            .try_fold(self.plain.len(), |size, (_, role)| {
-                size.checked_add(role.sequence().len() + RESET.len())
+            .try_fold(self.plain.len(), |size, (range, piece)| {
+                let added = match piece {
+                    Piece::Span(role) => role.sequence().len() + palette::RESET.len(),
+                    Piece::Status(role) => {
+                        role.sequence().len() + role.marker().len() + palette::RESET.len()
+                    }
+                    Piece::Text(text) => text.len(),
+                };
+                let removed = match piece {
+                    Piece::Text(_) => range.len(),
+                    Piece::Span(_) | Piece::Status(_) => 0,
+                };
+                size.checked_add(added).map(|size| size - removed)
             });
         let Some(styled_len) = styled_len.filter(|&size| size <= limit) else {
             return self.plain;
         };
-        if self.spans.is_empty() {
+        if self.pieces.is_empty() {
             return self.plain;
         }
         let mut styled = String::with_capacity(styled_len);
         let mut cursor = 0;
-        for (range, role) in self.spans {
+        for (range, piece) in self.pieces {
             styled.push_str(&self.plain[cursor..range.start]);
-            styled.push_str(role.sequence());
-            styled.push_str(&self.plain[range.clone()]);
-            styled.push_str(RESET);
+            match piece {
+                Piece::Span(role) => {
+                    styled.push_str(role.sequence());
+                    styled.push_str(&self.plain[range.clone()]);
+                    styled.push_str(palette::RESET);
+                }
+                Piece::Status(role) => {
+                    styled.push_str(role.sequence());
+                    styled.push_str(role.marker());
+                    styled.push_str(&self.plain[range.clone()]);
+                    styled.push_str(palette::RESET);
+                }
+                Piece::Text(text) => styled.push_str(text),
+            }
             cursor = range.end;
         }
         styled.push_str(&self.plain[cursor..]);
@@ -130,7 +223,7 @@ impl HumanText {
     }
 }
 
-// Ordinary writes remain plain; only explicit spans receive generated styling.
+// Ordinary writes remain plain; only explicit pieces receive generated styling.
 impl Deref for HumanText {
     type Target = String;
     fn deref(&self) -> &Self::Target {
@@ -148,13 +241,43 @@ impl std::fmt::Write for HumanText {
 mod tests {
     use super::*;
 
+    fn sample(style: HumanStyle) -> HumanText {
+        let mut output = HumanText::new(style);
+        output.heading("Outcome:");
+        output.push(' ');
+        output.status(Role::Passed, "passed");
+        output.push('\n');
+        output.span(Role::Warning, "1 warning");
+        output.separator("; ");
+        output.span(None, "0 notices");
+        output.push('\n');
+        output.gap();
+        output.push_str("detail\n");
+        output
+    }
+
+    #[test]
+    fn styled_output_only_adds_presentation_to_the_plain_projection() {
+        let plain = "Outcome: passed\n1 warning; 0 notices\ndetail\n";
+        let styled = "\x1b[1;38;2;189;147;249mOutcome:\x1b[0m \
+            \x1b[1;38;2;90;247;142m✔ passed\x1b[0m\n\
+            \x1b[1;38;2;243;156;18m1 warning\x1b[0m · 0 notices\n\ndetail\n";
+        assert_eq!(sample(HumanStyle::Plain).finish(usize::MAX), plain);
+        let output = sample(HumanStyle::Ansi);
+        assert_eq!(output.as_str(), plain);
+        assert_eq!(output.finish(usize::MAX), styled);
+    }
+
     #[test]
     fn style_overhead_never_drops_retained_plain_detail() {
-        for (limit, expected) in [(14, "passed detail"), (22, "\x1b[32mpassed\x1b[0m detail")] {
-            let mut output = HumanText::new(HumanStyle::Ansi);
-            output.span(Role::Passed, "passed");
-            output.push_str(" detail");
-            assert_eq!(output.finish(limit), expected);
-        }
+        let styled_len = sample(HumanStyle::Ansi).finish(usize::MAX).len();
+        assert_eq!(
+            sample(HumanStyle::Ansi).finish(styled_len - 1),
+            "Outcome: passed\n1 warning; 0 notices\ndetail\n"
+        );
+        assert_eq!(
+            sample(HumanStyle::Ansi).finish(styled_len).len(),
+            styled_len
+        );
     }
 }

@@ -1,4 +1,5 @@
 //! Destination-aware CLI presentation. Library renderers remain environment independent.
+use crate::terminal_palette as palette;
 use std::{
     borrow::Cow,
     ffi::{OsStr, OsString},
@@ -74,7 +75,6 @@ pub(crate) struct Style(bool);
 pub(crate) enum Role {
     Heading,
     Syntax,
-    Failure,
 }
 
 impl Style {
@@ -87,11 +87,33 @@ impl Style {
             return Cow::Borrowed(text);
         }
         let sequence = match role {
-            Role::Heading => "\x1b[1m",
-            Role::Syntax => "\x1b[36m",
-            Role::Failure => "\x1b[31m",
+            Role::Heading => palette::HEADING,
+            Role::Syntax => palette::SYNTAX,
         };
-        Cow::Owned(format!("{sequence}{text}\x1b[0m"))
+        Cow::Owned(format!("{sequence}{text}{}", palette::RESET))
+    }
+
+    /// A failure prefix, introduced by the failure symbol when styled. The explanation that
+    /// follows stays in the default foreground.
+    pub(crate) fn failure(self, text: &str) -> Cow<'_, str> {
+        self.marked(palette::FAILED, palette::FAILED_MARK, text)
+    }
+
+    /// A case disposition, introduced by its status symbol when styled.
+    pub(crate) fn disposition(self, disposition: esdieff::Disposition) -> Cow<'static, str> {
+        let (sequence, mark) = match disposition {
+            esdieff::Disposition::Passed => (palette::PASSED, palette::PASSED_MARK),
+            esdieff::Disposition::Failed => (palette::FAILED, palette::FAILED_MARK),
+            _ => (palette::ADVISORY, palette::ADVISORY_MARK),
+        };
+        self.marked(sequence, mark, disposition.as_str())
+    }
+
+    fn marked<'a>(self, sequence: &str, mark: &str, text: &'a str) -> Cow<'a, str> {
+        if !self.enabled() {
+            return Cow::Borrowed(text);
+        }
+        Cow::Owned(format!("{sequence}{mark}{text}{}", palette::RESET))
     }
 
     /// The supplied help rows contain only fixed option syntax, never source content.

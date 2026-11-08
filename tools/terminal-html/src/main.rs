@@ -67,18 +67,25 @@ impl Style {
                 "33" => self.foreground = Some("y"),
                 "36" => self.foreground = Some("c"),
                 "30" | "34" | "35" | "37" | "39" => self.foreground = None,
-                // Ignore extended colours as a unit, not as independent SGR codes.
+                // Read extended colours as a unit, not as independent SGR codes. Only
+                // Esdieff's own palette becomes a class.
                 "38" | "48" | "58" => {
-                    if code == "38" {
-                        self.foreground = None;
-                    }
                     let count = match codes.next() {
                         Some("5") => 1,
                         Some("2") => 3,
                         _ => break,
                     };
-                    for _ in 0..count {
-                        codes.next();
+                    let components: Vec<_> = codes.by_ref().take(count).collect();
+                    if code == "38" {
+                        self.foreground = match components[..] {
+                            ["189", "147", "249"] => Some("h"),
+                            ["92", "184", "255"] => Some("c"),
+                            ["90", "247", "142"] => Some("g"),
+                            ["243", "156", "18"] => Some("y"),
+                            ["255", "92", "87"] => Some("r"),
+                            ["112", "120", "140"] => Some("m"),
+                            _ => None,
+                        };
                     }
                 }
                 _ => {}
