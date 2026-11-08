@@ -126,7 +126,6 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
         "examples/thermostat-check/rich.sdf.json",
         "tests/fixtures/model.json",
         "scripts/check.sh",
-        ".github/workflows/ci.yml",
         "unknown-input",
     ] {
         for helper in ["", "tools/release/tests/ci_gate.rs"] {
@@ -140,6 +139,42 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
             );
         }
     }
+    // Application changes are checked on every platform. Release installation checks
+    // also run when what a release packages, or how CI selects it, changes.
+    for path in [
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "dist-workspace.toml",
+        "about.toml",
+        "about.hbs",
+        "packaging/homebrew/esdieff.rb",
+        "scripts/check-packages.sh",
+        "scripts/install-dist.sh",
+        ".github/workflows/ci.yml",
+    ] {
+        assert_eq!(
+            selected("pull_request", "checked-base", path, ""),
+            "rust=true\nrelease_tools=false\nartifacts=true\ndocs=false\nstyles=false\nwebsite=false\n",
+            "packaged inputs must retain release installation checks: {path}"
+        );
+        assert_eq!(
+            selected("push", "checked-base", path, ""),
+            "rust=false\nrelease_tools=false\nartifacts=false\ndocs=false\nstyles=false\nwebsite=false\n",
+            "post-merge selection must not repeat packaged-input checks: {path}"
+        );
+    }
+    // Shared actions install tools for the release, documentation and website jobs.
+    assert_eq!(
+        selected(
+            "pull_request",
+            "checked-base",
+            ".github/actions/tool/action.yml",
+            ""
+        ),
+        "rust=false\nrelease_tools=false\nartifacts=true\ndocs=true\nstyles=false\nwebsite=true\n",
+        "shared actions must retain the checks of every job that uses them"
+    );
     assert_eq!(
         selected("workflow_call", "", "tools/release/tests/ci_gate.rs", ""),
         "rust=true\nrelease_tools=true\nartifacts=true\ndocs=true\nstyles=true\nwebsite=true\n",
@@ -164,7 +199,7 @@ fn aggregate_requires_selected_checks_and_accepts_only_intentional_skips() {
         .join("\n");
     for (changes, checks, docs, artifacts, rust_selected, docs_selected, expected) in [
         (
-            "success", "success", "success", "success", "true", "true", true,
+            "success", "success", "success", "skipped", "true", "true", true,
         ),
         (
             "success", "skipped", "success", "skipped", "false", "true", true,
@@ -185,22 +220,23 @@ fn aggregate_requires_selected_checks_and_accepts_only_intentional_skips() {
             false,
         ),
         (
-            "success", "failure", "success", "success", "true", "true", false,
+            "success", "failure", "success", "skipped", "true", "true", false,
         ),
         (
             "success",
             "cancelled",
             "success",
-            "success",
+            "skipped",
             "true",
             "true",
             false,
         ),
+        // Release checks that ran without being selected are not an intentional skip.
         (
-            "success", "success", "success", "skipped", "true", "true", false,
+            "success", "success", "success", "success", "true", "true", false,
         ),
         (
-            "success", "success", "skipped", "success", "true", "true", false,
+            "success", "success", "skipped", "skipped", "true", "true", false,
         ),
         (
             "success", "skipped", "failure", "skipped", "false", "true", false,
@@ -252,7 +288,12 @@ fn aggregate_requires_selected_checks_and_accepts_only_intentional_skips() {
 #[test]
 fn maintained_check_command_limits_only_the_requested_scope() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    for (argument, count) in [("", 9), ("--all", 9), ("--release-tools-only", 3)] {
+    for (argument, count) in [
+        ("", 9),
+        ("--all", 9),
+        ("--release-tools-only", 3),
+        ("--warm", 6),
+    ] {
         let output = Command::new("bash")
             .args([
                 "-c",

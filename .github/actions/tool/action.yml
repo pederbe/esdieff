@@ -1,0 +1,60 @@
+name: Cached tool
+description: >-
+  Restore a pinned command-line tool from the Actions cache, installing it only
+  when the cache has no copy for this version and runner, and put it on PATH.
+inputs:
+  tool:
+    description: The tool and its pinned version, such as mdbook@0.5.4.
+    required: true
+  binary:
+    description: The executable's name without an extension.
+    required: true
+  script:
+    description: >-
+      A Bash script that installs the tool into $TOOL_DIR. Without one,
+      taiki-e/install-action installs it.
+    default: ''
+runs:
+  using: composite
+  steps:
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/tools/${{ inputs.binary }}
+        key: tool-${{ inputs.tool }}-${{ runner.os }}-${{ runner.arch }}
+    - name: Install ${{ inputs.tool }} with its script
+      if: steps.cache.outputs.cache-hit != 'true' && inputs.script != ''
+      shell: bash
+      env:
+        TOOL_DIR: ${{ runner.temp }}/tools/${{ inputs.binary }}
+        SCRIPT: ${{ inputs.script }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$TOOL_DIR"
+        bash -euo pipefail -c "$SCRIPT"
+    - if: steps.cache.outputs.cache-hit != 'true' && inputs.script == ''
+      uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      with:
+        tool: ${{ inputs.tool }}
+    - name: Keep ${{ inputs.tool }} for the cache
+      if: steps.cache.outputs.cache-hit != 'true' && inputs.script == ''
+      shell: bash
+      env:
+        TOOL_DIR: ${{ runner.temp }}/tools/${{ inputs.binary }}
+        BINARY: ${{ inputs.binary }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$TOOL_DIR"
+        source=$(command -v "$BINARY")
+        for file in "$source" "$source.exe"; do
+          if [ -f "$file" ]; then cp "$file" "$TOOL_DIR/"; fi
+        done
+    - name: Put ${{ inputs.tool }} on PATH
+      shell: bash
+      env:
+        TOOL_DIR: ${{ runner.temp }}/tools/${{ inputs.binary }}
+        BINARY: ${{ inputs.binary }}
+      run: |
+        set -euo pipefail
+        test -x "$TOOL_DIR/$BINARY" || test -x "$TOOL_DIR/$BINARY.exe"
+        echo "$TOOL_DIR" >> "$GITHUB_PATH"

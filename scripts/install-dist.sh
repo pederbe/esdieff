@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Install the pinned dist release tool into $TOOL_DIR after checking its installer.
+set -euo pipefail
+release=https://github.com/axodotdev/cargo-dist/releases/download/v0.33.1
+if [ "$RUNNER_OS" = Windows ]; then
+  installer=$RUNNER_TEMP/cargo-dist-installer.ps1
+  checksum=c0f180726e9045bfb2837e15f40330d8453a1f93338be48d4f48efcb09a5c0d4
+  curl --proto '=https' --tlsv1.2 -fsSL "$release/cargo-dist-installer.ps1" -o "$installer"
+else
+  installer=$RUNNER_TEMP/cargo-dist-installer.sh
+  checksum=a7b3b0812d624a09a534ba272aa8e04c801e56a83d553327a4a8632bc03abb94
+  curl --proto '=https' --tlsv1.2 -fsSL "$release/cargo-dist-installer.sh" -o "$installer"
+fi
+if [ "$RUNNER_OS" = macOS ]; then
+  printf '%s  %s\n' "$checksum" "$installer" | shasum -a 256 -c -
+else
+  printf '%s  %s\n' "$checksum" "$installer" | sha256sum -c -
+fi
+export CARGO_DIST_UNMANAGED_INSTALL=$TOOL_DIR
+if [ "$RUNNER_OS" = Windows ]; then
+  pwsh -NoProfile -File "$installer"
+else
+  sh "$installer"
+fi

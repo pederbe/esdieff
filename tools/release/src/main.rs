@@ -3,6 +3,7 @@ mod licenses;
 mod metadata;
 mod serve;
 mod smoke;
+mod winget_submission;
 
 pub(crate) type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -15,6 +16,7 @@ fn run(args: &[String]) -> Result<()> {
         "licenses" => licenses::run(rest),
         "serve-artifacts" => serve::run(rest),
         "release-notes" => metadata::notes(rest),
+        "winget-submit" => winget_submission::run(rest),
         "package-linux" | "repository" | "homebrew" | "winget" => distribution::run(args),
         _ => Err(format!("unknown release command: {command}").into()),
     }
