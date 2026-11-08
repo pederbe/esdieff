@@ -1245,3 +1245,23 @@ fn a_nested_link_names_its_member_rejections_after_its_entry() {
         Admission::Rejected,
     );
 }
+
+#[test]
+fn member_rejections_need_required_entries_that_obey_both_rules() {
+    for required in [
+        // Undescribed, so filled with `null`.
+        r#""required":["extra"],"properties":{"href":{"type":"string"}}"#,
+        // Untyped, so its first value is `0`.
+        r#""required":["href"],"properties":{"href":{}}"#,
+        r#""required":["Href"],"properties":{"Href":{"type":"string"}}"#,
+    ] {
+        let values = property(&format!(
+            r#"{{"type":"object","sdfType":"link",{required}}}"#
+        ));
+        let order = targets(&values);
+        assert!(
+            !order.contains(&"uppercase_member") && !order.contains(&"nonstring_member"),
+            "{required}: {order:?}"
+        );
+    }
+}

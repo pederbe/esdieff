@@ -462,41 +462,63 @@ impl<'m> Run<'_, 'm, '_> {
     /// ADR 0060: Link sdfType draft support. Each is the map of required entries beside an
     /// undeclared member, `Href` holding a string for the lowercase name rule and `rel`
     /// holding a number for the string rule, renamed with `_` until no entry is described or
-    /// required under that name.
+    /// required under that name. Neither is offered when a required entry would break a
+    /// member rule itself.
     fn link_members(&mut self, description: EffectiveJson<'_>) -> Result<(), Exhausted> {
-        self.generator.work(64)?;
-        if !crate::link::established(description, &mut self.generator.allowance.budget) {
-            return Ok(());
+        let budget = &mut self.generator.allowance.budget;
+        if !crate::link::established(description, budget) {
+            // `established` reports an exhausted allowance as no link meaning.
+            return if budget.work == 0 {
+                Err(Exhausted::Work)
+            } else {
+                Ok(())
+            };
         }
         let Some((described, required)) = self.entries(description)? else {
             return Ok(());
         };
-        for (base, target) in [("Href", "uppercase_member"), ("rel", "nonstring_member")] {
-            let mut name = base.to_owned();
-            loop {
-                let mut taken = false;
-                for other in described
-                    .iter()
-                    .map(|(other, _)| *other)
-                    .chain(required.iter().copied())
-                {
-                    self.generator.work(name.len().min(other.len()) + 1)?;
-                    taken |= other == name;
-                }
-                if !taken {
+        // Each value isolates its own rule only when the required entries obey both: each is
+        // lowercase and described with a `type`, rather than filled with `null` or the `0`
+        // an untyped description gives first.
+        for name in &required {
+            self.generator.work(name.len() + 1)?;
+            if !crate::link::member_name_admitted(name) {
+                return Ok(());
+            }
+            let mut typed = false;
+            for (other, entry) in &described {
+                self.generator.work(name.len().min(other.len()) + 1)?;
+                if other == name {
+                    typed = self.generator.member(*entry, "type")?.is_some();
                     break;
                 }
-                self.generator.work(name.len() + 1)?;
-                name.push('_');
             }
-            let value = if target == "uppercase_member" {
-                self.text(0)?
-            } else {
-                self.generator.lexeme("0")?
-            };
+            if !typed {
+                return Ok(());
+            }
+        }
+        let string = self.text(0)?;
+        let number = self.generator.lexeme("0")?;
+        for (base, target, value) in [
+            ("Href", "uppercase_member", string),
+            ("rel", "nonstring_member", number),
+        ] {
             let Some(value) = value else {
                 continue;
             };
+            let mut name = base.to_owned();
+            loop {
+                let names = described.iter().map(|(other, _)| *other);
+                let names = names.chain(required.iter().copied());
+                if !listed(names, &name, &mut self.generator.allowance.budget)? {
+                    break;
+                }
+                self.generator.work(name.len() + 1)?;
+                if !crate::allowance::charge(&mut self.generator.allowance.budget.allocation, 1) {
+                    return Err(Exhausted::Allocation);
+                }
+                name.push('_');
+            }
             let depth = self.path.len();
             let value = self
                 .generator
