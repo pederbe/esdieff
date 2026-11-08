@@ -700,7 +700,7 @@ fn winget(args: &[String]) -> Result<()> {
     fs::write(
         out.join("PederBergan.Esdieff.locale.en-US.yaml"),
         format!(
-            "{}{identity}PackageLocale: en-US\nPublisher: Peder Bergan\nPublisherUrl: https://github.com/pederbe\nPublisherSupportUrl: https://github.com/pederbe/esdieff/issues\nPackageName: Esdieff\nPackageUrl: https://esdieff.com\nLicense: MIT OR Apache-2.0\nLicenseUrl: https://github.com/pederbe/esdieff/blob/v{version}/README.md#license\nShortDescription: An SDF toolkit for connected-device models\nMoniker: esdieff\nReleaseNotesUrl: https://github.com/pederbe/esdieff/releases/tag/v{version}\nManifestType: defaultLocale\nManifestVersion: {schema}\n",
+            "{}{identity}PackageLocale: en-US\nPublisher: Peder Bergan\nPublisherUrl: https://github.com/pederbe\nPublisherSupportUrl: https://github.com/pederbe/esdieff/issues\nPackageName: Esdieff\nPackageUrl: https://esdieff.com/\nLicense: MIT OR Apache-2.0\nLicenseUrl: https://github.com/pederbe/esdieff/blob/v{version}/README.md#license\nShortDescription: An SDF toolkit for connected-device models\nMoniker: esdieff\nReleaseNotesUrl: https://github.com/pederbe/esdieff/releases/tag/v{version}\nManifestType: defaultLocale\nManifestVersion: {schema}\n",
             header("defaultLocale")
         ),
     )?;

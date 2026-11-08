@@ -38,12 +38,12 @@ jobs:
           ENABLED: ${{ vars.WINGET_ENABLED }}
           RELEASE_ENABLED: ${{ vars.RELEASE_ENABLED }}
           PRIVATE: ${{ github.event.repository.private }}
-          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
           if ($env:PRIVATE -ne 'false' -or $env:RELEASE_ENABLED -ne 'true') { throw 'Release publication is not enabled' }
           if ($env:ENABLED -ne 'true') { throw 'Automatic WinGet submission is disabled' }
-          if (!$env:WINGET_CREATE_GITHUB_TOKEN) { throw 'WINGET_TOKEN is not configured in the distribution environment' }
+          if (!$env:TOKEN) { throw 'WINGET_TOKEN is not configured in the distribution environment' }
       - name: Download the published manifests and check their identity
         shell: pwsh
         env:
@@ -100,34 +100,37 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'WinGet removal failed' }
             if (Test-Path $binary) { throw 'Removal left the installed command' }
           }
-      - name: Check the official WinGet Create client
+      - name: Check the current stable Komac client
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $release = gh api repos/microsoft/winget-create/releases/latest | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot select WinGetCreate' }
-          $asset = $release.assets | Where-Object name -eq wingetcreate.exe
-          if (!$asset -or $asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw 'WinGetCreate checksum unavailable' }
-          $client = "$env:RUNNER_TEMP/wingetcreate.exe"
-          gh release download $release.tag_name --repo microsoft/winget-create --pattern wingetcreate.exe --dir $env:RUNNER_TEMP
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot download WinGetCreate' }
-          if ((Get-FileHash $client -Algorithm SHA256).Hash.ToLower() -ne $asset.digest.Substring(7)) { throw 'WinGetCreate checksum mismatch' }
-          & $client
-          if ($LASTEXITCODE -ne 0) { throw 'WinGetCreate cannot start' }
+          $release = gh api repos/russellbanks/Komac/releases/latest | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot select Komac' }
+          $name = "komac-$($release.tag_name.TrimStart('v'))-x86_64-pc-windows-msvc.exe"
+          $asset = $release.assets | Where-Object name -eq $name
+          if (!$asset -or $asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw 'Komac checksum unavailable' }
+          $client = "$env:RUNNER_TEMP/komac.exe"
+          gh release download $release.tag_name --repo russellbanks/Komac --pattern $name --output $client
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot download Komac' }
+          if ((Get-FileHash $client -Algorithm SHA256).Hash.ToLower() -ne $asset.digest.Substring(7)) { throw 'Komac checksum mismatch' }
+          & $client --version
+          if ($LASTEXITCODE -ne 0) { throw 'Komac cannot start' }
       - name: Prepare or complete the WinGet pull request
         shell: pwsh
         env:
           TAG: ${{ inputs.tag }}
           SUBMIT: ${{ inputs.submit_winget }}
           GH_TOKEN: ${{ inputs.submit_winget && secrets.WINGET_TOKEN || github.token }}
-          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
           WINGET_CHECKED: 'true'
         run: |
           $ErrorActionPreference = 'Stop'
-          $env:WINGET_CREATE = "$env:RUNNER_TEMP/wingetcreate.exe"
+          $env:WINGET_SUBMIT = "$env:RUNNER_TEMP/komac.exe"
           $mode = if ($env:SUBMIT -eq 'true') { '--submit' } else { '--prepare' }
+          $env:GITHUB_TOKEN = $env:GH_TOKEN
+          & $env:WINGET_SUBMIT submit "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))" --dry-run
+          if ($LASTEXITCODE -ne 0) { throw 'Komac manifest preparation failed' }
           cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-submit "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))" PederBergan.Esdieff ($env:TAG.Substring(1)) $mode
           if ($LASTEXITCODE -ne 0) { throw 'WinGet preparation or submission failed; retry this version' }
       - uses: actions/upload-artifact@v7.0.2

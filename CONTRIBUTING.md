@@ -82,7 +82,7 @@ version published on crates.io, so later releases wait until this one is
 published.
 
 After publication, the Distribution updates workflow validates and installs the
-published WinGet manifest, submits it with WinGetCreate, and completes the PR
+published WinGet manifest, submits it with Komac, and completes the PR
 description from its check evidence. Microsoft controls catalog admission. Retry
 that workflow on `main` with the same release tag and submission enabled to finish
 an interrupted submission or description update. Manual runs default to preparation

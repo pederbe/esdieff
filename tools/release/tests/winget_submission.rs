@@ -51,7 +51,8 @@ fn failed_body_update_resumes_existing_pr_without_resubmission() {
             .current_dir(&root)
             .env("PATH", &path)
             .env("FIXTURE_ROOT", &root)
-            .env("WINGET_CREATE", &client)
+            .env("WINGET_SUBMIT", &client)
+            .env("GH_TOKEN", "fixture-token")
             .env("WINGET_CHECKED", "true")
             .env("GITHUB_REPOSITORY", "fixture/tool")
             .env("GITHUB_RUN_ID", "123")
@@ -67,6 +68,8 @@ fn failed_body_update_resumes_existing_pr_without_resubmission() {
     let body = fs::read_to_string(root.join("body-json")).unwrap();
     assert!(body.contains("- [x] Signed"));
     assert!(body.contains("actions/runs/123"));
+    assert!(body.contains("Maintainer note."));
+    assert!(!body.contains("Pull request has been created with"));
     assert!(run().status.success());
     fs::remove_dir_all(&root).unwrap();
 }

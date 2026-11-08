@@ -20,9 +20,10 @@ fn main() {
     let args: Vec<_> = env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("submit") {
         assert!(!root.join("created").exists(), "created a duplicate PR");
-        for entry in fs::read_dir(args.last().unwrap()).unwrap() {
+        assert_eq!(args.last().unwrap(), "--yes");
+        for entry in fs::read_dir(&args[1]).unwrap() {
             let text = fs::read_to_string(entry.unwrap().path()).unwrap();
-            assert!(!text.contains("yaml-language-server"));
+            assert!(text.contains("yaml-language-server"));
             assert!(text.contains("ManifestVersion: 1.28.0"));
         }
         fs::write(root.join("created"), "yes").unwrap();
@@ -76,10 +77,15 @@ fn main() {
             fs::write(root.join("body-json"), body).unwrap();
         }
         let body = fs::read_to_string(root.join("body-json"))
-            .unwrap_or_else(|_| quoted(&fs::read_to_string(root.join("template")).unwrap()));
+            .unwrap_or_else(|_| quoted("### Pull request has been created with [komac](https://github.com/russellbanks/Komac) v2.17.2 :rocket:\n\nMaintainer note.\n"));
         println!(
             "{{\"body\":{body},\"state\":\"open\",\"user\":{{\"login\":\"fixture\"}},\"head\":{{\"sha\":\"abc\"}}}}"
         );
+    } else if args
+        .iter()
+        .any(|a| a.contains(".github/PULL_REQUEST_TEMPLATE.md"))
+    {
+        print!("{}", fs::read_to_string(root.join("template")).unwrap());
     } else if args.iter().any(|a| a.contains("/contents/")) {
         eprintln!("gh: Not Found (HTTP 404)");
         std::process::exit(1);
