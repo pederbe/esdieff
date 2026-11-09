@@ -1,15 +1,13 @@
 [workspace]
-# The Release workflow builds, verifies and publishes each tag.
+# The Release workflow builds and qualifies each tag, creates its GitHub release
+# and publishes the crate.
 publish = false
 git_release_enable = false
 git_tag_name = "v{{ version }}"
-# Release only when the weekly release pull request merges.
 release_always = false
-# Release only for changes that appear in the changelog, so every release has
-# notes. These are feat:, fix:, perf:, docs:, revert:, breaking changes and
-# titles without a conventional prefix.
-release_commits = '^([A-Z]|[a-z]+[^a-z(!:]|(feat|fix|perf|docs|revert)[(:!]|[a-z]+(\([^)]*\))?!:)|BREAKING[ -]CHANGE'
-pr_name = "chore: release v{{ version }}"
+features_always_increment_minor = true
+pr_name = "chore: release{% if version %} v{{ version }}{% endif %}"
+release_commits = '^(feat|fix|perf|docs|revert)(\([^)]*\))?!?:|^[a-z]+(\([^)]*\))?!:|^[A-Z]|(?m:^BREAKING[ -]CHANGE:)'
 
 [changelog]
 header = """# Changelog
@@ -22,9 +20,11 @@ body = """
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | striptags | trim }}
 {% for commit in commits | unique(attribute="message") %}
-- {{ commit.message | split(pat="\n") | first | trim | upper_first }}\
+- {% if commit.breaking %}**Breaking:** {% endif %}{{ commit.message | split(pat="\n") | first | trim | upper_first }}\
 {% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %}
-  {{ commit.breaking_description | split(pat="\n") | first | trim | upper_first }}\
+
+{{ commit.breaking_description | trim }}
+
 {% endif %}
 {%- endfor %}
 {% endfor %}
@@ -36,10 +36,13 @@ commit_preprocessors = [
   { pattern = '\(#(\d+)\)', replace = "([#${1}](https://github.com/pederbe/esdieff/pull/${1}))" },
 ]
 commit_parsers = [
-  { message = "^[a-z]+(\\([^)]*\\))?!:", group = "<!-- 0 -->Breaking changes" },
-  { body = "BREAKING[ -]CHANGE", group = "<!-- 0 -->Breaking changes" },
+  { message = "^feat\\(remove\\)!?:", group = "<!-- 0 -->Removed" },
+  { message = "^feat\\(deprecate\\)!?:", group = "<!-- 1 -->Deprecated" },
+  { message = "^[a-z]+(\\([^)]*\\))?!:", group = "<!-- 0 -->Changed" },
+  { footer = "^BREAKING[ -]CHANGE:", group = "<!-- 0 -->Changed" },
   { message = "^feat(\\([^)]*\\))?:", group = "<!-- 1 -->Added" },
   { message = "^fix\\(deps\\):", group = "<!-- 4 -->Dependencies" },
+  { message = "^fix\\(security\\):", group = "<!-- 2 -->Security" },
   { message = "^fix(\\([^)]*\\))?:", group = "<!-- 2 -->Fixed" },
   { message = "^perf(\\([^)]*\\))?:", group = "<!-- 3 -->Performance" },
   { message = "^docs(\\([^)]*\\))?:", group = "<!-- 5 -->Documentation" },
