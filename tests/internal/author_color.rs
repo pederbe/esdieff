@@ -37,9 +37,9 @@ fn generation_limits_and_report_omissions_preserve_the_plain_facts() {
         let ordinary = result.to_human();
         let styled = result.to_human_with_style(HumanStyle::Ansi);
         assert_presents(styled.as_bytes(), ordinary.as_bytes());
-        assert!(
-            styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[1;38;2;243;156;18munavailable\x1b[0m")
-        );
+        assert!(styled.contains(
+            "\x1b[38;2;112;120;140mGeneration:\x1b[0m \x1b[1;38;2;243;156;18munavailable\x1b[0m"
+        ));
         assert!(styled.contains(expected_code));
     }
     let source = SOURCE.replace(

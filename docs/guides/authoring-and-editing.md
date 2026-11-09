@@ -78,10 +78,10 @@ the declaration is required. The thermostat refinement lowers the maximum to
 `source` matches the key you give the file with `--source KEY PATH`. The `key` and `generated_key` name the request and the generated document in reports. Run the recipe, and ask for an initial check of the result in the same step:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff author --plan recipe.json --source capabilities capabilities.sdf.json --document-output climate-unit.sdf.json --check initial-v1
-<b><span class="h">Author</span></b> ClimateUnit: <b><span class="g">✔ passed</span></b>
-<b>Generation:</b> <b><span class="g">complete</span></b>
-<b>Fidelity:</b> <b><span class="g">established</span></b>
-<b>Broader RFC coverage:</b> partial
+<b><span class="g">✔ </span></b><b><span class="h">Author</span></b> ClimateUnit: <b><span class="g">passed</span></b>
+<span class="m">Generation:</span> <b><span class="g">complete</span></b>
+<span class="m">Fidelity:</span> <b><span class="g">established</span></b>
+<span class="m">Broader RFC coverage:</span> partial
 Errors: 0 · warnings: 0 · notices: 0 · unfinished authoring units: 0
 <span class="m">Baseline: rfc9880/base-1</span>
 <span class="m">Selected generated root: 2</span>
@@ -90,9 +90,9 @@ Errors: 0 · warnings: 0 · notices: 0 · unfinished authoring units: 0
 <span class="m">Unavailable required sources: none</span>
 <span class="m">Source 1 "capabilities": Model, Acquired</span>
 <span class="m">Source 2 "climate-unit": Generated, Generated</span>
-<b>Requested checking</b> esdieff.initial/1: <b><span class="g">✔ passed</span></b> (0 incomplete assessment units)
+<b><span class="g">✔ </span></b><span class="m">Requested checking</span> esdieff.initial/1: <b><span class="g">passed</span></b> (0 incomplete assessment units)
 <span class="m">Requested check inventory: esdieff.initial/1</span>
-<b>Requested check coverage</b> (assessment_area): total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
+<span class="m">Requested check coverage</span> (assessment_area): total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
 </code></pre>
 
 `Generation: complete` says the document was assembled, and `Fidelity: established` says Esdieff verified that every generated reference still points at its source and every refinement value kept its exact spelling. The document is written only when both hold and the requested check passes. Here is the generated `climate-unit.sdf.json`:
@@ -143,7 +143,7 @@ inherited at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty
 The `maximum` is an `override` from the generated document, and the step is `inherited` from the capabilities file. Running the same command again refuses to overwrite the output until you add `--replace-document`:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff author --plan recipe.json --source capabilities capabilities.sdf.json --document-output climate-unit.sdf.json --check initial-v1
-<b><span class="r">✗ esdieff:</span></b> existing output requires explicit replacement of a regular non-symlink file
+<b><span class="r">esdieff:</span></b> existing output requires explicit replacement of a regular non-symlink file
 </code></pre>
 
 Use `--report-output report.json --format json` to save the report beside the document, and `--check full-baseline` for the complete assessment. A refinement member set to `null` deletes the inherited member. The [authoring contract](../authoring-contract.md) lists every plan field, the refinement rules and the limits.
@@ -184,18 +184,18 @@ Starting from the thermostat model as `thermostat.sdf.json`, save this plan as `
 Run it the same way as a recipe:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff edit --plan edits.json --source thermostat thermostat.sdf.json --document-output thermostat-winter.sdf.json --check initial-v1
-<b><span class="h">Edit</span></b> winter-edits: <b><span class="g">✔ passed</span></b>
-<b>Generation:</b> <b><span class="g">complete</span></b>
-<b>Fidelity:</b> <b><span class="g">established</span></b> (esdieff.authored-quality-edit/1)
+<b><span class="g">✔ </span></b><b><span class="h">Edit</span></b> winter-edits: <b><span class="g">passed</span></b>
+<span class="m">Generation:</span> <b><span class="g">complete</span></b>
+<span class="m">Fidelity:</span> <b><span class="g">established</span></b> (esdieff.authored-quality-edit/1)
 <span class="m">Substitution: source 1 with generated source 2</span>
 <span class="m">Root sources: [2]</span>
 <span class="m">Dependency sources: []</span>
 <span class="m">Assessed sources: [2]</span>
 <span class="m">Unavailable required sources: []</span>
-<b>Requested editing coverage:</b> total 1 · assessed 1 · undetermined 0
-<b>Checking:</b> esdieff.initial/1: <b><span class="g">✔ passed</span></b>
-<b>Requested model coverage:</b> total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
-<b>Broader RFC coverage:</b> partial
+<span class="m">Requested editing coverage:</span> total 1 · assessed 1 · undetermined 0
+<b><span class="g">✔ </span></b><span class="m">Checking:</span> esdieff.initial/1: <b><span class="g">passed</span></b>
+<span class="m">Requested model coverage:</span> total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
+<span class="m">Broader RFC coverage:</span> partial
 Errors: 0 · unfinished editing units: 0
 </code></pre>
 

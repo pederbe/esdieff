@@ -350,10 +350,8 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
             acknowledged["breaking"], acknowledged["undetermined"]
         ));
     }
-    text.push_str(&format!(
-        "Perspective: {}. ",
-        comparison.perspective.as_str()
-    ));
+    text.label("Perspective:");
+    text.push_str(&format!(" {}. ", comparison.perspective.as_str()));
     text.push_str(comparison.perspective.scope_notice());
     text.push('\n');
     let documents = &result["summary"]["documents"];
@@ -385,8 +383,14 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         } else {
             text.separator(", ");
         }
-        text.push_str(&format!("{} ", result["summary"][classification.as_str()]));
-        text.span(classification_role(classification), classification.as_str());
+        let count = result["summary"][classification.as_str()]
+            .as_u64()
+            .expect("classification count");
+        text.count(
+            count,
+            classification_role(classification),
+            classification.as_str(),
+        );
     }
     text.push('\n');
     // The recorded unit evidence, as in `check`, from the state the wire records also use.
@@ -395,7 +399,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
     let warnings = diagnostics["items"].as_array().expect("warnings");
     if !warnings.is_empty() {
         text.gap();
-        text.heading("Warnings:");
+        text.status(Role::Warning, "Warnings:");
         text.push('\n');
     }
     for warning in warnings {

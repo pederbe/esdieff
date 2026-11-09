@@ -138,8 +138,11 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         } else {
             text.separator(", ");
         }
-        text.push_str(&format!("{} ", result.count(outcome)));
-        text.span(outcome_role(outcome), outcome.as_str());
+        text.count(
+            u64::from(result.count(outcome)),
+            outcome_role(outcome),
+            outcome.as_str(),
+        );
     }
     text.push('\n');
     text.label("Admissions:");

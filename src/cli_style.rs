@@ -58,15 +58,33 @@ impl ColorMode {
 
     pub(crate) fn for_terminal(self, terminal: bool) -> Style {
         Style(match self {
-            Self::Always => true,
+            Self::Always => {
+                // Forced styling is written even where the console cannot show it.
+                enable_console_ansi();
+                true
+            }
             Self::Never => false,
             Self::Auto => {
                 terminal
                     && !std::env::var_os("TERM").is_some_and(|value| value == "dumb")
                     && !std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty())
+                    && enable_console_ansi()
             }
         })
     }
+}
+
+/// Turns on virtual terminal processing in a Windows console, once, and reports whether
+/// the console now interprets ANSI styling. Other terminals interpret it directly.
+fn enable_console_ansi() -> bool {
+    #[cfg(windows)]
+    {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        // This reaches the console through CONOUT$, so it works while stdout or stderr is redirected.
+        *ENABLED.get_or_init(|| nu_ansi_term::enable_ansi_support().is_ok())
+    }
+    #[cfg(not(windows))]
+    true
 }
 
 #[derive(Clone, Copy)]
@@ -74,7 +92,12 @@ pub(crate) struct Style(bool);
 
 pub(crate) enum Role {
     Heading,
-    Syntax,
+    /// Field names within a line, which recede so their values stand out.
+    Label,
+    /// Command and option names.
+    Command,
+    /// Placeholders for values the user supplies.
+    Placeholder,
 }
 
 impl Style {
@@ -88,52 +111,83 @@ impl Style {
         }
         let sequence = match role {
             Role::Heading => palette::HEADING,
-            Role::Syntax => palette::SYNTAX,
+            Role::Command => palette::COMMAND,
+            Role::Label | Role::Placeholder => palette::MUTED,
         };
         Cow::Owned(format!("{sequence}{text}{}", palette::RESET))
     }
 
-    /// A failure prefix, introduced by the failure symbol when styled. The explanation that
-    /// follows stays in the default foreground.
+    /// A diagnostic or failure label. The explanation that follows stays in the default
+    /// foreground.
     pub(crate) fn failure(self, text: &str) -> Cow<'_, str> {
-        self.marked(palette::FAILED, palette::FAILED_MARK, text)
+        self.colored(palette::FAILED, text)
     }
 
-    /// A case disposition, introduced by its status symbol when styled.
+    /// A case disposition in its outcome colour.
     pub(crate) fn disposition(self, disposition: esdieff::Disposition) -> Cow<'static, str> {
-        let (sequence, mark) = match disposition {
+        self.colored(
+            Self::disposition_palette(disposition).0,
+            disposition.as_str(),
+        )
+    }
+
+    /// The symbol that starts the line of a case disposition, or nothing when plain.
+    pub(crate) fn disposition_mark(self, disposition: esdieff::Disposition) -> Cow<'static, str> {
+        if !self.enabled() {
+            return Cow::Borrowed("");
+        }
+        let (sequence, mark) = Self::disposition_palette(disposition);
+        self.colored(sequence, mark)
+    }
+
+    fn disposition_palette(disposition: esdieff::Disposition) -> (&'static str, &'static str) {
+        match disposition {
             esdieff::Disposition::Passed => (palette::PASSED, palette::PASSED_MARK),
             esdieff::Disposition::Failed => (palette::FAILED, palette::FAILED_MARK),
             _ => (palette::ADVISORY, palette::ADVISORY_MARK),
-        };
-        self.marked(sequence, mark, disposition.as_str())
+        }
     }
 
-    fn marked<'a>(self, sequence: &str, mark: &str, text: &'a str) -> Cow<'a, str> {
+    fn colored<'a>(self, sequence: &str, text: &'a str) -> Cow<'a, str> {
         if !self.enabled() {
             return Cow::Borrowed(text);
         }
-        Cow::Owned(format!("{sequence}{mark}{text}{}", palette::RESET))
+        Cow::Owned(format!("{sequence}{text}{}", palette::RESET))
     }
 
     /// The supplied help rows contain only fixed option syntax, never source content.
+    /// Options are bold and uppercase placeholders are gray.
     fn syntax(self, text: &str) -> String {
         let mut rendered = String::new();
         let mut remaining = text;
-        while let Some(start) = remaining.find("--") {
+        while !remaining.is_empty() {
+            let word = |character: char| {
+                character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+            };
+            let start = remaining.find(word).unwrap_or(remaining.len());
             rendered.push_str(&remaining[..start]);
             remaining = &remaining[start..];
             let end = remaining
-                .find(|character: char| {
-                    character != '-'
-                        && !character.is_ascii_lowercase()
-                        && !character.is_ascii_digit()
-                })
+                .find(|character: char| !word(character))
                 .unwrap_or(remaining.len());
-            rendered.push_str(&self.span(Role::Syntax, &remaining[..end]));
+            let token = &remaining[..end];
+            let role = if token.starts_with('-') {
+                Some(Role::Command)
+            } else if token.starts_with(|character: char| character.is_ascii_uppercase())
+                && token
+                    .chars()
+                    .all(|character| matches!(character, 'A'..='Z' | '_' | '.'))
+            {
+                Some(Role::Placeholder)
+            } else {
+                None
+            };
+            match role {
+                Some(role) => rendered.push_str(&self.span(role, token)),
+                None => rendered.push_str(token),
+            }
             remaining = &remaining[end..];
         }
-        rendered.push_str(remaining);
         rendered
     }
 }
@@ -142,8 +196,8 @@ pub(crate) fn help(style: Style) -> String {
     let mut help = format!("{}\n", style.span(Role::Heading, "Usage:"));
     help.push_str(&format!(
         "{} {}\n",
-        style.span(Role::Syntax, "esdieff"),
-        style.span(Role::Syntax, "--version")
+        style.span(Role::Command, "esdieff"),
+        style.span(Role::Command, "--version")
     ));
     help.push_str("Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.\n");
     for (command, options) in [
@@ -191,8 +245,8 @@ pub(crate) fn help(style: Style) -> String {
     ] {
         help.push_str(&format!(
             "{} {} {}\n",
-            style.span(Role::Syntax, "esdieff"),
-            style.span(Role::Syntax, command),
+            style.span(Role::Command, "esdieff"),
+            style.span(Role::Command, command),
             style.syntax(options)
         ));
     }
@@ -204,12 +258,13 @@ pub(crate) fn help(style: Style) -> String {
 
 fn global_options(style: Style) -> String {
     format!(
-        "\n{}\n  {} auto|always|never, {}=MODE  Choose styling (default: auto).\n  {}                         Alias for --color never.\n  {}, {}                         Show this help.\n",
+        "\n{}\n  {} auto|always|never, {}={}  Choose styling (default: auto).\n  {}                         Alias for --color never.\n  {}, {}                         Show this help.\n",
         style.span(Role::Heading, "Global options:"),
-        style.span(Role::Syntax, "--color"),
-        style.span(Role::Syntax, "--color"),
-        style.span(Role::Syntax, "--no-color"),
-        style.span(Role::Syntax, "-h"),
-        style.span(Role::Syntax, "--help"),
+        style.span(Role::Command, "--color"),
+        style.span(Role::Command, "--color"),
+        style.span(Role::Placeholder, "MODE"),
+        style.span(Role::Command, "--no-color"),
+        style.span(Role::Command, "-h"),
+        style.span(Role::Command, "--help"),
     )
 }

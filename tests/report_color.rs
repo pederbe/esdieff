@@ -49,14 +49,18 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
         assert!(report.outcome().complete());
         let output = styled(&report);
         assert!(output.starts_with(if strict {
-            "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"
+            "\x1b[1;38;2;255;92;87m✗ \x1b[0m\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;255;92;87mfailed\x1b[0m\n"
         } else {
-            "\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;90;247;142m✔ passed\x1b[0m\n"
+            "\x1b[1;38;2;90;247;142m✔ \x1b[0m\x1b[1;38;2;189;147;249mEsdieff:\x1b[0m \x1b[1;38;2;90;247;142mpassed\x1b[0m\n"
         }));
-        // Each finding starts after a blank line, and counts share one middle-dot list.
+        // Each finding starts after a blank line, and counts share one middle-dot list with
+        // gray labels.
         assert!(output.contains("\n\n\x1b[1;38;2;243;156;18m⚠ metadata.info_absent\x1b[0m: "));
-        assert!(output.contains(" · \x1b[1mwarnings:\x1b[0m 1 · "));
-        assert!(output.contains("\x1b[1mBroader RFC coverage:\x1b[0m partial\n"));
+        assert!(output.contains(
+            " · \x1b[38;2;112;120;140mwarnings:\x1b[0m \x1b[1;38;2;243;156;18m1\x1b[0m · "
+        ));
+        assert!(output.contains("\x1b[38;2;112;120;140mErrors:\x1b[0m 0 · "));
+        assert!(output.contains("\x1b[38;2;112;120;140mBroader RFC coverage:\x1b[0m partial\n"));
         // Request metadata is muted as whole lines, keeping its plain separators.
         assert!(output.contains(concat!(
             "\n\x1b[38;2;112;120;140mBaseline: rfc9880/base-1 (RFC 9880)\x1b[0m\n",
@@ -71,7 +75,7 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
                 esdieff::Severity::Warning | esdieff::Severity::Incomplete => {
                     "\x1b[1;38;2;243;156;18m⚠ "
                 }
-                esdieff::Severity::Notice => "\x1b[1;38;2;92;184;255m▶ ",
+                esdieff::Severity::Notice => "\x1b[38;2;92;184;255m▶ ",
                 _ => unreachable!(),
             };
             assert!(output.contains(&format!("{sequence}{}\x1b[0m: ", condition.code())));
@@ -86,8 +90,12 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
     assert_eq!(report.outcome().disposition(), Disposition::Failed);
     assert!(!report.outcome().complete());
     let output = styled(&report);
-    assert!(output.contains("\x1b[1;38;2;255;92;87m✗ failed\x1b[0m"));
-    assert!(output.contains("\x1b[1mComplete:\x1b[0m \x1b[1;38;2;243;156;18mfalse\x1b[0m"));
+    assert!(output.starts_with("\x1b[1;38;2;255;92;87m✗ \x1b[0m"));
+    assert!(output.contains(" \x1b[1;38;2;255;92;87mfailed\x1b[0m\n"));
+    assert!(
+        output
+            .contains("\x1b[38;2;112;120;140mComplete:\x1b[0m \x1b[1;38;2;243;156;18mfalse\x1b[0m")
+    );
     let diagnostics = report.diagnostics();
     let error = diagnostics
         .conditions()
@@ -127,8 +135,8 @@ fn notice_codes_and_unfinished_requiredness_keep_their_separate_roles() {
         )
         .unwrap();
     let output = styled(&report);
-    assert!(output.contains("\x1b[1;38;2;92;184;255m▶ required.target_missing\x1b[0m: "));
-    assert!(output.contains("\x1b[1mRequired declarations:\x1b[0m"));
+    assert!(output.contains("\x1b[38;2;92;184;255m▶ required.target_missing\x1b[0m: "));
+    assert!(output.contains("\x1b[38;2;112;120;140mRequired declarations:\x1b[0m"));
 }
 
 #[test]
@@ -153,29 +161,31 @@ fn source_and_effective_inspection_keep_payload_names_and_exact_values_plain() {
         ))
         .unwrap();
     assert_eq!(report.outcome().disposition(), Disposition::Undetermined);
-    assert!(styled(&report).contains("\x1b[1;38;2;243;156;18m⚠ undetermined\x1b[0m"));
+    let output = styled(&report);
+    assert!(output.starts_with("\x1b[1;38;2;243;156;18m⚠ \x1b[0m"));
+    assert!(output.contains("\x1b[1;38;2;243;156;18mundetermined\x1b[0m"));
 }
 
 #[test]
 fn samples_style_admission_without_turning_assessed_or_inapplicable_into_validity() {
-    for (input, admission, disposition, sequence) in [
+    for (input, admission, disposition, (sequence, mark)) in [
         (
             Some(b"2".as_slice()),
             "admitted",
             Disposition::Passed,
-            "\x1b[1;38;2;90;247;142m✔ ",
+            ("\x1b[1;38;2;90;247;142m", "✔ "),
         ),
         (
             Some(b"0".as_slice()),
             "rejected",
             Disposition::Failed,
-            "\x1b[1;38;2;255;92;87m✗ ",
+            ("\x1b[1;38;2;255;92;87m", "✗ "),
         ),
         (
             None,
             "undetermined",
             Disposition::Undetermined,
-            "\x1b[1;38;2;243;156;18m⚠ ",
+            ("\x1b[1;38;2;243;156;18m", "⚠ "),
         ),
     ] {
         let model = br#"{"info":{},"sdfData":{"passed":{"type":"integer","minimum":1}}}"#;
@@ -199,6 +209,10 @@ fn samples_style_admission_without_turning_assessed_or_inapplicable_into_validit
             .unwrap();
         assert_eq!(report.outcome().disposition(), disposition);
         let output = styled(&report);
+        // The admission's symbol starts the sample line; the admission keeps its colour.
+        assert!(output.contains(&format!(
+            "\n{sequence}{mark}\x1b[0m\x1b[38;2;112;120;140mSample\x1b[0m "
+        )));
         assert!(output.contains(&format!("{sequence}{admission}\x1b[0m · context ")));
         assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));
         assert!(!output.contains("\x1b[1;38;2;90;247;142mnot_applicable"));
@@ -466,14 +480,17 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     let styled = generate("--color=always");
     assert_presents(&styled, &generate("--color=never"));
     let styled = String::from_utf8(styled).unwrap();
-    assert!(styled.contains(": \x1b[1;38;2;90;247;142m✔ passed\x1b[0m\n"));
+    assert!(styled.starts_with(
+        "\x1b[1;38;2;90;247;142m✔ \x1b[0m\x1b[1;38;2;189;147;249mGenerated values\x1b[0m "
+    ));
+    assert!(styled.contains(": \x1b[1;38;2;90;247;142mpassed\x1b[0m\n"));
     assert!(styled.contains(concat!(
-        "\x1b[1mValues:\x1b[0m 2 \x1b[1;38;2;90;247;142madmitted\x1b[0m",
-        " · 7 \x1b[1;38;2;255;92;87mrejected\x1b[0m",
-        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+        "\x1b[38;2;112;120;140mValues:\x1b[0m \x1b[1;38;2;90;247;142m2 admitted\x1b[0m",
+        " · \x1b[1;38;2;255;92;87m7 rejected\x1b[0m",
+        " · 0 undetermined\n"
     )));
     assert!(styled.contains(&format!(
-        "\x1b[1;38;2;189;147;249mproperty {pointer}\x1b[0m: \x1b[1;38;2;90;247;142m✔ complete\x1b[0m\n"
+        "\x1b[1;38;2;90;247;142m✔ \x1b[0m\x1b[1;38;2;189;147;249mproperty {pointer}\x1b[0m: \x1b[1;38;2;90;247;142mcomplete\x1b[0m\n"
     )));
 
     let trace = format!(
@@ -489,17 +506,17 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     let styled = replay("--color=always");
     assert_presents(&styled, &replay("--color=never"));
     let styled = String::from_utf8(styled).unwrap();
-    assert!(styled.contains(": \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"));
+    assert!(styled.contains(": \x1b[1;38;2;255;92;87mfailed\x1b[0m\n"));
     assert!(styled.contains(concat!(
-        "\x1b[1mEntries:\x1b[0m 1 \x1b[1;38;2;90;247;142mpassed\x1b[0m",
-        " · 1 \x1b[1;38;2;255;92;87mfailed\x1b[0m",
-        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+        "\x1b[38;2;112;120;140mEntries:\x1b[0m \x1b[1;38;2;90;247;142m1 passed\x1b[0m",
+        " · \x1b[1;38;2;255;92;87m1 failed\x1b[0m",
+        " · 0 undetermined\n"
     )));
-    assert!(
-        styled.contains("\x1b[1mAdmissions:\x1b[0m 1 admitted · 1 rejected · 0 undetermined\n")
-    );
+    assert!(styled.contains(
+        "\x1b[38;2;112;120;140mAdmissions:\x1b[0m 1 admitted · 1 rejected · 0 undetermined\n"
+    ));
     assert!(styled.contains(&format!(
-        "\n\nline 2 property \"{pointer}\": \x1b[1;38;2;255;92;87m✗ failed\x1b[0m\n"
+        "\n\n\x1b[1;38;2;255;92;87m✗ \x1b[0mline 2 property \"{pointer}\": \x1b[1;38;2;255;92;87mfailed\x1b[0m\n"
     )));
     assert!(styled.contains("\n  \x1b[1;38;2;255;92;87m✗ error\x1b[0m sample.bound at "));
 }

@@ -1585,11 +1585,16 @@ impl Report<'_> {
             },
         );
         output.push('\n');
-        for (index, (label, count)) in [
-            ("Errors:", self.outcome.errors),
-            ("warnings:", self.outcome.warnings),
-            ("notices:", self.outcome.notices),
-            ("incomplete checks:", self.outcome.incomplete),
+        // A nonzero count takes the colour of its findings, so the key result stands out.
+        for (index, (label, count, role)) in [
+            ("Errors:", self.outcome.errors, Role::Failed),
+            ("warnings:", self.outcome.warnings, Role::Warning),
+            ("notices:", self.outcome.notices, Role::Notice),
+            (
+                "incomplete checks:",
+                self.outcome.incomplete,
+                Role::Incomplete,
+            ),
         ]
         .into_iter()
         .enumerate()
@@ -1598,7 +1603,8 @@ impl Report<'_> {
                 output.separator("; ");
             }
             output.label(label);
-            output.push_str(&format!(" {count}"));
+            output.push(' ');
+            output.span((count != 0).then_some(role), &count.to_string());
         }
         output.push('\n');
         output.label("Scope:");
@@ -1612,6 +1618,8 @@ impl Report<'_> {
         output.push(' ');
         output.push_str(self.broader_state());
         output.push('\n');
+        // Request details follow the summary as their own section.
+        output.gap();
         self.write_required_human(&mut output, &required);
         if self
             .assessment_profile()
@@ -1745,9 +1753,8 @@ impl Report<'_> {
             }
         }
         if let Some(state) = &self.sample {
-            output.label("Selected");
             output.push_str(&format!(
-                " {} in model {} at {}\n",
+                "Selected {} in model {} at {}\n",
                 state.kind.as_str(),
                 state.model.get(),
                 serde_json::to_string(&state.pointer).expect("selector encoding"),
