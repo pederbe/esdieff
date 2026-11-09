@@ -138,11 +138,9 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         } else {
             text.separator(", ");
         }
-        let count = result.count(outcome);
-        text.push_str(&format!("{count} "));
-        // Only a nonzero count takes the colour of its outcome.
-        text.span(
-            (count != 0).then(|| outcome_role(outcome)),
+        text.count(
+            u64::from(result.count(outcome)),
+            outcome_role(outcome),
             outcome.as_str(),
         );
     }

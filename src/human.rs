@@ -97,7 +97,7 @@ pub(crate) struct HumanText {
     plain: String,
     pieces: Vec<(Range<usize>, Piece)>,
     /// Where the latest symbol was inserted, so each line receives at most one.
-    marked: Option<usize>,
+    marked_at: Option<usize>,
     style: HumanStyle,
 }
 
@@ -106,7 +106,7 @@ impl HumanText {
         Self {
             plain: String::new(),
             pieces: Vec::new(),
-            marked: None,
+            marked_at: None,
             style,
         }
     }
@@ -135,11 +135,12 @@ impl HumanText {
         }
         let line = self.plain.rfind('\n').map_or(0, |end| end + 1);
         let at = self.plain.len() - self.plain[line..].trim_start_matches(' ').len();
-        if self.style != HumanStyle::Ansi || role.marker().is_empty() || self.marked == Some(at) {
+        if self.style != HumanStyle::Ansi || role.marker().is_empty() || self.marked_at == Some(at)
+        {
             self.span(role, text);
             return;
         }
-        self.marked = Some(at);
+        self.marked_at = Some(at);
         if at == self.plain.len() {
             self.piece(Some(Piece::Status(role)), text);
             return;
@@ -151,6 +152,11 @@ impl HumanText {
             .partition_point(|(range, _)| range.start < at || range == &(at..at));
         self.pieces.insert(index, (at..at, Piece::Mark(role)));
         self.span(role, text);
+    }
+
+    /// A count and what it counts. Only a nonzero count takes the colour of its role.
+    pub(crate) fn count(&mut self, count: u64, role: Role, noun: &str) {
+        self.span((count != 0).then_some(role), &format!("{count} {noun}"));
     }
 
     pub(crate) fn heading(&mut self, text: &str) {

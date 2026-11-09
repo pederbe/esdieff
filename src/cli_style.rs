@@ -58,15 +58,33 @@ impl ColorMode {
 
     pub(crate) fn for_terminal(self, terminal: bool) -> Style {
         Style(match self {
-            Self::Always => true,
+            Self::Always => {
+                // Forced styling is written even where the console cannot show it.
+                console_shows_ansi();
+                true
+            }
             Self::Never => false,
             Self::Auto => {
                 terminal
                     && !std::env::var_os("TERM").is_some_and(|value| value == "dumb")
                     && !std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty())
+                    && console_shows_ansi()
             }
         })
     }
+}
+
+/// Whether the attached console interprets ANSI styling. Windows consoles do once
+/// virtual terminal processing is on. Other terminals interpret it directly.
+fn console_shows_ansi() -> bool {
+    #[cfg(windows)]
+    {
+        static SHOWS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        // This reaches the console through CONOUT$, so it works while stdout or stderr is redirected.
+        *SHOWS.get_or_init(|| nu_ansi_term::enable_ansi_support().is_ok())
+    }
+    #[cfg(not(windows))]
+    true
 }
 
 #[derive(Clone, Copy)]
@@ -74,6 +92,8 @@ pub(crate) struct Style(bool);
 
 pub(crate) enum Role {
     Heading,
+    /// Field names within a line, which recede so their values stand out.
+    Label,
     /// Command and option names.
     Command,
     /// Placeholders for values the user supplies.
@@ -92,7 +112,7 @@ impl Style {
         let sequence = match role {
             Role::Heading => palette::HEADING,
             Role::Command => palette::COMMAND,
-            Role::Placeholder => palette::MUTED,
+            Role::Label | Role::Placeholder => palette::MUTED,
         };
         Cow::Owned(format!("{sequence}{text}{}", palette::RESET))
     }
@@ -105,7 +125,10 @@ impl Style {
 
     /// A case disposition in its outcome colour.
     pub(crate) fn disposition(self, disposition: esdieff::Disposition) -> Cow<'static, str> {
-        self.colored(Self::outcome(disposition).0, disposition.as_str())
+        self.colored(
+            Self::disposition_palette(disposition).0,
+            disposition.as_str(),
+        )
     }
 
     /// The symbol that starts the line of a case disposition, or nothing when plain.
@@ -113,11 +136,11 @@ impl Style {
         if !self.enabled() {
             return Cow::Borrowed("");
         }
-        let (sequence, mark) = Self::outcome(disposition);
+        let (sequence, mark) = Self::disposition_palette(disposition);
         self.colored(sequence, mark)
     }
 
-    fn outcome(disposition: esdieff::Disposition) -> (&'static str, &'static str) {
+    fn disposition_palette(disposition: esdieff::Disposition) -> (&'static str, &'static str) {
         match disposition {
             esdieff::Disposition::Passed => (palette::PASSED, palette::PASSED_MARK),
             esdieff::Disposition::Failed => (palette::FAILED, palette::FAILED_MARK),

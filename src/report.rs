@@ -1753,9 +1753,8 @@ impl Report<'_> {
             }
         }
         if let Some(state) = &self.sample {
-            output.label("Selected");
             output.push_str(&format!(
-                " {} in model {} at {}\n",
+                "Selected {} in model {} at {}\n",
                 state.kind.as_str(),
                 state.model.get(),
                 serde_json::to_string(&state.pointer).expect("selector encoding"),

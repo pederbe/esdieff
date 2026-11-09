@@ -485,8 +485,8 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     ));
     assert!(styled.contains(": \x1b[1;38;2;90;247;142mpassed\x1b[0m\n"));
     assert!(styled.contains(concat!(
-        "\x1b[38;2;112;120;140mValues:\x1b[0m 2 \x1b[1;38;2;90;247;142madmitted\x1b[0m",
-        " · 7 \x1b[1;38;2;255;92;87mrejected\x1b[0m",
+        "\x1b[38;2;112;120;140mValues:\x1b[0m \x1b[1;38;2;90;247;142m2 admitted\x1b[0m",
+        " · \x1b[1;38;2;255;92;87m7 rejected\x1b[0m",
         " · 0 undetermined\n"
     )));
     assert!(styled.contains(&format!(
@@ -508,8 +508,8 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     let styled = String::from_utf8(styled).unwrap();
     assert!(styled.contains(": \x1b[1;38;2;255;92;87mfailed\x1b[0m\n"));
     assert!(styled.contains(concat!(
-        "\x1b[38;2;112;120;140mEntries:\x1b[0m 1 \x1b[1;38;2;90;247;142mpassed\x1b[0m",
-        " · 1 \x1b[1;38;2;255;92;87mfailed\x1b[0m",
+        "\x1b[38;2;112;120;140mEntries:\x1b[0m \x1b[1;38;2;90;247;142m1 passed\x1b[0m",
+        " · \x1b[1;38;2;255;92;87m1 failed\x1b[0m",
         " · 0 undetermined\n"
     )));
     assert!(styled.contains(

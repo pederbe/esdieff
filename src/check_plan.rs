@@ -733,12 +733,14 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             output.push_str(fields["sources"].get());
             output.push_str(",\"cases\":[");
         } else {
-            output.push_str(&color.stdout().span(Role::Heading, "Esdieff check run"));
-            output.push_str("\nPlan: ");
-            output.push_str(&identity);
-            output.push_str("\nSources: ");
-            output.push_str(fields["sources"].get());
-            output.push('\n');
+            let style = color.stdout();
+            output.push_str(&format!(
+                "{}\n{} {identity}\n{} {}\n",
+                style.span(Role::Heading, "Esdieff check run"),
+                style.span(Role::Label, "Plan:"),
+                style.span(Role::Label, "Sources:"),
+                fields["sources"].get()
+            ));
         }
     }
     for (index, case) in plan.cases.iter().enumerate() {
@@ -756,10 +758,12 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
                 let record = request_error(case, &ids, index, message)?;
                 summary.request_errors += 1;
                 if !json_output {
+                    let style = color.stdout();
                     write!(
                         output,
-                        "\n{} ",
-                        color.stdout().failure("Case request error:")
+                        "\n{}{} ",
+                        style.disposition_mark(esdieff::Disposition::Failed),
+                        style.failure("Case request error:")
                     )
                     .expect("String write");
                 }
@@ -819,9 +823,32 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             let broader: BTreeMap<&str, &RawValue> =
                 serde_json::from_str(coverage["broader"].get())
                     .map_err(|e| host(format!("cannot disclose broader coverage: {e}")))?;
-            output.push_str(&format!("\n{} {}\nOperation: {}\nScope/profile/selector: {}\n{}Disposition: {}\nComplete: {}\nOutcome: {}\nBroader RFC coverage: {}\nBaseline: {}\nPolicy: {}\n", color.stdout().span(Role::Heading, "Case:"), encode_text(case.name), case.operation.name(), fields["request"].get(), color.stdout().disposition_mark(disposition), color.stdout().disposition(disposition), complete, fields["outcome"].get(), broader["state"].get().trim_matches('"'), fields["baseline"].get(), fields["policy"].get()));
+            let style = color.stdout();
+            let label = |text| style.span(Role::Label, text);
+            output.push_str(&format!(
+                "\n{} {}\n{} {}\n{} {}\n{}{} {}\n{} {complete}\n{} {}\n{} {}\n{} {}\n{} {}\n",
+                style.span(Role::Heading, "Case:"),
+                encode_text(case.name),
+                label("Operation:"),
+                case.operation.name(),
+                label("Scope/profile/selector:"),
+                fields["request"].get(),
+                style.disposition_mark(disposition),
+                label("Disposition:"),
+                style.disposition(disposition),
+                label("Complete:"),
+                label("Outcome:"),
+                fields["outcome"].get(),
+                label("Broader RFC coverage:"),
+                broader["state"].get().trim_matches('"'),
+                label("Baseline:"),
+                fields["baseline"].get(),
+                label("Policy:"),
+                fields["policy"].get()
+            ));
             if let Some((_, heading, value)) = tag {
-                output.push_str(&format!("{heading}: {value}\n"));
+                let heading = format!("{heading}:");
+                output.push_str(&format!("{} {value}\n", label(&heading)));
             }
             drop(fields);
             drop(native);
@@ -845,7 +872,8 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
     if json_output {
         output.push_str(&format!("],\"summary\":{}}}\n", summary.wire()));
     } else {
-        output.push_str(&format!("\nCheck case summary: {}\n", summary.wire()));
+        let summary_label = color.stdout().span(Role::Label, "Check case summary:");
+        output.push_str(&format!("\n{summary_label} {}\n", summary.wire()));
     }
     if output.len() > REPORT_BYTES {
         return Err(host("run report exceeds admitted envelope"));

@@ -60,10 +60,13 @@ fn evidence_json(counts: [u32; 5]) -> Value {
         "rejected_outside":outside,"rejected_candidate":rejected,"undetermined":undetermined})
 }
 
+const EVIDENCE_LABEL: &str = "Corpus evidence:";
+
+/// The corpus evidence counts that follow `EVIDENCE_LABEL` on an indented line.
 fn human_evidence(counts: [u32; 5]) -> String {
     let [examples, boundaries, outside, rejected, undetermined] = counts;
     format!(
-        "  Corpus evidence: {examples} other admitted examples, {boundaries} admitted boundary candidates, {outside} rejected outside candidates, {rejected} other rejected candidates, {undetermined} undetermined\n"
+        " {examples} other admitted examples, {boundaries} admitted boundary candidates, {outside} rejected outside candidates, {rejected} other rejected candidates, {undetermined} undetermined\n"
     )
 }
 
@@ -82,6 +85,8 @@ pub(super) fn description_bytes(document: SourceId, kind: SampleKind, pointer: &
         + description_close(u32::MAX).len()
         + 1;
     let human = human_heading(kind, pointer, GenerationState::Unavailable).len()
+        + "  ".len()
+        + EVIDENCE_LABEL.len()
         + human_evidence(counts).len()
         + NO_ADMITTED.len()
         + human_omitted(u32::MAX, u32::MAX).len();
@@ -390,11 +395,9 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         } else {
             text.separator(", ");
         }
-        let count = result.count(admission);
-        text.push_str(&format!("{count} "));
-        // Only a nonzero count takes the colour of its admission.
-        text.span(
-            (count != 0).then(|| admission_role(admission)),
+        text.count(
+            u64::from(result.count(admission)),
+            admission_role(admission),
             admission.as_str(),
         );
     }
@@ -434,6 +437,8 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         text.status(role, description.state.as_str());
         text.push('\n');
         let counts = evidence_counts(description);
+        text.push_str("  ");
+        text.label(EVIDENCE_LABEL);
         text.push_str(&human_evidence(counts));
         if counts[0] == 0 && counts[1] == 0 {
             text.push_str(NO_ADMITTED);

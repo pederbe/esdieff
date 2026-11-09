@@ -1476,6 +1476,12 @@ fn a_breaking_revision_that_keeps_its_version_warns_in_every_format() {
     assert_eq!(human.status.code(), Some(1));
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.contains(CODE), "{human}");
+    let styled = diff(old.path(), new.path(), &["--color", "always"]);
+    let styled = String::from_utf8(styled.stdout).unwrap();
+    assert!(
+        styled.contains("\n\n\x1b[1;38;2;243;156;18m⚠ Warnings:\x1b[0m\n"),
+        "{styled}"
+    );
 
     let markdown = diff(old.path(), new.path(), &["--format", "markdown"]);
     assert_eq!(markdown.status.code(), Some(1));

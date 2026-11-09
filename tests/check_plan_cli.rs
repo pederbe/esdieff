@@ -274,6 +274,10 @@ fn sample_request_errors_retain_only_tagged_fields_and_continue_independent_case
     assert!(human.contains("wrong class"));
     assert!(human.contains("Admission: admitted"));
     assert!(human.contains(&serde_json::to_string(&result["summary"]).unwrap()));
+    let styled = String::from_utf8(run(&plan, &["--color", "always"]).stdout).unwrap();
+    assert!(styled.contains(
+        "\n\x1b[1;38;2;255;92;87m✗ \x1b[0m\x1b[1;38;2;255;92;87mCase request error:\x1b[0m "
+    ));
     let all_errors = files.mixed(json!(errors));
     let result = wire(&run(&all_errors, &["--format", "json"]), 2);
     assert_eq!(result["sources"].as_array().unwrap().len(), 2);
@@ -344,7 +348,11 @@ fn all_sample_kinds_admit_and_reject_with_direct_native_parity() {
         assert!(human.stdout.contains(&0x1b));
         let human = String::from_utf8(human.stdout).unwrap();
         assert_eq!(
-            human.matches(&format!("Admission: {admission}\n")).count(),
+            human
+                .matches(&format!(
+                    "\x1b[38;2;112;120;140mAdmission:\x1b[0m {admission}\n"
+                ))
+                .count(),
             5
         );
     }
@@ -1910,13 +1918,15 @@ fn human_run_output_shows_each_diff_case_classification_and_native_report() {
     let colored = run(&plan, &["--color", "always"]);
     assert_eq!(colored.status.code(), Some(1));
     let colored = String::from_utf8(colored.stdout).unwrap();
-    assert!(colored.starts_with("\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m\nPlan: "));
+    assert!(colored.starts_with(
+        "\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m\n\x1b[38;2;112;120;140mPlan:\x1b[0m "
+    ));
     for (sequence, mark, disposition) in [
         ("\x1b[1;38;2;255;92;87m", "✗ ", "failed"),
         ("\x1b[1;38;2;90;247;142m", "✔ ", "passed"),
     ] {
         assert!(colored.contains(&format!(
-            "\n{sequence}{mark}\x1b[0mDisposition: {sequence}{disposition}\x1b[0m\n"
+            "\n{sequence}{mark}\x1b[0m\x1b[38;2;112;120;140mDisposition:\x1b[0m {sequence}{disposition}\x1b[0m\n"
         )));
     }
 }

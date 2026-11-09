@@ -18,6 +18,10 @@ serde_json = { version = "=1.0.154", features = ["raw_value"] }
 same-file = "=1.0.6"
 hotpath = { version = "=0.31.1", optional = true }
 
+# Turns on ANSI processing in Windows consoles, which styled output needs.
+[target.'cfg(windows)'.dependencies]
+nu-ansi-term = "=0.50.3"
+
 # Profiling with hotpath-rs is off by default, so normal builds compile no
 # instrumentation. See docs/profiling.md.
 [features]
