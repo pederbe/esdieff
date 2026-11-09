@@ -7,8 +7,10 @@ Use `Esdieff` for the product name and `esdieff` for the crate, command, reposit
 Every change, including the maintainer's, enters `main` through a pull request
 that passes the required hosted `CI` check. The maintainer uses a `contrib/`
 branch in this repository. Other contributors use a branch in their fork.
-Never force-push. Run independent Spec and Standards review for code changes
-and resolve material findings before integration.
+Never force-push. The one exception is release-plz, which rewrites its own
+release branch when it refreshes the release pull request. Run independent Spec
+and Standards review for code changes and resolve material findings before
+integration.
 
 ## Checks
 
