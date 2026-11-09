@@ -27,12 +27,16 @@ fn author_style_is_explicit_and_leaves_names_and_unrequested_checking_plain() {
     let styled = result.to_human_with_style(HumanStyle::Ansi);
     assert_presents(styled.as_bytes(), ordinary.as_bytes());
     assert!(styled.contains(
-        "\x1b[1;38;2;189;147;249mAuthor\x1b[0m failed: \x1b[1;38;2;90;247;142m✔ passed\x1b[0m"
+        "\x1b[1;38;2;90;247;142m✔ \x1b[0m\x1b[1;38;2;189;147;249mAuthor\x1b[0m failed: \x1b[1;38;2;90;247;142mpassed\x1b[0m"
     ));
-    assert!(styled.contains("\x1b[1mGeneration:\x1b[0m \x1b[1;38;2;90;247;142mcomplete\x1b[0m"));
-    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[1;38;2;90;247;142mestablished\x1b[0m"));
-    assert!(styled.contains("\x1b[1mChecking:\x1b[0m not requested"));
-    assert!(styled.contains("\x1b[1mBroader RFC coverage:\x1b[0m partial\n"));
+    assert!(styled.contains(
+        "\x1b[38;2;112;120;140mGeneration:\x1b[0m \x1b[1;38;2;90;247;142mcomplete\x1b[0m"
+    ));
+    assert!(styled.contains(
+        "\x1b[38;2;112;120;140mFidelity:\x1b[0m \x1b[1;38;2;90;247;142mestablished\x1b[0m"
+    ));
+    assert!(styled.contains("\x1b[38;2;112;120;140mChecking:\x1b[0m not requested"));
+    assert!(styled.contains("\x1b[38;2;112;120;140mBroader RFC coverage:\x1b[0m partial\n"));
     assert!(!styled.contains("✗ failed"));
     assert!(!ordinary.contains('\x1b'));
 }
@@ -219,8 +223,10 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
     let styled = result.to_human_with_style(HumanStyle::Ansi);
     assert_presents(styled.as_bytes(), ordinary.as_bytes());
     assert!(styled.contains("\x1b[1;38;2;90;247;142mcomplete\x1b[0m"));
-    assert!(styled.contains("\x1b[1mFidelity:\x1b[0m \x1b[1;38;2;243;156;18mundetermined\x1b[0m"));
-    assert!(styled.contains("esdieff.initial/1: \x1b[1;38;2;255;92;87m✗ failed\x1b[0m"));
+    assert!(styled.contains(
+        "\x1b[38;2;112;120;140mFidelity:\x1b[0m \x1b[1;38;2;243;156;18mundetermined\x1b[0m"
+    ));
+    assert!(styled.contains("esdieff.initial/1: \x1b[1;38;2;255;92;87mfailed\x1b[0m"));
     assert!(styled.contains("\x1b[1;38;2;255;92;87m✗ error\x1b[0m "));
     assert!(styled.contains("\x1b[1;38;2;243;156;18m⚠ incomplete\x1b[0m author.fidelity_unknown"));
     assert!(
@@ -267,7 +273,7 @@ fn delivery_failures_preserve_exit_status_disclosure_and_only_style_the_failure_
                 assert!(
                     output
                         .stderr
-                        .starts_with("\x1b[1;38;2;255;92;87m✗ esdieff:\x1b[0m ".as_bytes())
+                        .starts_with("\x1b[1;38;2;255;92;87mesdieff:\x1b[0m ".as_bytes())
                 );
                 assert_eq!(
                     output.stderr.iter().filter(|&&byte| byte == 0x1b).count(),

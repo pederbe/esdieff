@@ -92,8 +92,9 @@ Terminal examples in the docs keep the tool's own colours. Capture the output
 with `--color=always`, prefix the command line with `$ `, and pipe the text through
 `scripts/ansi-to-html.sh`, which writes a `<pre class="terminal">` block to paste into
 the Markdown. `docs/theme/esdieff.css` maps the terminal palette (purple
-headings, bold labels, blue syntax and notices, green passed, amber unfinished,
-red failed, gray metadata) to readable colours in the light and dark docs themes.
+headings, bold commands and options, blue notices, green passed, amber
+unfinished, red failed, gray labels, placeholders and metadata) to readable
+colours in the light and dark docs themes.
 The dark theme uses the terminal colours themselves, with a slightly lighter gray
 for contrast. Terminal blocks share the background of code blocks. Plain
 ```` ```console ```` fences remain fine for output without colour.

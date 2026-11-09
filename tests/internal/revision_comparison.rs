@@ -583,7 +583,7 @@ fn the_human_report_orders_breaking_undetermined_and_compatible_differences() {
     );
     let styled = comparison.to_human_with_style(esdieff::HumanStyle::Ansi);
     assert!(styled.starts_with(
-        "\x1b[1;38;2;189;147;249mRevision comparison\x1b[0m esdieff.revision-comparison/10: \x1b[1;38;2;255;92;87m✗ breaking\x1b[0m\n"
+        "\x1b[1;38;2;255;92;87m✗ \x1b[0m\x1b[1;38;2;189;147;249mRevision comparison\x1b[0m esdieff.revision-comparison/10: \x1b[1;38;2;255;92;87mbreaking\x1b[0m\n"
     ));
     assert!(styled.contains("\x1b[1;38;2;255;92;87mbreaking\x1b[0m"));
     assert!(styled.contains("\x1b[1;38;2;255;92;87mthermostat\x1b[0m"));

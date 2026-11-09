@@ -39,8 +39,12 @@ fn help_accepts_both_control_forms_and_only_styles_syntax() {
         assert_eq!(plain(&output.stdout), plain(&ordinary.stdout));
         let text = String::from_utf8(output.stdout).unwrap();
         assert!(text.contains("\x1b[1;38;2;189;147;249mUsage:\x1b[0m"));
-        assert!(text.contains("\x1b[38;2;92;184;255m--color\x1b[0m auto|always|never"));
-        assert!(!text.contains("\x1b[38;2;92;184;255mauto"));
+        // Commands and options are bold, placeholders gray and values plain.
+        assert!(text.contains("\x1b[1m--color\x1b[0m auto|always|never"));
+        assert!(text.contains("\x1b[1m--color\x1b[0m=\x1b[38;2;112;120;140mMODE\x1b[0m"));
+        assert!(text.contains("\x1b[1m--plan\x1b[0m \x1b[38;2;112;120;140mPLAN\x1b[0m ["));
+        assert!(!text.contains("\x1b[1mauto"));
+        assert!(!text.contains("\x1b[38;2;112;120;140mhuman"));
         assert!(text.ends_with("standard input.\n"));
     }
 }
@@ -75,7 +79,7 @@ fn all_commands_scan_controls_before_and_after_the_command() {
             assert!(
                 output
                     .stderr
-                    .starts_with("\x1b[1;38;2;255;92;87m✗ esdieff:\x1b[0m ".as_bytes())
+                    .starts_with("\x1b[1;38;2;255;92;87mesdieff:\x1b[0m ".as_bytes())
             );
             assert_eq!(
                 output.stderr.iter().filter(|byte| **byte == 0x1b).count(),
@@ -127,7 +131,7 @@ fn ordinary_scanning_keeps_last_valid_mode_and_does_not_rescan_values() {
         assert!(
             output
                 .stderr
-                .starts_with("\x1b[1;38;2;255;92;87m✗ esdieff:\x1b[0m ".as_bytes()),
+                .starts_with("\x1b[1;38;2;255;92;87mesdieff:\x1b[0m ".as_bytes()),
             "{args:?}"
         );
     }
@@ -207,7 +211,7 @@ fn help_and_report_output_failures_keep_exit_four_and_style_only_the_prefix() {
         let output = cli_color_support::closed_stdout(&args, input);
         assert_eq!(output.status.code(), Some(4));
         assert!(output.stderr.starts_with(
-            "\x1b[1;38;2;255;92;87m✗ esdieff:\x1b[0m cannot emit requested ".as_bytes()
+            "\x1b[1;38;2;255;92;87mesdieff:\x1b[0m cannot emit requested ".as_bytes()
         ));
         assert_eq!(
             output.stderr.iter().filter(|byte| **byte == 0x1b).count(),

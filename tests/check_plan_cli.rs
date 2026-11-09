@@ -1911,11 +1911,13 @@ fn human_run_output_shows_each_diff_case_classification_and_native_report() {
     assert_eq!(colored.status.code(), Some(1));
     let colored = String::from_utf8(colored.stdout).unwrap();
     assert!(colored.starts_with("\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m\nPlan: "));
-    for disposition in [
-        "\x1b[1;38;2;255;92;87m✗ failed\x1b[0m",
-        "\x1b[1;38;2;90;247;142m✔ passed\x1b[0m",
+    for (sequence, mark, disposition) in [
+        ("\x1b[1;38;2;255;92;87m", "✗ ", "failed"),
+        ("\x1b[1;38;2;90;247;142m", "✔ ", "passed"),
     ] {
-        assert!(colored.contains(&format!("\nDisposition: {disposition}\n")));
+        assert!(colored.contains(&format!(
+            "\n{sequence}{mark}\x1b[0mDisposition: {sequence}{disposition}\x1b[0m\n"
+        )));
     }
 }
 

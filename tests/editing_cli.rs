@@ -276,7 +276,7 @@ fn human_and_json_reports_agree_on_findings_and_unfinished_source_work() {
             let sequence = match severity {
                 "error" => "\x1b[1;38;2;255;92;87m✗",
                 "warning" | "incomplete" => "\x1b[1;38;2;243;156;18m⚠",
-                "notice" => "\x1b[1;38;2;92;184;255m▶",
+                "notice" => "\x1b[38;2;92;184;255m▶",
                 _ => unreachable!(),
             };
             let code = finding["code"].as_str().unwrap();
@@ -583,7 +583,7 @@ fn document_stdout_is_pure_json_under_every_color_and_report_mode() {
     let human = String::from_utf8(output.stdout).unwrap();
     assert!(
         human.contains(
-            "\x1b[1mRequested editing coverage:\x1b[0m total 1 · assessed 1 · undetermined 0\n"
+            "\x1b[38;2;112;120;140mRequested editing coverage:\x1b[0m total 1 · assessed 1 · undetermined 0\n"
         ),
         "{human}"
     );
