@@ -95,8 +95,8 @@ the Markdown. `docs/theme/esdieff.css` maps the terminal palette (purple
 headings, bold labels, blue syntax and notices, green passed, amber unfinished,
 red failed, gray metadata) to readable colours in the light and dark docs themes.
 The dark theme uses the terminal colours themselves, with a slightly lighter gray
-for contrast. Plain ```` ```console ```` fences remain fine for output without
-colour.
+for contrast. Terminal blocks share the background of code blocks. Plain
+```` ```console ```` fences remain fine for output without colour.
 
 The launcher builds the unpublished Rust helper in `tools/terminal-html` on its
 first run using the repository's Rust toolchain. Cargo caches it in

@@ -94,7 +94,7 @@ html:not(.js) #mdbook-sidebar-toggle { display: none; }
 .navy pre, .navy code.hljs { background: #001c2b; }
 .content pre:has(> code.language-console), .content pre.terminal { border-top-color: var(--doc-second); }
 .content pre.terminal { padding: 0; font-size: 0.875em; }
-.content pre.terminal > code { display: block; padding: 20px 22px; line-height: 1.65; background: none; white-space: pre; overflow-x: auto; }
+.content pre.terminal > code { display: block; white-space: pre; overflow-x: auto; }
 .content pre.terminal b { font-weight: 650; color: var(--fg); }
 .content pre.terminal .p { color: var(--doc-second); }
 .content pre.terminal .h { color: var(--term-purple); }
