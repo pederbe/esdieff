@@ -30,6 +30,11 @@ new terminal and check the installation:
 esdieff --version
 ```
 
+Colored reports start their status lines with symbols such as ✔ and ✗.
+Windows Terminal, the default terminal on Windows 11, shows them. The fonts of
+the classic console window do not include these symbols. If you use that
+window, switch to Windows Terminal, or add `--color never` for plain reports.
+
 To update, replace the extracted files with a newer release. To uninstall,
 remove the folder and its entry from your `PATH`.
 
