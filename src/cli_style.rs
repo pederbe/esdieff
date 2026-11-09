@@ -60,7 +60,7 @@ impl ColorMode {
         Style(match self {
             Self::Always => {
                 // Forced styling is written even where the console cannot show it.
-                console_shows_ansi();
+                enable_console_ansi();
                 true
             }
             Self::Never => false,
@@ -68,20 +68,20 @@ impl ColorMode {
                 terminal
                     && !std::env::var_os("TERM").is_some_and(|value| value == "dumb")
                     && !std::env::var_os("NO_COLOR").is_some_and(|value| !value.is_empty())
-                    && console_shows_ansi()
+                    && enable_console_ansi()
             }
         })
     }
 }
 
-/// Whether the attached console interprets ANSI styling. Windows consoles do once
-/// virtual terminal processing is on. Other terminals interpret it directly.
-fn console_shows_ansi() -> bool {
+/// Turns on virtual terminal processing in a Windows console, once, and reports whether
+/// the console now interprets ANSI styling. Other terminals interpret it directly.
+fn enable_console_ansi() -> bool {
     #[cfg(windows)]
     {
-        static SHOWS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         // This reaches the console through CONOUT$, so it works while stdout or stderr is redirected.
-        *SHOWS.get_or_init(|| nu_ansi_term::enable_ansi_support().is_ok())
+        *ENABLED.get_or_init(|| nu_ansi_term::enable_ansi_support().is_ok())
     }
     #[cfg(not(windows))]
     true
