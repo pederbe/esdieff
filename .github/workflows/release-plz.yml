@@ -1,8 +1,9 @@
 name: Release-plz
 
-# Every Monday, release-plz opens a release pull request with the next version
-# and changelog when there are unreleased changes. It merges once CI passes.
-# Merging it tags the version, and the Release workflow builds and publishes it.
+# Every Monday, release-plz opens or updates one release pull request when there
+# are unreleased changes. It merges once CI passes. Pushes to main refresh an
+# open release pull request. Merging it tags the version, and the Release
+# workflow builds and publishes it.
 on:
   push:
     branches: [main]
@@ -13,75 +14,60 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-plz
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   release-pr:
     if: >-
-      github.repository == 'pederbe/esdieff' && github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && vars.WEEKLY_RELEASE_ENABLED == 'true'))
+      github.repository == 'pederbe/esdieff' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
-    permissions:
-      contents: read
-    concurrency:
-      group: release-plz-pr
-      cancel-in-progress: false
     steps:
-      # release-plz force-pushes when it updates an open release pull request.
-      # Close that pull request instead, so release-plz opens a fresh one. After
-      # another change merges, this keeps the release up to date with main.
-      - name: Replace any open release pull request
+      - name: Prepare weekly release or refresh an open release pull request
         id: prepare
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
-            --jq '.[] | select(.headRefName | startswith("release-plz-")) | .number')
-          if [ "$EVENT" = push ] && [ -z "$open" ]; then
-            echo run=false >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "$EVENT" = push ]; then
+            open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json headRefName \
+              --jq '[.[] | select(.headRefName | startswith("release-plz-"))] | length')
+            if [ "$open" = 0 ]; then
+              echo run=false >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           fi
-          for pr in $open; do
-            gh pr close "$pr" --repo "$GITHUB_REPOSITORY" --delete-branch \
-              --comment 'Replaced by a new release pull request with the latest changes on main.'
-          done
           echo run=true >> "$GITHUB_OUTPUT"
-      - if: steps.prepare.outputs.run == 'true'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.prepare.outputs.run == 'true'
         with:
           fetch-depth: 0
           persist-credentials: false
-      - if: steps.prepare.outputs.run == 'true'
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-        with:
-          toolchain: stable
+      - run: rustup toolchain install
+        if: steps.prepare.outputs.run == 'true'
       # CI runs only on pull requests opened with a personal token, not with the workflow token.
-      - if: steps.prepare.outputs.run == 'true'
+      - id: release-plz
+        if: steps.prepare.outputs.run == 'true'
         uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
         with:
           command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
       - name: Merge the release pull request once CI passes
-        if: steps.prepare.outputs.run == 'true'
+        if: steps.release-plz.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
-        run: |
-          set -euo pipefail
-          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
-            --jq '[.[] | select(.headRefName | startswith("release-plz-"))][0].number // empty')
-          if [ -z "$pr" ]; then
-            echo 'No unreleased changes this week.'
-            exit 0
-          fi
-          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --auto
+          PR: ${{ steps.release-plz.outputs.pr }}
+        run: gh pr merge "$(jq -r .number <<< "$PR")" --repo "$GITHUB_REPOSITORY" --squash --auto
 
   release:
     if: github.repository == 'pederbe/esdieff' && github.event_name == 'push'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: read
@@ -91,16 +77,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-        with:
-          toolchain: stable
+      - run: rustup toolchain install
       - id: release-plz
         uses: release-plz/action@66b324fd6c72d05d2a08568492ecdd62bfb8a62b # v0.5.148
         with:
           command: release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # Tags created with the workflow token start no workflows, so start the build here.
+      # Workflow-token events do not start other workflows. Dispatch the build
+      # explicitly after release-plz has tagged it. The Release workflow creates
+      # the draft, qualifies the assets and publishes the crate.
       - name: Build and publish the tagged release
         if: steps.release-plz.outputs.releases_created == 'true'
         env:
@@ -108,6 +94,7 @@ jobs:
           RELEASES: ${{ steps.release-plz.outputs.releases }}
         run: |
           set -euo pipefail
-          for tag in $(jq -r '.[].tag' <<< "$RELEASES"); do
+          tag=$(jq -r '.[] | select(.package_name == "esdieff") | .tag' <<< "$RELEASES")
+          if [ -n "$tag" ]; then
             gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag" -f publish=true
-          done
+          fi
