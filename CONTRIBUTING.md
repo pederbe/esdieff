@@ -77,11 +77,11 @@ A week without changes for the changelog makes no release. Merging the release
 pull request tags the version and starts the Release workflow, which builds and
 publishes the release with that changelog section as its notes.
 
-To edit a release pull request, disable its auto-merge first, then merge it
-yourself. A merge to `main` in the meantime updates it again and overwrites your
-edits. To skip a week, close the release pull request. Maintainers can open a
-release pull request at another time by running the Release-plz workflow
-manually.
+Edits pushed to a release pull request last only until the next merge to
+`main`, which regenerates the pull request and turns its auto-merge back on.
+To skip a week, close the release pull request, and the next scheduled run opens
+a new one. Maintainers can open a release pull request at another time by
+running the Release-plz workflow manually.
 
 If the Release workflow fails after tagging for a reason outside the tagged
 sources, such as a flaky job, a secret or a setting, fix the cause and run it
