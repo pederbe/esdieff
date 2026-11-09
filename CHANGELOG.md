@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
+### Added
+
+- Check link values from the Link sdfType draft ([#104](https://github.com/pederbe/esdieff/pull/104))
+- Generate link member-rule rejections ([#106](https://github.com/pederbe/esdieff/pull/106))
+- Style terminal output with status symbols and a shared palette ([#110](https://github.com/pederbe/esdieff/pull/110))
+- Start status lines with their symbol and show field names in grey ([#116](https://github.com/pederbe/esdieff/pull/116))
+
+### Dependencies
+
+- Update rust crate hotpath to v0.31.0 ([#92](https://github.com/pederbe/esdieff/pull/92))
+- Update daily dependencies ([#95](https://github.com/pederbe/esdieff/pull/95))
+
+### Documentation
+
+- Give terminal examples the code block background and refresh the landing transcript ([#113](https://github.com/pederbe/esdieff/pull/113))
+
 ### Changed
 
 - Generation contract `esdieff.generation/3` replaces `/2` for the Link member
