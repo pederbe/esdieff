@@ -75,15 +75,15 @@ The run exits 1, because the rejected sample is a failed case. A plan has no exp
 `--recursive` descends into subdirectories and `--exclude` prunes a literal file or subtree relative to each directory. Sample files, plans and a `.bak` lookalike are not selected. Without the exclusion, the draft's broken type fails the run:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff check --directory examples/directory-check --recursive
-<b><span class="h">Esdieff:</span></b> <b><span class="r">✗ failed</span></b>
-<b>Complete:</b> true
-<b>Errors:</b> 1 · <b>warnings:</b> 0 · <b>notices:</b> 0 · <b>incomplete checks:</b> 0
+<b><span class="r">✗ </span></b><b><span class="h">Esdieff:</span></b> <b><span class="r">failed</span></b>
+<span class="m">Complete:</span> true
+<span class="m">Errors:</span> <b><span class="r">1</span></b> · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
 ...
 
 <b><span class="r">✗ data.string</span></b>: A textual data quality must contain a string
 source 2 "/sdfData/Unfinished/type"
 
-<b>Diagnostic details omitted:</b> 0
+<span class="m">Diagnostic details omitted:</span> 0
 </code></pre>
 
 Repeat `--directory` for several collections, add explicit files beside them, and name a discovered root by its joined path, such as `--root examples/directory-check/device.sdf.json`. [Check a local model collection](../directory-discovery.md) states the selection rules and limits.

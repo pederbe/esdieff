@@ -138,8 +138,13 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         } else {
             text.separator(", ");
         }
-        text.push_str(&format!("{} ", result.count(outcome)));
-        text.span(outcome_role(outcome), outcome.as_str());
+        let count = result.count(outcome);
+        text.push_str(&format!("{count} "));
+        // Only a nonzero count takes the colour of its outcome.
+        text.span(
+            (count != 0).then(|| outcome_role(outcome)),
+            outcome.as_str(),
+        );
     }
     text.push('\n');
     text.label("Admissions:");

@@ -487,7 +487,7 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     assert!(styled.contains(concat!(
         "\x1b[38;2;112;120;140mValues:\x1b[0m 2 \x1b[1;38;2;90;247;142madmitted\x1b[0m",
         " · 7 \x1b[1;38;2;255;92;87mrejected\x1b[0m",
-        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+        " · 0 undetermined\n"
     )));
     assert!(styled.contains(&format!(
         "\x1b[1;38;2;90;247;142m✔ \x1b[0m\x1b[1;38;2;189;147;249mproperty {pointer}\x1b[0m: \x1b[1;38;2;90;247;142mcomplete\x1b[0m\n"
@@ -510,7 +510,7 @@ fn generation_and_trace_reports_mark_outcomes_and_separate_counts() {
     assert!(styled.contains(concat!(
         "\x1b[38;2;112;120;140mEntries:\x1b[0m 1 \x1b[1;38;2;90;247;142mpassed\x1b[0m",
         " · 1 \x1b[1;38;2;255;92;87mfailed\x1b[0m",
-        " · 0 \x1b[1;38;2;243;156;18mundetermined\x1b[0m\n"
+        " · 0 undetermined\n"
     )));
     assert!(styled.contains(
         "\x1b[38;2;112;120;140mAdmissions:\x1b[0m 1 admitted · 1 rejected · 0 undetermined\n"

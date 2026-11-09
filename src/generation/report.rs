@@ -390,8 +390,13 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         } else {
             text.separator(", ");
         }
-        text.push_str(&format!("{} ", result.count(admission)));
-        text.span(admission_role(admission), admission.as_str());
+        let count = result.count(admission);
+        text.push_str(&format!("{count} "));
+        // Only a nonzero count takes the colour of its admission.
+        text.span(
+            (count != 0).then(|| admission_role(admission)),
+            admission.as_str(),
+        );
     }
     text.push('\n');
     text.label("Descriptions:");

@@ -385,8 +385,11 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
         } else {
             text.separator(", ");
         }
-        text.push_str(&format!("{} ", result["summary"][classification.as_str()]));
-        text.span(classification_role(classification), classification.as_str());
+        let count = &result["summary"][classification.as_str()];
+        text.push_str(&format!("{count} "));
+        // Only a nonzero count takes the colour of its classification.
+        let role = (count.as_u64() != Some(0)).then(|| classification_role(classification));
+        text.span(role, classification.as_str());
     }
     text.push('\n');
     // The recorded unit evidence, as in `check`, from the state the wire records also use.
