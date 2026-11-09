@@ -16,7 +16,7 @@ A **sample** is one JSON value for one definition. Save `21.5` in `comfortable.j
 <span class="m">Errors:</span> 0 · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
 <span class="m">Scope:</span> selected
 ...
-<span class="m">Selected</span> property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
+Selected property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
 <b><span class="g">✔ </span></b><span class="m">Sample</span> 2: <b><span class="g">admitted</span></b> · context available
 ...
 </code></pre>
@@ -46,12 +46,12 @@ The reports are trimmed to the lines about the sample. A rejected sample is a fa
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">passed</span></b>
-<span class="m">Values:</span> 2 <b><span class="g">admitted</span></b> · 8 <b><span class="r">rejected</span></b> · 0 undetermined
+<span class="m">Values:</span> <b><span class="g">2 admitted</span></b> · <b><span class="r">8 rejected</span></b> · 0 undetermined
 <span class="m">Descriptions:</span> 1
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
 <b><span class="g">✔ </span></b><b><span class="h">property /sdfObject/Thermostat/sdfProperty/targetTemperature</span></b>: <b><span class="g">complete</span></b>
-  Corpus evidence: 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
+  <span class="m">Corpus evidence:</span> 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
   <b><span class="r">rejected    </span></b> null          null (sample.null) [rejected_candidate]
   <b><span class="g">admitted    </span></b> minimum       5 [admitted_boundary]
   <b><span class="g">admitted    </span></b> maximum       30 [admitted_boundary]
@@ -104,7 +104,7 @@ Each line carries the selector, the value and its settled result as `expected`. 
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace readings.jsonl thermostat.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">failed</span></b>
-<span class="m">Entries:</span> 3 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 undetermined
+<span class="m">Entries:</span> <b><span class="g">3 passed</span></b> · <b><span class="r">2 failed</span></b> · 0 undetermined
 <span class="m">Admissions:</span> 2 admitted · 3 rejected · 0 undetermined
 
 <b><span class="r">✗ </span></b>line 2 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">failed</span></b>
@@ -139,7 +139,7 @@ admissions match the recorded expectations. This thermostat replay passes:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace vectors.jsonl thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="g">passed</span></b>
-<span class="m">Entries:</span> 10 <b><span class="g">passed</span></b> · 0 failed · 0 undetermined
+<span class="m">Entries:</span> <b><span class="g">10 passed</span></b> · 0 failed · 0 undetermined
 <span class="m">Admissions:</span> 2 admitted · 8 rejected · 0 undetermined
 </code></pre>
 
@@ -153,7 +153,7 @@ Against this revision, the vectors whose settled admission changed fail:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document revised.sdf.json --trace vectors.jsonl revised.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">failed</span></b>
-<span class="m">Entries:</span> 8 <b><span class="g">passed</span></b> · 2 <b><span class="r">failed</span></b> · 0 undetermined
+<span class="m">Entries:</span> <b><span class="g">8 passed</span></b> · <b><span class="r">2 failed</span></b> · 0 undetermined
 <span class="m">Admissions:</span> 4 admitted · 6 rejected · 0 undetermined
 
 <b><span class="r">✗ </span></b>line 5 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">failed</span></b>

@@ -109,7 +109,7 @@ Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/t
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">passed</span></b>
-<span class="m">Values:</span> 15 <b><span class="g">admitted</span></b> · 60 <b><span class="r">rejected</span></b> · 0 undetermined
+<span class="m">Values:</span> <b><span class="g">15 admitted</span></b> · <b><span class="r">60 rejected</span></b> · 0 undetermined
 <span class="m">Descriptions:</span> 4
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
 
@@ -117,7 +117,7 @@ Corpus evidence counts kept values, not constraints or individual Choice alterna
   ...
 
 <b><span class="g">✔ </span></b><b><span class="h">property /sdfObject/Thermostat/sdfProperty/targetTemperature</span></b>: <b><span class="g">complete</span></b>
-  Corpus evidence: 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
+  <span class="m">Corpus evidence:</span> 0 other admitted examples, 2 admitted boundary candidates, 7 rejected outside candidates, 1 other rejected candidates, 0 undetermined
   <b><span class="r">rejected    </span></b> null          null (sample.null) [rejected_candidate]
   <b><span class="g">admitted    </span></b> minimum       5 [admitted_boundary]
   <b><span class="g">admitted    </span></b> maximum       30 [admitted_boundary]

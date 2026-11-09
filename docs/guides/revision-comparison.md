@@ -49,11 +49,11 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
-Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 1 compared · 0 removed · 0 added
-<span class="m">Differences:</span> 1 <b><span class="r">breaking</span></b> · 1 <b><span class="y">undetermined</span></b> · 1 <b><span class="g">compatible</span></b>
+<span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · <b><span class="y">1 undetermined</span></b> · <b><span class="g">1 compatible</span></b>
 
-<b><span class="h">Warnings:</span></b>
+<b><span class="y">⚠ Warnings:</span></b>
   <b><span class="y">⚠ comparison.version_not_increased</span></b> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
 
 <b><span class="r">✗ Breaking differences:</span></b>
@@ -132,9 +132,9 @@ lower the shared minimum there from -40 to -50. Keep the original `v1/` and
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old shared-v1 --new shared-v2
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
-Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 2 compared · 0 removed · 0 added
-<span class="m">Differences:</span> 1 <b><span class="r">breaking</span></b> · 0 undetermined · 0 compatible
+<span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · 0 undetermined · 0 compatible
 
 <b><span class="r">✗ Breaking differences:</span></b>
   changed quality minimum (thing-supplied data)
@@ -189,11 +189,11 @@ Review the file, delete any entry you do not intend, add a `note` to each if you
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
 <b><span class="g">✔ </span></b><span class="m">Disposition:</span> <b><span class="g">passed</span></b>, with 1 breaking and 1 undetermined differences acknowledged
-Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
+<span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 1 compared · 0 removed · 0 added
-<span class="m">Differences:</span> 1 <b><span class="r">breaking</span></b> · 1 <b><span class="y">undetermined</span></b> · 1 <b><span class="g">compatible</span></b>
+<span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · <b><span class="y">1 undetermined</span></b> · <b><span class="g">1 compatible</span></b>
 
-<b><span class="h">Warnings:</span></b>
+<b><span class="y">⚠ Warnings:</span></b>
   <b><span class="y">⚠ comparison.version_not_increased</span></b> in document: later version "1.0.0" does not compare higher than earlier version "1.0.0", after 1 breaking difference
 
 <b><span class="h">Acknowledged differences:</span></b>
