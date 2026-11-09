@@ -135,7 +135,18 @@ impl HumanText {
         }
         let line = self.plain.rfind('\n').map_or(0, |end| end + 1);
         let at = self.plain.len() - self.plain[line..].trim_start_matches(' ').len();
-        if self.style != HumanStyle::Ansi || role.marker().is_empty() || self.marked_at == Some(at)
+        // A line that starts inside an earlier span, after a line break in its text, keeps
+        // that span whole and gets no symbol.
+        let inside = self
+            .pieces
+            .iter()
+            .rev()
+            .take_while(|(range, _)| range.end > at)
+            .any(|(range, _)| range.start < at);
+        if self.style != HumanStyle::Ansi
+            || role.marker().is_empty()
+            || self.marked_at == Some(at)
+            || inside
         {
             self.span(role, text);
             return;
@@ -315,6 +326,20 @@ mod tests {
         assert_eq!(
             output.finish(usize::MAX),
             "\x1b[1;38;2;255;92;87m✗ failed\x1b[0m \x1b[1;38;2;90;247;142mpassed\x1b[0m"
+        );
+    }
+
+    #[test]
+    fn a_status_whose_line_starts_inside_a_span_keeps_its_colour_without_a_symbol() {
+        // A Given Name may contain a line break, which starts a line inside its heading.
+        let mut output = HumanText::new(HumanStyle::Ansi);
+        output.heading("property /a\nb");
+        output.push_str(": ");
+        output.status(Role::Passed, "complete");
+        assert_eq!(output.as_str(), "property /a\nb: complete");
+        assert_eq!(
+            output.finish(usize::MAX),
+            "\x1b[1;38;2;189;147;249mproperty /a\nb\x1b[0m: \x1b[1;38;2;90;247;142mcomplete\x1b[0m"
         );
     }
 
