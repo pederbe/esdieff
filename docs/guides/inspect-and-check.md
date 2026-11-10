@@ -1,6 +1,6 @@
 # Inspect and check a model
 
-This guide checks a model that reuses a shared definition, reads the findings and inspects effective definitions. It assumes Esdieff is [installed](../getting-started/README.md) and uses the rich model saved as `thermostat.sdf.json` on that page, plus the repository examples linked below.
+Check a model that reuses a shared definition, read the findings and inspect the effective definitions behind them. You need Esdieff [installed](../getting-started/README.md), the rich model saved as `thermostat.sdf.json` on that page, and the repository examples linked below.
 
 ## Supply the files a model needs
 

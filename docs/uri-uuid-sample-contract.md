@@ -1,6 +1,6 @@
 # URI and UUID sample contract
 
-This contract follows [ADR 0019: URI, URI-reference and UUID sample conventions](adr/0019-uri-and-uuid-sample-conventions.md). It extends the [selected-sample operation contract](sample-contract.md) without changing the nine-area `esdieff.sample/1` inventory, report version 1.1, selection, ownership or disposition rules. The adopted scope distinguishes representation, applicable URI scheme meaning, opaque UUID values and context-dependent equality.
+URI, URI-reference and UUID samples follow [ADR 0019: URI, URI-reference and UUID sample conventions](adr/0019-uri-and-uuid-sample-conventions.md). Their contract extends the [selected-sample operation contract](sample-contract.md) without changing the nine-area `esdieff.sample/1` inventory, report version 1.1, selection, ownership or disposition rules. The adopted scope distinguishes representation, applicable URI scheme meaning, opaque UUID values and context-dependent equality.
 
 FullBaseline establishes known `uri`, `uri-reference` and `uuid` model
 interpretations without supplying a value or invoking a representation check.

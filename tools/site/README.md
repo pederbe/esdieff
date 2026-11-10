@@ -120,7 +120,9 @@ For example, from the repository root after building Esdieff:
 
 The build needs mdBook 0.5 (`MDBOOK` can select an installed binary). It stages
 `docs/` so that links to the repository root (the domain language and the
-examples) resolve on the site, and it never deploys. `wrangler.jsonc` describes
+examples) resolve on the site, and it never deploys. Decision records in
+`docs/adr/` are not published. The build points links to them at the
+repository, and `book.toml` redirects their former addresses there. `wrangler.jsonc` describes
 the Cloudflare Workers static-assets deployment.
 
 ## Deployment

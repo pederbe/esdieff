@@ -1,6 +1,6 @@
 # Repeat checks and share reports
 
-This guide saves checks so they run the same way every time, checks a whole directory of models, and brings the results into CI and code review. It assumes Esdieff is [installed](../getting-started/README.md).
+Save checks so they run the same way every time, check a whole directory of models, and bring the results into CI and code review. You need Esdieff [installed](../getting-started/README.md).
 
 ## Save checks as a plan
 
@@ -150,6 +150,18 @@ Every command uses the same exit statuses, so a shell or CI step can act on them
 | 2 | The invocation, plan or a case request was invalid |
 | 3 | Nothing failed, but some work could not be settled, such as a missing dependency or an undetermined difference |
 | 4 | A host or output operation failed, such as writing the report |
+
+In a CI job, run the check as its own step and let its status decide the job:
+
+```sh
+esdieff check --directory models --recursive --strict-warnings
+```
+
+A missing `models` directory exits 2 and a named model file that is missing
+exits 3, so the step fails when the check could not run as well as when it
+found a problem. When you pipe a report into another program, such as `jq`, the
+shell reports that program's status instead. Run `set -o pipefail` before the
+pipeline to keep the check's status.
 
 An invalid invocation or undecodable plan writes its reason to standard error
 without a report. A valid plan whose individual case request is invalid still

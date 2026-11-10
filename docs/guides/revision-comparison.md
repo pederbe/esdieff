@@ -1,9 +1,8 @@
 # Compare two revisions
 
-This guide compares two revisions of a model before a change is published, reads
-which differences break the apps that use the device, and records the ones you
-intend. It uses a [current-checkout installation](../getting-started/README.md#direct-downloads-and-cargo)
-for the `esdieff.revision-comparison/10` output shown here.
+Compare two revisions of a model before a change is published, read which
+differences break the apps that use the device, and record the ones you intend.
+You need Esdieff [installed](../getting-started/README.md).
 
 ## Build a before and after pair
 

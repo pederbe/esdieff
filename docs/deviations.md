@@ -1,6 +1,6 @@
 # Agreed deviations and acceptance restrictions
 
-This document records explicitly agreed departures from [RFC 9880](https://www.rfc-editor.org/rfc/rfc9880.html) and narrower Esdieff acceptance policies. A policy rejection is distinguished from a definite violation of an RFC requirement.
+Esdieff has no agreed departures from [RFC 9880](https://www.rfc-editor.org/rfc/rfc9880.html) requirements and two narrower acceptance policies, A001 and A002. A policy rejection is distinguished from a definite violation of an RFC requirement.
 
 ## Deviations from RFC requirements
 

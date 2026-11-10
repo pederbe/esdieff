@@ -21,16 +21,21 @@ cp book.toml "$STAGE/"
 cp -r docs "$STAGE/docs"
 rm -rf "$STAGE/docs/agents" "$STAGE/docs/communications" "$STAGE/docs/presentations" \
        "$STAGE/docs/profiling" "$STAGE/docs/profiling.md"
+# Decision records stay in the repository. Pages link to them there, and book.toml
+# redirects their former addresses.
+rm -rf "$STAGE/docs/adr"
 cp GLOSSARY.md "$STAGE/docs/domain-language.md"
 find "$STAGE/docs" -name '*.md' -print0 | xargs -0 sed -i \
   -e 's#](\.\./\.\./GLOSSARY\.md#](../domain-language.md#g' \
   -e 's#](\.\./GLOSSARY\.md#](domain-language.md#g' \
+  -e "s#](\.\./adr/#]($GITHUB/docs/adr/#g" \
+  -e "s#](adr/#]($GITHUB/docs/adr/#g" \
   -e "s#](\.\./\.\./examples/#]($GITHUB/examples/#g" \
   -e "s#](\.\./examples/#]($GITHUB/examples/#g" \
   -e "s#](\.\./\.\./src/#]($GITHUB/src/#g" \
   -e "s#](\.\./src/#]($GITHUB/src/#g"
 # The domain language file links to docs/ from the repository root.
-sed -i -e 's#](docs/#](#g' "$STAGE/docs/domain-language.md"
+sed -i -e "s#](docs/adr/#]($GITHUB/docs/adr/#g" -e 's#](docs/#](#g' "$STAGE/docs/domain-language.md"
 # Let mdBook fingerprint the same favicon used by the homepage.
 cp site/favicon.svg "$STAGE/docs/theme/favicon.svg"
 
@@ -41,6 +46,13 @@ cp -r site/. "$NEW/"
 {
   printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>%s/</loc></url>\n' "$SITE"
   while IFS= read -r -d '' file; do
+    # Redirects to the decision records in the repository are not pages of the site.
+    case "$file" in
+      "$NEW"/docs/adr/*)
+        sed -i '/<\/head>/i\<meta name="robots" content="noindex">' "$file"
+        continue
+        ;;
+    esac
     case "${file##*/}" in
       print.html|toc.html) continue ;;
       404.html|README.html)
