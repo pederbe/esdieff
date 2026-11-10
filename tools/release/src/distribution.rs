@@ -407,6 +407,11 @@ fn repository(args: &[String]) -> Result<()> {
     )?;
     fs::create_dir_all(root.join("apt/pool/main/e/esdieff"))?;
     fs::create_dir_all(root.join("rpm"))?;
+    // Retain immutable packages, but advertise only this invocation's release.
+    let indexed_apt = work.0.join("apt");
+    let indexed_pool = indexed_apt.join("pool/main/e/esdieff");
+    fs::create_dir_all(&indexed_pool)?;
+    let mut indexed_rpms = Vec::new();
     let rpm_version = text(Command::new("rpm").arg("--version"))?;
     let rpm6 = rpm_version
         .split_whitespace()
@@ -422,6 +427,7 @@ fn repository(args: &[String]) -> Result<()> {
             .ok_or("package has no name")?;
         let (_, _, is_rpm) = package_identity(name).ok_or("expected an Esdieff .deb or .rpm")?;
         if is_rpm {
+            indexed_rpms.push(name);
             let copy = work.0.join(name);
             fs::copy(path, &copy)?;
             let identity = rpm_identity(&copy)?;
@@ -454,6 +460,7 @@ fn repository(args: &[String]) -> Result<()> {
             }
         } else {
             keep(path, &root.join("apt/pool/main/e/esdieff").join(name))?;
+            fs::copy(path, indexed_pool.join(name))?;
         }
     }
     let mut revision = 0;
@@ -528,7 +535,7 @@ fn repository(args: &[String]) -> Result<()> {
         let packages = output(
             Command::new("apt-ftparchive")
                 .args(["--arch", arch, "packages", "pool"])
-                .current_dir(&apt),
+                .current_dir(&indexed_apt),
         )?;
         fs::write(index.join("Packages"), packages)?;
         let compressed = output(
@@ -573,8 +580,12 @@ fn repository(args: &[String]) -> Result<()> {
     signer.sign(&dists.join("Release"), &dists.join("Release.gpg"), false)?;
     let generated = work.0.join("rpm");
     fs::create_dir(&generated)?;
+    let package_list = work.0.join("rpm-packages");
+    fs::write(&package_list, indexed_rpms.join("\n") + "\n")?;
     output(
         Command::new("createrepo_c")
+            .arg("--pkglist")
+            .arg(&package_list)
             .args(["--quiet", "--set-timestamp-to-revision", "--revision"])
             .arg(revision.to_string())
             .args(["--location-prefix", "../../", "--outputdir"])

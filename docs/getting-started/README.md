@@ -30,7 +30,7 @@ new terminal and check the installation:
 esdieff --version
 ```
 
-To update, replace the extracted files with a newer release. To uninstall,
+To update, replace the extracted files with the latest release. To uninstall,
 remove the folder and its entry from your `PATH`.
 
 A WinGet listing is being prepared. WinGet installation will become available
@@ -48,8 +48,8 @@ Updates arrive through your package manager.
 
 ### Direct downloads and Cargo
 
-[Download a release archive](https://github.com/pederbe/esdieff/releases), extract
-it and put the command on your `PATH`. Download a newer archive to update it.
+[Download the latest release archive](https://github.com/pederbe/esdieff/releases/latest), extract
+it and put the command on your `PATH`. Download the latest archive to update it.
 Remove the extracted command to uninstall it.
 
 Rust users can install a prebuilt release with:
@@ -65,12 +65,6 @@ cargo install --locked esdieff
 ```
 
 This builds the `esdieff` command and puts it in Cargo's binary directory, normally `~/.cargo/bin`. Make sure that directory is on your `PATH`.
-
-From a checkout of the repository, install the same way with a path instead:
-
-```sh
-cargo install --locked --path .
-```
 
 Repeat the Cargo installation command to update. Use `cargo uninstall esdieff`
 to remove it.

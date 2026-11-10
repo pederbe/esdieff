@@ -14,8 +14,8 @@ if [[ -n $repository_url ]]; then
 fi
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
 case $(uname -m) in
-  x86_64) architecture=amd64 ;;
-  aarch64|arm64) architecture=arm64 ;;
+  x86_64) architecture=amd64; rpm_architecture=x86_64 ;;
+  aarch64|arm64) architecture=arm64; rpm_architecture=aarch64 ;;
   *) echo 'Unsupported package test host' >&2; exit 1 ;;
 esac
 test -f "$repo/apt/pool/main/e/esdieff/esdieff_${version}_${architecture}.deb"
@@ -31,7 +31,7 @@ previous=$(find "$repo/apt/pool/main/e/esdieff" -name "esdieff_*_${architecture}
 for image in docker.io/library/ubuntu:22.04 docker.io/library/ubuntu:24.04 docker.io/library/fedora:44; do
   "$engine" run --rm --network="$network" -i -v "$repo:/repository:ro" \
     -e VERSION="$version" -e PREVIOUS="$previous" -e DIGEST="$digest" \
-    -e REPOSITORY_URL="$repository_url" \
+    -e REPOSITORY_URL="$repository_url" -e RPM_ARCHITECTURE="$rpm_architecture" \
     "$image" bash -s <<'CLIENT'
 set -euo pipefail
 if command -v apt-get >/dev/null; then
@@ -43,14 +43,16 @@ if command -v apt-get >/dev/null; then
   cp /repository/esdieff.gpg /usr/share/keyrings/esdieff.gpg
   printf 'deb [signed-by=/usr/share/keyrings/esdieff.gpg] %s/apt stable main\n' "${REPOSITORY_URL:-file:/repository}" > /etc/apt/sources.list.d/esdieff.list
   apt-get -q -o Acquire::Languages=none update
+  test "$(apt-cache madison esdieff | awk '{print $3}')" = "$VERSION"
   if [[ -n $PREVIOUS ]]; then
-    apt-get -qy install "esdieff=$PREVIOUS"
+    # Older packages are internal upgrade fixtures, absent from current indexes.
+    apt-get -qy install "/repository/apt/pool/main/e/esdieff/esdieff_${PREVIOUS}_$(dpkg --print-architecture).deb"
     test "$(dpkg-query -W -f='${Version}' esdieff)" = "$PREVIOUS"
   fi
   if [[ -n $PREVIOUS ]]; then
     apt-get -qy --only-upgrade install esdieff
   else
-    apt-get -qy install "esdieff=$VERSION"
+    apt-get -qy install esdieff
   fi
   test "$(dpkg-query -W -f='${Version}' esdieff)" = "$VERSION"
 else
@@ -66,14 +68,17 @@ repo_gpgcheck=1
 gpgkey=file:///repository/esdieff.asc
 REPO
   flags=(-y --disablerepo='*' --enablerepo=esdieff)
+  test "$(dnf -q "${flags[@]}" repoquery --available --arch="$RPM_ARCHITECTURE" --qf '%{version}\n' esdieff)" = "$VERSION"
   if [[ -n $PREVIOUS ]]; then
-    dnf "${flags[@]}" install "esdieff-$PREVIOUS"
+    fixture=${REPOSITORY_URL:-/repository}/rpm/esdieff-$PREVIOUS-1.$RPM_ARCHITECTURE.rpm
+    rpm --import /repository/esdieff.asc
+    dnf "${flags[@]}" --setopt=localpkg_gpgcheck=1 install "$fixture"
     test "$(rpm -q --qf '%{VERSION}' esdieff)" = "$PREVIOUS"
   fi
   if [[ -n $PREVIOUS ]]; then
     dnf "${flags[@]}" upgrade esdieff
   else
-    dnf "${flags[@]}" install "esdieff-$VERSION"
+    dnf "${flags[@]}" install esdieff
   fi
   test "$(rpm -q --qf '%{VERSION}' esdieff)" = "$VERSION"
 fi
