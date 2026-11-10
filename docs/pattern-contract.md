@@ -1,6 +1,6 @@
 # Effective model pattern syntax and matching
 
-Esdieff uses pinned `corvus-regex-ecma262` 0.2.7 with Unicode `u` semantics and
+Esdieff uses pinned `corvus-regex-ecma262` with Unicode `u` semantics and
 unanchored matching, following [RFC 9880 Appendix C.2](https://www.rfc-editor.org/rfc/rfc9880.html#appendix-C.2)
 and [ECMA-262 2025](https://tc39.es/ecma262/2025/multipage/text-processing.html#sec-patterns).
 The suggested portable subset does not restrict otherwise supported syntax.
