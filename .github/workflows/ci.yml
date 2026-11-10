@@ -231,6 +231,11 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund --prefix tools/site
           npm run build:landing --prefix tools/site
           git diff --exit-code -- site/landing.css
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - name: Check documentation for release numbers
+        run: cargo test --manifest-path tools/terminal-html/Cargo.toml --locked --test user_docs
       - name: Build documentation and check links
         run: bash scripts/build-site.sh
 
