@@ -699,7 +699,11 @@ fn reports_match_the_library_comparison_in_every_format() {
             .contains('\x1b')
     );
     assert_eq!(
-        text(diff(old.path(), new.path(), &["--no-color", "--recursive"])),
+        text(diff(
+            old.path(),
+            new.path(),
+            &["--color=never", "--recursive"]
+        )),
         with_newline(comparison.to_human())
     );
 }

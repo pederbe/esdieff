@@ -24,10 +24,6 @@ impl ColorMode {
         index: &mut usize,
     ) -> Result<bool, (u8, String)> {
         let value = match flag.to_str() {
-            Some("--no-color") => {
-                *self = Self::Never;
-                return Ok(true);
-            }
             Some("--color") => {
                 let value = args
                     .get(*index)
@@ -258,12 +254,11 @@ pub(crate) fn help(style: Style) -> String {
 
 fn global_options(style: Style) -> String {
     format!(
-        "\n{}\n  {} auto|always|never, {}={}  Choose styling (default: auto).\n  {}                         Alias for --color never.\n  {}, {}                         Show this help.\n",
+        "\n{}\n  {} auto|always|never, {}={}  Choose styling (default: auto).\n  {}, {}                         Show this help.\n",
         style.span(Role::Heading, "Global options:"),
         style.span(Role::Command, "--color"),
         style.span(Role::Command, "--color"),
         style.span(Role::Placeholder, "MODE"),
-        style.span(Role::Command, "--no-color"),
         style.span(Role::Command, "-h"),
         style.span(Role::Command, "--help"),
     )
