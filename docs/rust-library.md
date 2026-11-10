@@ -14,7 +14,7 @@ Add the released crate from [crates.io](https://crates.io/crates/esdieff):
 cargo add esdieff
 ```
 
-The crate uses the 2024 edition. Use the Rust version required by your selected
+The crate uses the 2024 edition. Use the Rust version required by the latest
 release.
 
 ## The entry points

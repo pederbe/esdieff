@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName > "$RUNNER_TEMP/release.json"
           jq -e --arg tag "$TAG" '.tagName == $tag and .isDraft == false and .isPrerelease == false' "$RUNNER_TEMP/release.json"
+          test "$TAG" = "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq '.[].tagName' |
             grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V |
             awk -v current="$TAG" '$0 == current {exit} {previous=$0} END {print previous}')
@@ -151,8 +152,16 @@ jobs:
           PACKAGE_SIGNING_PASSPHRASE: ${{ inputs.publish && secrets.PACKAGE_SIGNING_PASSPHRASE || '' }}
         run: |
           set -euo pipefail
+          # Sign the preceding release only for the internal upgrade check.
+          if [[ -n "$PREVIOUS" ]]; then
+            previous=${PREVIOUS#v}
+            cargo run --locked --manifest-path tools/release/Cargo.toml -- repository \
+              "$RUNNER_TEMP/repository" "$KEY" "$RUNNER_TEMP/assets/esdieff_${previous}_"*.deb "$RUNNER_TEMP/assets/esdieff-${previous}-1."*.rpm
+          fi
+          # The current indexes contain only the latest published release.
+          version=${TAG#v}
           cargo run --locked --manifest-path tools/release/Cargo.toml -- repository \
-            "$RUNNER_TEMP/repository" "$KEY" "$RUNNER_TEMP/assets/"*.deb "$RUNNER_TEMP/assets/"*.rpm
+            "$RUNNER_TEMP/repository" "$KEY" "$RUNNER_TEMP/assets/esdieff_${version}_"*.deb "$RUNNER_TEMP/assets/esdieff-${version}-1."*.rpm
       - name: Prepare trusted live checks
         if: inputs.verify_only
         run: |
