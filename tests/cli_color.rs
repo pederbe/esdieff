@@ -92,7 +92,7 @@ fn all_commands_scan_controls_before_and_after_the_command() {
 #[test]
 fn ordinary_scanning_keeps_last_valid_mode_and_does_not_rescan_values() {
     for args in [
-        vec!["--color=always", "check", "--no-color", "--unknown"],
+        vec!["--color=always", "check", "--color=never", "--unknown"],
         vec![
             "--color=always",
             "check",
@@ -118,7 +118,7 @@ fn ordinary_scanning_keeps_last_valid_mode_and_does_not_rescan_values() {
         assert!(!output.stderr.contains(&0x1b), "{args:?}");
     }
     for args in [
-        vec!["--no-color", "check", "--color=always", "--unknown"],
+        vec!["--color=never", "check", "--color=always", "--unknown"],
         vec!["--color=always", "--unknown", "--color=never"],
         vec!["check", "--color=always", "--color=invalid"],
         vec!["check", "--color=always", "--color"],
@@ -187,14 +187,14 @@ fn automatic_mode_detects_actual_terminals_and_each_stream_independently() {
     let redirected = terminal(&["--help"], &[("FORCE_COLOR", "1")], true, true);
     assert!(!redirected.stdout.contains(&0x1b));
     let disabled = terminal(
-        &["--no-color", "--help"],
+        &["--color=never", "--help"],
         &[("CLICOLOR_FORCE", "1")],
         false,
         true,
     );
     assert!(!disabled.stdout.contains(&0x1b));
     let restored_auto = terminal(
-        &["--no-color", "--color", "auto", "--help"],
+        &["--color=never", "--color", "auto", "--help"],
         &[],
         false,
         true,

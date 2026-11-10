@@ -163,7 +163,6 @@ writes the result to `--document-output`. The options match `author`.
 | Option | Meaning |
 | --- | --- |
 | `--color auto\|always\|never`, `--color=MODE` | Choose terminal styling. The default is `auto`. |
-| `--no-color` | The same as `--color never`. |
 | `-h`, `--help` | Show the help. |
 
 `esdieff --version`, on its own, prints the installed version. Put `--` before
