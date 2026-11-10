@@ -11,6 +11,7 @@ bash scripts/check.sh
 
 Website changes also need `bash scripts/build-site.sh`. See
 [website build instructions](tools/site/README.md) for its prerequisites.
+[ARCHITECTURE.md](ARCHITECTURE.md) maps the main parts of the code.
 
 Every change, including the maintainer's, enters `main` through a pull request
 that passes the required hosted `CI` check. The maintainer uses a `contrib/`

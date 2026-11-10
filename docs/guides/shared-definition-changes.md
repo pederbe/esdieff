@@ -1,11 +1,9 @@
 # Follow a shared definition through a model change
 
-Use this walkthrough to find which Property declarations reuse a data definition,
-explain a local override, and compare the client-visible effects of changing the
-shared definition. It uses a
-[current-checkout installation](../getting-started/README.md#direct-downloads-and-cargo)
-for `reference --uses`, which was added after release 0.2.0. Run the walkthrough
-from the repository root.
+Find which Property declarations reuse a data definition, explain a local
+override, and compare the client-visible effects of changing the shared
+definition. You need Esdieff [installed](../getting-started/README.md) and a
+copy of the repository. Run the commands from the repository root.
 
 ## Identify the definitions and qualities
 

@@ -15,7 +15,7 @@ std::process::exit(comparison.disposition().exit_code().into());
 
 The comparison contract identity is `esdieff.revision-comparison/10`. It binds which differences are classified and how. A release that classifies more differences gets a new identity, so a report keeps its meaning.
 
-This page describes the current checkout. Contract `/10` classifies adding, removing
+Contract `/10` classifies adding, removing
 and swapping the recorded `link` convention. Contract `/9` added implementer Property
 capability classifications. Contract `/8` added implementer grouping
 count classifications. Contract `/7` added implementer
@@ -165,7 +165,7 @@ An acknowledgement file is one JSON object:
 }
 ```
 
-Each entry has a `kind` of `removed`, `added` or `changed`, a `subject` as in the [report](#report-16), a `quality` exactly when the subject is `quality`, a `classification` of `breaking` or `undetermined`, and `earlier` and `later` members. Each side is null or names the source key of the document holding the difference in that revision and its effective pointer, and at least one side is not null. An optional `note` is a comment for readers. An empty `differences` array is allowed. Unknown and duplicate members, two entries with the same identity, an entry of kind `unavailable` and an entry whose classification is `compatible` are refused.
+Each entry has a `kind` of `removed`, `added` or `changed`, a `subject` as in the [report](#report-17), a `quality` exactly when the subject is `quality`, a `classification` of `breaking` or `undetermined`, and `earlier` and `later` members. Each side is null or names the source key of the document holding the difference in that revision and its effective pointer, and at least one side is not null. An optional `note` is a comment for readers. An empty `differences` array is allowed. Unknown and duplicate members, two entries with the same identity, an entry of kind `unavailable` and an entry whose classification is `compatible` are refused.
 
 `DifferenceAcknowledgements::from_json(bytes)` decodes a file under the fixed JSON input safeguards, and `DifferenceAcknowledgements::new(entries)` builds the same value from typed entries. `DifferenceAcknowledgement::new(kind, subject, classification)` starts an entry, `earlier(document, pointer)` and `later(document, pointer)` locate it, and `with_note(note)` adds a note. Each validates as the file does, and `DifferenceAcknowledgements::new` refuses an entry without a location and duplicate identities. `entries()` lists them in file order, and each entry returns its `kind()`, `subject()`, `classification()`, `document(revision)`, `pointer(revision)` and `note()`.
 

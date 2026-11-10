@@ -10,21 +10,12 @@ local file paths to the command-line tool.
 
 Add the released crate from [crates.io](https://crates.io/crates/esdieff):
 
-```toml
-[dependencies]
-esdieff = "0.2"
+```sh
+cargo add esdieff
 ```
 
 The crate uses the 2024 edition. Use the Rust version required by your selected
-release. For APIs added after 0.2.0, including model references and JSON Schema
-export, depend on a current repository revision instead:
-
-```toml
-[dependencies]
-esdieff = { git = "https://github.com/pederbe/esdieff" }
-```
-
-Pin a verified commit with `rev = "..."` for a reproducible Git dependency.
+release.
 
 ## The entry points
 
@@ -45,8 +36,8 @@ Operations take explicit requests:
 | Compose an sdfThing | `AuthorRequest::author()` | `AuthorResult` |
 | Edit qualities | `EditRequest::edit()` | `EditResult` |
 | Compare revisions | `ComparisonRequest::compare()` | `RevisionComparison` |
-| Document a definition, after 0.2.0 | `catalogue.reference(ReferenceRequest)` | `ReferenceResult` |
-| Export JSON Schema, after 0.2.0 | `catalogue.export_schema(SchemaRequest)` | `SchemaResult` |
+| Document a definition | `catalogue.reference(ReferenceRequest)` | `ReferenceResult` |
+| Export JSON Schema | `catalogue.export_schema(SchemaRequest)` | `SchemaResult` |
 
 Checking, inspection, effective views, generation and trace results borrow their
 catalogue. Revision comparison borrows both catalogues. Authoring and editing
@@ -160,7 +151,7 @@ Each operation's reference page states what its result promises, with a Rust exa
 - [Recorded traces](trace-contract.md) covers `TraceRequest` and per-entry outcomes.
 - [Composed sdfThing authoring](authoring-contract.md) and [Authored-quality editing](editing-contract.md) cover `AuthorRequest`, `EditRequest`, plans and fidelity.
 - [Revision comparison](revision-comparison-contract.md) covers `ComparisonRequest`, differences, witnesses and acknowledgements.
-- [Model references](model-reference.md) and [JSON Schema export](json-schema.md) cover the current-checkout `ReferenceRequest` and `SchemaRequest` APIs.
+- [Model references](model-reference.md) and [JSON Schema export](json-schema.md) cover the `ReferenceRequest` and `SchemaRequest` APIs.
 - [Workflow and report contract](report-contract.md) covers the shared report envelope that `to_json()` renders.
 
 The repository's [examples directory](https://github.com/pederbe/esdieff/blob/main/examples) holds complete programs that read effective values and requirement coverage.

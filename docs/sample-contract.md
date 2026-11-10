@@ -1,6 +1,6 @@
 # Selected-sample operation contract
 
-This extends [the shared workflow and report contract](report-contract.md) under [ADR 0016: Selected samples with explicit admission and coverage](adr/0016-selected-sample-contract.md). It specifies observable behavior for the library, command and versioned report. Standards meanings follow the recorded baseline, [RFC 9880 Sections 4.7, 5.2, 5.3 and 5.4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.7), and normative Appendix C. This contract does not introduce a generic JSON Schema validator or a protocol payload binding.
+Checking a selected sample extends [the shared workflow and report contract](report-contract.md) under [ADR 0016: Selected samples with explicit admission and coverage](adr/0016-selected-sample-contract.md). The rules below specify observable behavior for the library, command and versioned report. Standards meanings follow the recorded baseline, [RFC 9880 Sections 4.7, 5.2, 5.3 and 5.4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.7), and normative Appendix C. This contract does not introduce a generic JSON Schema validator or a protocol payload binding.
 
 The numeric workflow and typed projection boundary follow [ADR 0025: Selected numeric samples](adr/0025-selected-numeric-samples.md). An ordinary Rust caller registers both roles together:
 

@@ -1,6 +1,6 @@
 # Compose and edit models
 
-This guide builds a new device description from reusable definitions and then makes repeatable edits to an existing document. Both commands read a small JSON plan, write a new file and leave every input unchanged. It assumes Esdieff is [installed](../getting-started/README.md).
+Build a new device description from reusable definitions, then make repeatable edits to an existing document. Both commands read a small JSON plan, write a new file and leave every input unchanged. You need Esdieff [installed](../getting-started/README.md).
 
 ## Compose an sdfThing from reusable objects
 

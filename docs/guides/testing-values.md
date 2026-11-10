@@ -1,8 +1,8 @@
 # Test values against a model
 
-This guide checks single values against a model, generates boundary and invalid
-values for tests, and checks a log of recorded values in one run. It uses the
-current-checkout command and `thermostat.sdf.json` from
+Check single values against a model, generate boundary and invalid values for
+tests, and check a log of recorded values in one run. You need the
+`thermostat.sdf.json` model from
 [Install and try a model](../getting-started/README.md), whose `targetTemperature`
 accepts 5 to 30 °C in half-degree steps.
 

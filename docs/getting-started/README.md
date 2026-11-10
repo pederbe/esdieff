@@ -1,7 +1,7 @@
 # Install and try a model
 
-This guide installs Esdieff and runs it on a supplied thermostat model. No
-device is needed. Installation and downloading the example use the network.
+Install Esdieff, then run it on a supplied thermostat model to see generated
+test values and a model check. No device is needed. Installation and downloading the example use the network.
 The subsequent model operations run locally without sending your documents.
 
 ## Install Esdieff
@@ -72,12 +72,6 @@ From a checkout of the repository, install the same way with a path instead:
 cargo install --locked --path .
 ```
 
-The walkthrough output below describes the current repository checkout.
-Release 0.3.0 predates the `esdieff.generation/3` report, and 0.2.0 also
-predates the reference and schema commands. To reproduce the current output, use the checkout
-installation above. Released versions may print earlier report identities and
-different counts.
-
 Repeat the Cargo installation command to update. Use `cargo uninstall esdieff`
 to remove it.
 
@@ -85,13 +79,15 @@ to remove it.
 
 <pre class="terminal"><code><span class="p">$</span> esdieff --help
 <b><span class="h">Usage:</span></b>
+<b>esdieff</b> <b>--version</b>
+Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.
 <b>esdieff</b> <b>check</b> <b>--plan</b> <span class="m">PLAN</span> [<b>--format</b> human|json]
-<b>esdieff</b> <b>check</b> [<b>--directory</b> <span class="m">DIR</span>] [<b>--recursive</b>] [<b>--exclude</b> <span class="m">RELATIVE_PATH</span>] [<b>--root</b> <span class="m">INPUT</span>] [<b>--assessment</b> initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [<b>--registry-knowledge</b> recorded|withheld] [<b>--strict-warnings</b>] [<b>--format</b> human|json|sarif] [<span class="m">INPUT...</span>]
 </code></pre>
 
-The help continues with one line per command. If the command is not found,
-check that its installation folder is on your `PATH` and open a new terminal.
-Cargo installations normally use `~/.cargo/bin`.
+The help continues with one line per command, and the
+[command line reference](../command-line.md) explains each one. If the command
+is not found, check that its installation folder is on your `PATH` and open a
+new terminal. Cargo installations normally use `~/.cargo/bin`.
 
 ## Try the thermostat example
 
@@ -191,3 +187,4 @@ and ordinary warnings do not by themselves fail the check.
 - [Test values against a model](../guides/testing-values.md) checks single samples, saves generated values as test vectors and checks recorded logs.
 - [Compare two revisions](../guides/revision-comparison.md) finds the changes that break the apps using a device.
 - [Repeat checks and share reports](../guides/checks-and-reports.md) saves these checks as a plan and runs them in CI.
+- [Troubleshooting](../troubleshooting.md) explains the messages you are most likely to meet.
