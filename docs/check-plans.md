@@ -230,6 +230,10 @@ keeps its outcome, completion and sample admission or comparison classification
 when its native report is omitted. Invalid case requests name the plan location,
 document and selector, then later cases continue.
 
+When native detail is omitted, the case still gives its requested assessment,
+scope or selector, warning policy and aggregate coverage. A strict-warning
+failure is explained in the case summary even when no native report fits.
+
 ## Finite allowances
 
 Plans are at most 1 MiB, with the ordinary native JSON depth, node, decoding and

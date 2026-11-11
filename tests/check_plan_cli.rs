@@ -1108,7 +1108,7 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     }
     let bytes = serde_json::to_vec(&json!({"info":{},"sdfData":{"D":qualities}})).unwrap();
     let model = files.write("device.json", &bytes);
-    let cases:Vec<Value>=(0..64).map(|index| json!({"name":format!("case {index}"),"operation":"check","scope":{"kind":"catalogue"},"strict_warnings":index==63})).collect();
+    let cases:Vec<Value>=(0..64).map(|index| json!({"name":format!("case {index}"),"operation":"check","scope":if index==63 {json!({"kind":"selected","roots":["device"]})} else {json!({"kind":"catalogue"})},"strict_warnings":index==63})).collect();
     let plan = files.plan(json!(cases));
     let output = run(&plan, &["--format", "json"]);
     let result = wire(&output, 1);
@@ -1129,7 +1129,8 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     );
     assert!(result["cases"][63].get("report").is_none());
     let direct = Command::new(env!("CARGO_BIN_EXE_esdieff"))
-        .args(["check", "--strict-warnings", "--format", "json"])
+        .args(["check", "--strict-warnings", "--format", "json", "--root"])
+        .arg(&model)
         .arg(model)
         .output()
         .unwrap();
@@ -1144,6 +1145,16 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.contains("case 63"));
     assert!(human.contains("Native report omitted: run-report-budget"));
+    let last = human.split_once("\nCase: \"case 63\" [check]\n").unwrap().1;
+    assert!(last.contains("Assessment: initial-v1\n"));
+    assert!(last.contains("Scope: selected\nRoot: \"device\" (source 1)\n"));
+    assert!(last.contains("Warning policy: strict\n"));
+    assert!(last.contains("Requested coverage (assessment_area): total 8"));
+    assert!(last.contains("Broader RFC coverage: partial\n"));
+    let summary = human.split_once("\nDetails:\n").unwrap().0;
+    assert!(
+        summary.contains("Warnings caused this case to fail because strict_warnings is enabled.")
+    );
 }
 
 #[test]
