@@ -1,8 +1,8 @@
 # Troubleshooting
 
-Most Esdieff failures print one line that names the problem. Find that message
-or symptom below for its cause and fix. In a terminal, report lines also start
-with a coloured status symbol.
+Find the message or symptom below for its cause and fix. Human reports show
+supplied filenames and available byte locations beside source details and
+findings. In a terminal, report lines also start with a coloured status symbol.
 
 ## Command not found
 
@@ -31,15 +31,20 @@ esdieff check --root device.sdf.json device.sdf.json types.sdf.json
 [Resolve missing and ambiguous name references](guides/resolving-name-references.md)
 shows how to find which definition is missing.
 
-## Source content could not be acquired
+## A model file could not be read
 
 ```text
-input.acquisition: Source content could not be acquired
+input.acquisition: Could not read source content: No such file or directory (os error 2). Check the path and read permissions
 ```
 
-Esdieff could not read a file you named. The report's source line says
-`failed / unavailable`, and the command exits with status 3. Check the path
-and run the command again.
+Esdieff could not read a file you named. The report's source line identifies the
+file, and the command exits with status 3. The operating system's explanation
+depends on the cause and your platform. Correct a missing path or restore read
+access, then run the command again.
+
+Repeated notices about unfinished assessment areas appear once per notice code,
+with a count. The JSON report retains each area separately. These notices explain
+which checks could not finish after the file failure.
 
 ## JSON grammar violation
 
@@ -47,8 +52,9 @@ and run the command again.
 json.syntax: JSON grammar violation
 ```
 
-The file is not valid JSON, so the check fails with status 1. Fix the syntax,
-for example a missing closing brace, and check the file again.
+The file is not valid JSON, so the check fails with status 1. The finding shows
+the available byte offset in that file. Fix the syntax, for example a missing
+closing brace, and check the file again.
 
 ## No input or no model files selected
 

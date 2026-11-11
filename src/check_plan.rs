@@ -208,28 +208,56 @@ struct Plan<'a> {
 }
 
 fn text<'a>(node: JsonView<'a>, member: &str) -> Result<&'a str, Error> {
+    let value = field(node, member)?;
+    value
+        .text()
+        .require()
+        .map_err(|reason| plan_error(value, format!("field {member:?} must be text: {reason}")))
+}
+fn field<'a>(node: JsonView<'a>, member: &str) -> Result<JsonView<'a>, Error> {
     node.get(member)
         .require()
-        .and_then(|n| n.text().require())
-        .map_err(usage)
+        .map_err(|reason| plan_error(node, format!("field {member:?} is required: {reason}")))
+}
+fn plan_error(node: JsonView<'_>, message: impl std::fmt::Display) -> Error {
+    let span = node.span();
+    let place = node
+        .pointer()
+        .present()
+        .filter(|pointer| pointer.len() <= 512)
+        .map(|pointer| format!("at {pointer:?}"))
+        .unwrap_or_else(|| format!("at bytes {}..{}", span.start, span.end));
+    usage(format!("{place}: {message}"))
 }
 fn object(node: JsonView<'_>, allowed: &[&str]) -> Result<(), Error> {
     if node.kind() != JsonKind::Map {
-        return Err(usage("expected plan object"));
+        return Err(plan_error(node, "expected a JSON object"));
     }
     for child in node.children() {
         if !allowed.contains(&child.member_name().require().map_err(usage)?) {
-            return Err(usage("unknown plan member"));
+            let name = child.member_name().require().map_err(usage)?;
+            let name = crate::display_label(std::ffi::OsStr::new(name))
+                .unwrap_or("[field omitted]".into());
+            return Err(plan_error(
+                child,
+                format!(
+                    "unknown plan field {name:?}. Expected {}",
+                    allowed.join(", ")
+                ),
+            ));
         }
     }
     Ok(())
 }
 fn array(node: JsonView<'_>, max: usize) -> Result<JsonView<'_>, Error> {
-    if node.kind() != JsonKind::Array
-        || node.children().count() == 0
-        || node.children().count() > max
-    {
-        return Err(usage("plan array is empty or exceeds its count ceiling"));
+    if node.kind() != JsonKind::Array {
+        return Err(plan_error(node, "expected a JSON array"));
+    }
+    if node.children().count() == 0 || node.children().count() > max {
+        return Err(plan_error(
+            node,
+            format!("array must contain 1 through {max} entries"),
+        ));
     }
     Ok(node)
 }
@@ -264,7 +292,7 @@ fn acknowledgements(
     remaining: &mut usize,
 ) -> Result<DifferenceAcknowledgements, Error> {
     let refused = |reason: &str| {
-        usage(&format!(
+        usage(format!(
             "cannot read acknowledgements of diff case {name:?}: {reason}"
         ))
     };
@@ -302,9 +330,14 @@ fn alias<'a>(sources: JsonView<'a>, key: &str, role: &str) -> Result<usize, Erro
         .children()
         .enumerate()
         .find(|(_, row)| text(*row, "key").ok() == Some(key))
-        .ok_or_else(|| usage("unknown source key"))?;
+        .ok_or_else(|| {
+            usage(format!(
+                "unknown source key {:?}. Use a key declared in sources",
+                crate::display_label(std::ffi::OsStr::new(key)).unwrap_or("[key omitted]".into())
+            ))
+        })?;
     if text(source, "role")? != role {
-        return Err(usage("source alias has the wrong role"));
+        return Err(usage(format!("source key {key:?} must have role {role:?}")));
     }
     Ok(index)
 }
@@ -328,13 +361,15 @@ fn decode<'a>(root: JsonView<'a>, path: &Path) -> Result<Plan<'a>, Error> {
     }
     object(root, &["schema", "version", "sources", "cases"])?;
     if text(root, "schema")? != "esdieff.check-plan" || text(root, "version")? != "1" {
-        return Err(usage("unknown check plan schema or version"));
+        return Err(usage(
+            "check plan schema must be esdieff.check-plan and version must be 1",
+        ));
     }
     let base = path
         .parent()
         .ok_or_else(|| usage("plan has no parent directory"))?;
-    let source_rows = array(root.get("sources").require().map_err(usage)?, 256)?;
-    let case_rows = array(root.get("cases").require().map_err(usage)?, 64)?;
+    let source_rows = array(field(root, "sources")?, 256)?;
+    let case_rows = array(field(root, "cases")?, 64)?;
     // Admission uses borrowed decoded text. Resolved paths, control vectors and
     // the output buffer are allocated only after the entire envelope fits.
     let mut source_keys = HashSet::new();
@@ -343,19 +378,30 @@ fn decode<'a>(root: JsonView<'a>, path: &Path) -> Result<Plan<'a>, Error> {
     metadata(&mut control, 0)?;
     let mut models = 0;
     for row in source_rows.children() {
-        object(row, &["key", "path", "role"])?;
-        let key = text(row, "key")?;
-        identity(key)?;
-        if !source_keys.insert(key) {
-            return Err(usage("duplicate source key"));
-        }
-        let path_size = path_bytes(base, text(row, "path")?)?;
-        match text(row, "role")? {
-            "model" => models += 1,
-            "sample" => (),
-            _ => return Err(usage("unknown source role")),
-        }
-        metadata(&mut control, key.len() + path_size)?;
+        (|| {
+            object(row, &["key", "path", "role"])?;
+            let key = text(row, "key")?;
+            identity(key)?;
+            if !source_keys.insert(key) {
+                return Err(usage(format!(
+                    "source key {key:?} is repeated. Use a unique key for each source"
+                )));
+            }
+            let path_size = path_bytes(base, text(row, "path")?)?;
+            match text(row, "role")? {
+                "model" => models += 1,
+                "sample" => (),
+                _ => {
+                    return Err(plan_error(
+                        field(row, "role")?,
+                        "role must be model or sample",
+                    ));
+                }
+            }
+            metadata(&mut control, key.len() + path_size)?;
+            Ok(())
+        })()
+        .map_err(|(_, reason)| plan_error(row, reason))?;
     }
     if models == 0 {
         return Err(usage("plan requires a model source"));
@@ -363,107 +409,150 @@ fn decode<'a>(root: JsonView<'a>, path: &Path) -> Result<Plan<'a>, Error> {
     // Each diff document is reserved as a source is, beside the plan sources.
     let mut documents = 0;
     for row in case_rows.children() {
-        let name = text(row, "name")?;
-        identity(name)?;
-        if !names.insert(name) {
-            return Err(usage("duplicate case name"));
-        }
-        strict(row)?;
-        metadata(&mut control, name.len())?;
-        match text(row, "operation")? {
-            "check" => {
-                object(
-                    row,
-                    &[
-                        "name",
-                        "operation",
-                        "scope",
-                        "assessment",
-                        "strict_warnings",
-                    ],
-                )?;
-                let profile = profile(row)?;
-                assessment(Some(profile))?;
-                metadata(&mut control, profile.len())?;
-                let scope = row.get("scope").require().map_err(usage)?;
-                match text(scope, "kind")? {
-                    "catalogue" => object(scope, &["kind"])?,
-                    "selected" => {
-                        object(scope, &["kind", "roots"])?;
-                        let mut seen = HashSet::new();
-                        for root in
-                            array(scope.get("roots").require().map_err(usage)?, 256)?.children()
-                        {
-                            let key = root.text().require().map_err(usage)?;
-                            if !seen.insert(key) {
-                                return Err(usage("duplicate selected root"));
+        (|| {
+            let name = text(row, "name")?;
+            identity(name)?;
+            if !names.insert(name) {
+                return Err(usage("duplicate case name"));
+            }
+            strict(row)?;
+            metadata(&mut control, name.len())?;
+            match text(row, "operation")? {
+                "check" => {
+                    object(
+                        row,
+                        &[
+                            "name",
+                            "operation",
+                            "scope",
+                            "assessment",
+                            "strict_warnings",
+                        ],
+                    )?;
+                    let profile = profile(row)?;
+                    assessment(Some(profile)).map_err(|(_, reason)| {
+                        plan_error(
+                            field(row, "assessment").expect("explicit invalid assessment"),
+                            reason,
+                        )
+                    })?;
+                    metadata(&mut control, profile.len())?;
+                    let scope = field(row, "scope")?;
+                    match text(scope, "kind")? {
+                        "catalogue" => object(scope, &["kind"])?,
+                        "selected" => {
+                            object(scope, &["kind", "roots"])?;
+                            let mut seen = HashSet::new();
+                            for root in array(field(scope, "roots")?, 256)?.children() {
+                                let key = root.text().require().map_err(usage)?;
+                                if !seen.insert(key) {
+                                    return Err(usage("duplicate selected root"));
+                                }
+                                alias(source_rows, key, "model")
+                                    .map_err(|(_, reason)| plan_error(root, reason))?;
+                                metadata(&mut control, key.len())?;
                             }
-                            alias(source_rows, key, "model")?;
-                            metadata(&mut control, key.len())?;
+                        }
+                        _ => {
+                            return Err(plan_error(
+                                field(scope, "kind")?,
+                                "scope kind must be catalogue or selected",
+                            ));
                         }
                     }
-                    _ => return Err(usage("unknown check scope")),
                 }
-            }
-            "sample" => {
-                object(
-                    row,
-                    &[
-                        "name",
-                        "operation",
-                        "document",
-                        "kind",
-                        "pointer",
-                        "sample",
-                        "strict_warnings",
-                    ],
-                )?;
-                let document = text(row, "document")?;
-                let sample = text(row, "sample")?;
-                alias(source_rows, document, "model")?;
-                alias(source_rows, sample, "sample")?;
-                sample_kind(text(row, "kind")?)?;
-                let selector = text(row, "pointer")?;
-                pointer(selector)?;
-                metadata(&mut control, document.len() + sample.len() + selector.len())?;
-            }
-            "diff" => {
-                object(
-                    row,
-                    &[
-                        "name",
-                        "operation",
-                        "earlier",
-                        "later",
-                        "acknowledged",
-                        "perspective",
-                    ],
-                )?;
-                if let Field::Present(value) = row.get("perspective") {
-                    crate::diff_cli::parse_perspective(value.text().require().map_err(usage)?)?;
+                "sample" => {
+                    object(
+                        row,
+                        &[
+                            "name",
+                            "operation",
+                            "document",
+                            "kind",
+                            "pointer",
+                            "sample",
+                            "strict_warnings",
+                        ],
+                    )?;
+                    let document = text(row, "document")?;
+                    let sample = text(row, "sample")?;
+                    alias(source_rows, document, "model").map_err(|(_, reason)| {
+                        plan_error(field(row, "document").expect("validated document"), reason)
+                    })?;
+                    alias(source_rows, sample, "sample").map_err(|(_, reason)| {
+                        plan_error(field(row, "sample").expect("validated sample"), reason)
+                    })?;
+                    sample_kind(text(row, "kind")?).map_err(|(_, reason)| {
+                        plan_error(field(row, "kind").expect("validated kind"), reason)
+                    })?;
+                    let selector = text(row, "pointer")?;
+                    pointer(selector).map_err(|(_, reason)| {
+                        plan_error(field(row, "pointer").expect("validated pointer"), reason)
+                    })?;
+                    metadata(&mut control, document.len() + sample.len() + selector.len())?;
                 }
-                for member in ["earlier", "later"] {
-                    let side = row.get(member).require().map_err(usage)?;
-                    for document in revision(side)?.children() {
-                        let key = document.member_name().require().map_err(usage)?;
-                        identity(key)?;
-                        let path_size =
-                            path_bytes(base, document.text().require().map_err(usage)?)?;
-                        metadata(&mut control, key.len() + path_size)?;
-                        documents += 1;
+                "diff" => {
+                    object(
+                        row,
+                        &[
+                            "name",
+                            "operation",
+                            "earlier",
+                            "later",
+                            "acknowledged",
+                            "perspective",
+                        ],
+                    )?;
+                    if let Field::Present(value) = row.get("perspective") {
+                        crate::diff_cli::parse_perspective(value.text().require().map_err(usage)?)?;
+                    }
+                    for member in ["earlier", "later"] {
+                        let side = field(row, member)?;
+                        for document in revision(side)?.children() {
+                            let key = document.member_name().require().map_err(usage)?;
+                            identity(key)?;
+                            let path_size =
+                                path_bytes(base, document.text().require().map_err(usage)?)?;
+                            metadata(&mut control, key.len() + path_size)?;
+                            documents += 1;
+                        }
+                    }
+                    match row.get("acknowledged") {
+                        Field::Absent => (),
+                        Field::Present(file) => {
+                            let path_size =
+                                path_bytes(base, file.text().require().map_err(usage)?)?;
+                            metadata(&mut control, path_size)?;
+                        }
+                        _ => return Err(usage("unavailable acknowledgement path")),
                     }
                 }
-                match row.get("acknowledged") {
-                    Field::Absent => (),
-                    Field::Present(file) => {
-                        let path_size = path_bytes(base, file.text().require().map_err(usage)?)?;
-                        metadata(&mut control, path_size)?;
-                    }
-                    _ => return Err(usage("unavailable acknowledgement path")),
+                _ => {
+                    return Err(plan_error(
+                        field(row, "operation")?,
+                        "operation must be check, sample or diff",
+                    ));
                 }
             }
-            _ => return Err(usage("unknown case operation")),
-        }
+            Ok(())
+        })()
+        .map_err(|(_, reason)| {
+            let name = row
+                .get("name")
+                .present()
+                .and_then(|value| value.text().present())
+                .and_then(|name| crate::display_label(std::ffi::OsStr::new(name)));
+            plan_error(
+                row,
+                format!(
+                    "case {}: {reason}",
+                    name.map_or_else(
+                        || "[name unavailable]".to_owned(),
+                        |name| format!("{name:?}")
+                    )
+                ),
+            )
+        })?;
     }
     // Six bytes per metadata byte covers JSON escaping, including repeated
     // identities. Fixed case space covers native scope IDs, baseline/knowledge,
@@ -588,7 +677,10 @@ fn profile(row: JsonView<'_>) -> Result<&str, Error> {
 fn strict(row: JsonView<'_>) -> Result<bool, Error> {
     match row.get("strict_warnings") {
         Field::Absent => Ok(false),
-        Field::Present(value) => value.boolean().require().map_err(usage),
+        Field::Present(value) => value
+            .boolean()
+            .require()
+            .map_err(|_| plan_error(value, "strict_warnings must be true or false")),
         _ => Err(usage("unavailable strict warning policy")),
     }
 }
@@ -683,14 +775,21 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
     // Making the supplied path absolute, without canonicalizing, preserves the
     // parent of a symlink rather than switching to the target's directory.
     let path =
-        std::path::absolute(path).map_err(|e| usage(&format!("cannot resolve plan path: {e}")))?;
+        std::path::absolute(path).map_err(|e| usage(format!("cannot resolve plan path: {e}")))?;
     use std::io::Read;
     let mut bytes = Vec::new();
     std::fs::File::open(&path)
         .and_then(|file| file.take(PLAN_BYTES as u64 + 1).read_to_end(&mut bytes))
-        .map_err(|_| usage("plan unreadable or exceeds 1 MiB"))?;
+        .map_err(|error| {
+            usage(format!(
+                "cannot read check plan {:?}: {error}. Check the path and read permissions",
+                crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+            ))
+        })?;
     if bytes.len() > PLAN_BYTES {
-        return Err(usage("plan unreadable or exceeds 1 MiB"));
+        return Err(usage(
+            "check plan exceeds 1 MiB. Split it into smaller plans",
+        ));
     }
     let configuration = Catalogue::take_inputs(vec![
         SourceInput::supplied("plan", &bytes).omit_label().sample(),
@@ -698,9 +797,22 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
     .map_err(usage)?;
     let source = configuration.sources().next().expect("plan source");
     if !source.content_complete() {
-        return Err(usage("plan unreadable or exceeds 1 MiB"));
+        return Err(usage(
+            "check plan content is incomplete. Use a smaller plan",
+        ));
     }
-    let plan = decode(source.json().require().map_err(usage)?, &path)?;
+    let root = source.json().require().map_err(|reason| {
+        usage(format!(
+            "cannot decode check plan {:?}: {reason}. Check JSON syntax and duplicate fields",
+            crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+        ))
+    })?;
+    let plan = decode(root, &path).map_err(|(_, reason)| {
+        usage(format!(
+            "check plan {:?}: {reason}",
+            crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+        ))
+    })?;
     let inputs = plan.sources.iter().map(Source::input).collect();
     let catalogue = Catalogue::take_inputs(inputs).map_err(usage)?;
     let ids: Vec<_> = catalogue.sources().map(|s| s.id()).collect();

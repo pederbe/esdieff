@@ -388,6 +388,7 @@ impl EditRequest {
                     digest: None,
                     raw_path: None,
                     acquisition: Acquisition::Generated,
+            acquisition_error: None,
                     label_omitted: false,
                     complete: emitted,
                     parsed,

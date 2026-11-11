@@ -58,9 +58,9 @@ fn read(path: &OsStr) -> Result<Vec<u8>, Error> {
         std::fs::File::open(path).and_then(|file| file.take(cap).read_to_end(&mut bytes))
     };
     let label = path.to_string_lossy();
-    read.map_err(|error| usage(&format!("cannot read trace {label:?}: {error}")))?;
+    read.map_err(|error| usage(format!("cannot read trace {label:?}: {error}")))?;
     if bytes.len() > TraceRequest::FILE_BYTES {
-        return Err(usage(&format!("trace {label:?} exceeds 64 MiB")));
+        return Err(usage(format!("trace {label:?} exceeds 64 MiB")));
     }
     Ok(bytes)
 }
@@ -86,22 +86,18 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
         match if literal { None } else { value.to_str() } {
             Some("--help" | "-h") => help = true,
             Some(flag @ ("--document" | "--trace" | "--format")) => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| usage("option requires a value"))?;
+                let value = args.get(index).ok_or_else(|| crate::missing_value(flag))?;
                 index += 1;
                 metadata = metadata.saturating_add(value.as_encoded_bytes().len());
                 match flag {
                     "--document" if document.is_none() => document = Some(value.as_os_str()),
                     "--trace" if trace.is_none() => trace = Some(value.as_os_str()),
                     "--format" => format = crate::format(value, &[Format::Human, Format::Json])?,
-                    _ => return Err(usage("duplicate trace option")),
+                    _ => return Err(crate::duplicate_option(flag)),
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(usage(
-                    "unknown trace option; use -- before a path beginning with -",
-                ));
+                return Err(crate::unknown_option(OsStr::new(value)));
             }
             _ => {
                 if inputs.len() >= 256 {
@@ -136,7 +132,7 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
     }
     if metadata > 1024 * 1024 {
         return Err(usage(
-            "input and selector identities exceed metadata budget",
+            "input paths and selectors exceed 1 MiB. Use fewer inputs or shorter paths",
         ));
     }
     Ok(Some(Options {

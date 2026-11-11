@@ -24,11 +24,14 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         }
         match if literal { None } else { value.to_str() } {
             Some("--help" | "-h") => help = true,
-            Some("--uses") if !uses => uses = true,
+            Some("--uses") => {
+                if uses {
+                    return Err(crate::duplicate_option("--uses"));
+                }
+                uses = true;
+            }
             Some(flag @ ("--document" | "--pointer")) => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| usage("option requires a value"))?;
+                let value = args.get(index).ok_or_else(|| crate::missing_value(flag))?;
                 index += 1;
                 metadata = metadata.saturating_add(value.as_encoded_bytes().len());
                 match flag {
@@ -40,13 +43,11 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
                                 .ok_or_else(|| usage("pointer must be UTF-8"))?,
                         )
                     }
-                    _ => return Err(usage("duplicate reference option")),
+                    _ => return Err(crate::duplicate_option(flag)),
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(usage(
-                    "unknown reference option; use -- before a path beginning with -",
-                ));
+                return Err(crate::unknown_option(OsStr::new(value)));
             }
             _ => {
                 if inputs.len() >= 256 {
@@ -75,7 +76,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
     }
     if metadata > 1024 * 1024 {
         return Err(usage(
-            "input and selector identities exceed metadata budget",
+            "input paths and selectors exceed 1 MiB. Use fewer inputs or shorter paths",
         ));
     }
     let selected = crate::selected_index(&inputs, document)?;

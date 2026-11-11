@@ -357,7 +357,7 @@ fn destinations_protect_all_inputs_and_refuse_collisions() {
                 .unwrap(),
             2
         )
-        .contains("destinations alias")
+        .contains("refer to the same file")
     );
     assert_eq!(
         fs::read_to_string(fixture.path("doc.json")).unwrap(),
