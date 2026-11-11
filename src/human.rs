@@ -102,6 +102,22 @@ pub(crate) struct HumanText {
 }
 
 impl HumanText {
+    /// A supplied display label, or its caller key when no label was retained.
+    /// JSON quoting keeps source text from introducing terminal controls or new lines.
+    pub(crate) fn source(&mut self, label: &str, source: &crate::Source) {
+        self.label(label);
+        self.push(' ');
+        self.source_label(source);
+        self.push_str(&format!(" (source {})\n", source.id.get()));
+    }
+
+    pub(crate) fn source_label(&mut self, source: &crate::Source) {
+        self.push_str(
+            &serde_json::to_string(source.label.as_deref().unwrap_or(&source.key))
+                .expect("source label"),
+        );
+    }
+
     pub(crate) fn new(style: HumanStyle) -> Self {
         Self {
             plain: String::new(),

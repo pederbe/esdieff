@@ -19,11 +19,11 @@ pub(super) fn reserve(metadata: usize) -> usize {
 }
 
 /// The bytes one listed entry needs in its larger rendering.
-pub(super) fn entry_bytes(entry: &Entry, document: SourceId, trace: SourceId) -> usize {
+pub(super) fn entry_bytes(entry: &Entry, result: &TraceResult<'_>) -> usize {
     let mut json = String::new();
-    entry_json(&mut json, entry, document, trace);
+    entry_json(&mut json, entry, result.document(), result.file.id);
     let mut human = HumanText::new(crate::HumanStyle::Plain);
-    human_entry(&mut human, entry);
+    human_entry(&mut human, entry, result.catalogue);
     (json.len() + 1).max(human.len())
 }
 
@@ -131,6 +131,14 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
     let disposition = result.disposition();
     text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
+    text.source("Trace input:", &result.file);
+    text.source(
+        "Model:",
+        result
+            .catalogue
+            .source(result.document())
+            .expect("trace document"),
+    );
     text.label("Entries:");
     for (index, outcome) in TraceOutcome::ALL.into_iter().enumerate() {
         if index == 0 {
@@ -159,8 +167,18 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
         ));
     }
     text.push('\n');
+    let unchecked = result.outcomes.iter().sum::<u32>() - result.admissions.iter().sum::<u32>();
+    if unchecked > 0 {
+        text.label("Values not checked:");
+        text.push_str(&format!(" {unchecked}\n"));
+    }
+    if result.admissions(Admission::Rejected) > 0 {
+        text.push_str(
+            "A rejected value counts as a passed entry only when rejection was expected.\n",
+        );
+    }
     for entry in &result.entries {
-        human_entry(&mut text, entry);
+        human_entry(&mut text, entry, result.catalogue);
     }
     if result.omitted > 0 {
         text.push_str(&format!(
@@ -176,7 +194,7 @@ fn human_within(result: &TraceResult<'_>, style: crate::HumanStyle, limit: usize
 
 /// One entry's human lines, which begin with an empty line and a heading ending in its
 /// outcome. Styling marks the outcome and each condition's severity.
-fn human_entry(lines: &mut HumanText, entry: &Entry) {
+fn human_entry(lines: &mut HumanText, entry: &Entry, catalogue: &crate::Catalogue) {
     lines.push_str(&format!("\nline {}", entry.line));
     if let Some((kind, pointer)) = &entry.selector {
         lines.push_str(&format!(" {} {}", kind.as_str(), json!(pointer)));
@@ -196,6 +214,9 @@ fn human_entry(lines: &mut HumanText, entry: &Entry) {
     if !settled.is_empty() {
         lines.push_str(&format!("\n  {}", settled.join(", ")));
     }
+    if entry.admission.is_none() {
+        lines.push_str("\n  value not checked");
+    }
     for condition in &entry.conditions {
         lines.push_str("\n  ");
         lines.status(
@@ -210,6 +231,36 @@ fn human_entry(lines: &mut HumanText, entry: &Entry) {
             lines.push_str(&format!(" bytes {}..{}", span.start, span.end));
         }
         lines.push_str(&format!(": {}", condition.message));
+        if let Some(("constraint", name)) = condition.argument {
+            lines.push_str(&format!("\n    Model rule: {}", json!(name)));
+        }
+        for related in &condition.related {
+            let pointer = match related {
+                Related::Effective { root, pointer } => {
+                    lines.push_str(&format!("\n    related effective {}", root.get()));
+                    pointer
+                }
+                Related::Source { id, pointer, .. } => {
+                    lines.push_str(&format!("\n    related source {}", id.get()));
+                    if let Some(source) = catalogue
+                        .retained_sources()
+                        .find(|source| source.id() == *id)
+                    {
+                        lines.push(' ');
+                        lines.source_label(source);
+                    }
+                    pointer
+                }
+            };
+            if let Some(pointer) = pointer {
+                lines.push_str(&format!(" {}", json!(pointer)));
+            } else {
+                lines.push_str(" (pointer unavailable)");
+            }
+            if let Related::Source { span, .. } = related {
+                lines.push_str(&format!(" bytes {}..{}", span.start, span.end));
+            }
+        }
     }
     if entry.conditions_omitted > 0 {
         lines.push_str(&format!(
