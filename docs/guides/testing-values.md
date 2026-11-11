@@ -11,34 +11,39 @@ accepts 5 to 30 °C in half-degree steps.
 A **sample** is one JSON value for one definition. Save `21.5` in `comfortable.json` and check it against the target temperature. `--kind property` and `--pointer` select the definition, and the trailing argument supplies the model file:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff sample --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --sample comfortable.json thermostat.sdf.json
-<b><span class="g">✔ </span></b><b><span class="h">Esdieff:</span></b> <b><span class="g">passed</span></b>
+<b><span class="g">✔ </span></b><span class="m">Sample</span> 2: <b><span class="g">admitted</span></b> · context available
+<span class="m">Sample input:</span> "comfortable.json" (source 2)
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
+Selected property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
+<b><span class="g">✔ </span></b><b><span class="h">Run:</span></b> <b><span class="g">passed</span></b>
 <span class="m">Complete:</span> true
 <span class="m">Errors:</span> 0 · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
 <span class="m">Scope:</span> selected
-...
-Selected property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
-<b><span class="g">✔ </span></b><span class="m">Sample</span> 2: <b><span class="g">admitted</span></b> · context available
+<span class="m">Broader RFC coverage:</span> partial
 ...
 </code></pre>
 
-`Sample 2: admitted` is the verdict on the value. Now save `35` as `too-hot.json`:
+`Sample 2: admitted` is the verdict on the value. `Run` and `Complete` describe the whole check. The input filenames identify the sample and model. Now save `35` as `too-hot.json`:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff sample --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature --sample too-hot.json thermostat.sdf.json
-<b><span class="r">✗ </span></b><b><span class="h">Esdieff:</span></b> <b><span class="r">failed</span></b>
+<b><span class="r">✗ </span></b><span class="m">Sample</span> 2: <b><span class="r">rejected</span></b> · context available
+<span class="m">Sample input:</span> "too-hot.json" (source 2)
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
+Selected property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
+<b><span class="r">✗ </span></b><b><span class="h">Run:</span></b> <b><span class="r">failed</span></b>
 <span class="m">Complete:</span> true
 <span class="m">Errors:</span> <b><span class="r">1</span></b> · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
-...
-<b><span class="r">✗ </span></b><span class="m">Sample</span> 2: <b><span class="r">rejected</span></b> · context available
-...
+<span class="m">Scope:</span> selected
+<span class="m">Broader RFC coverage:</span> partial
 
 <b><span class="r">✗ sample.bound</span></b>: Sample violates an exact numerical bound
-source 2 ""
+source 2 "" bytes 0..2
   related effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum"
-  related source 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum"
+  related source 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum" bytes 604..606
 ...
 </code></pre>
 
-The reports are trimmed to the lines about the sample. A rejected sample is a failed check with exit status 1, and the finding names the rule it broke and where that rule is defined. The other kinds are `data` for an `sdfData` definition, `action_input`, `action_output` and `event_output`, which select the data an action or event carries, and `context` for non-interactive metadata under an Object or Thing. Follow the [Context value example](../context-contract.md#check-context-values) to check a simple asset tag and compound location data. Numbers compare exactly, so `30.0` and `30` are the same value and `0.1` is never rounded.
+The reports are trimmed to the lines about the sample. Findings appear before the technical details. A rejected sample is a failed check with exit status 1, and the finding shows where the broken rule is defined. A run can fail while the sample's admission is undetermined, for example when its JSON is malformed. A definite rejection can also coexist with unfinished checks, shown as `Complete: false`. The other kinds are `data` for an `sdfData` definition, `action_input`, `action_output` and `event_output`, which select the data an action or event carries, and `context` for non-interactive metadata under an Object or Thing. Follow the [Context value example](../context-contract.md#check-context-values) to check a simple asset tag and compound location data. Numbers compare exactly, so `30.0` and `30` are the same value and `0.1` is never rounded.
 
 ## Generate representative test values
 
@@ -104,28 +109,40 @@ Each line carries the selector, the value and its settled result as `expected`. 
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace readings.jsonl thermostat.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">failed</span></b>
+<span class="m">Trace input:</span> "readings.jsonl" (source 2)
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
 <span class="m">Entries:</span> <b><span class="g">3 passed</span></b> · <b><span class="r">2 failed</span></b> · 0 undetermined
 <span class="m">Admissions:</span> 2 admitted · 3 rejected · 0 undetermined
+A rejected value counts as a passed entry only when rejection was expected.
 
 <b><span class="r">✗ </span></b>line 2 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">failed</span></b>
   label "app bug"
   admission rejected
   <b><span class="r">✗ error</span></b> sample.multiple at "/value" bytes 206..210: Sample is not an exact multiple of the positive step
+    Model rule: "multipleOf"
+    related effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf"
+    related source 1 "thermostat.sdf.json" "/sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf" bytes 632..635
 
 <b><span class="r">✗ </span></b>line 4 action_input "/sdfObject/Thermostat/sdfAction/configure": <b><span class="r">failed</span></b>
   admission rejected
   <b><span class="r">✗ error</span></b> sample.bound at "/value/targetTemperature" bytes 459..461: Sample violates an exact numerical bound
+    Model rule: "maximum"
+    related effective 1 "/sdfObject/Thermostat/sdfAction/configure/sdfInputData/properties/targetTemperature/maximum"
+    related source 1 "thermostat.sdf.json" "/sdfObject/Thermostat/sdfAction/configure/sdfInputData/properties/targetTemperature/maximum" bytes 1100..1102
 </code></pre>
 
 Only the failed lines are listed here, each with its line number, the byte range
-in the trace file and the rule it broke. Line 1 passed because 21.5 is admitted.
+in the trace file, the rule it broke and that rule's location in the model. Line 1 passed because 21.5 is admitted.
 Line 3 passed because the current temperature is nullable. Line 5 passed too:
 the alarm's temperature of 85 is above its maximum of 80, and the line expected
 rejection. Lines 2 and 4 failed because their omitted `expected` members default
 to admitted, while the actual values were rejected. Undetermined entries are
 also listed when present.
 
-Each line is checked on its own, so one malformed line fails only itself. The
+Each line is checked on its own, so one malformed line fails only itself. A line
+whose value could not be checked is marked `value not checked` and counted under
+`Values not checked`. This is separate from an undetermined admission, where the
+value was checked but the result could not be settled. The
 model is composed once, and each entry has its own Sample-value checking
 allowance. File-size and entry-count limits bound the trace as a whole. The
 report keeps aggregate counts even when individual entry details do not fit.
@@ -139,8 +156,11 @@ admissions match the recorded expectations. This thermostat replay passes:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document thermostat.sdf.json --trace vectors.jsonl thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="g">passed</span></b>
+<span class="m">Trace input:</span> "vectors.jsonl" (source 2)
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
 <span class="m">Entries:</span> <b><span class="g">10 passed</span></b> · 0 failed · 0 undetermined
 <span class="m">Admissions:</span> 2 admitted · 8 rejected · 0 undetermined
+A rejected value counts as a passed entry only when rejection was expected.
 </code></pre>
 
 Create a revision that raises the maximum to 35 and drops the half-degree step:
@@ -153,8 +173,11 @@ Against this revision, the vectors whose settled admission changed fail:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff trace --document revised.sdf.json --trace vectors.jsonl revised.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Recorded trace</span></b> esdieff.trace/1: <b><span class="r">failed</span></b>
+<span class="m">Trace input:</span> "vectors.jsonl" (source 2)
+<span class="m">Model:</span> "revised.sdf.json" (source 1)
 <span class="m">Entries:</span> <b><span class="g">8 passed</span></b> · <b><span class="r">2 failed</span></b> · 0 undetermined
 <span class="m">Admissions:</span> 4 admitted · 6 rejected · 0 undetermined
+A rejected value counts as a passed entry only when rejection was expected.
 
 <b><span class="r">✗ </span></b>line 5 property "/sdfObject/Thermostat/sdfProperty/targetTemperature": <b><span class="r">failed</span></b>
   label "above_maximum"

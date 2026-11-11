@@ -1564,7 +1564,42 @@ impl Report<'_> {
     fn render_human_with_style(&self, fallback_at: usize, style: HumanStyle) -> String {
         let (value, result, required) = self.metadata(true);
         let mut output = HumanText::new(style);
-        output.heading("Esdieff:");
+        if let Some(state) = &self.sample {
+            output.label("Sample");
+            output.push_str(&format!(" {}: ", state.sample.get()));
+            output.status(
+                match state.admission {
+                    crate::Admission::Admitted => Role::Passed,
+                    crate::Admission::Rejected => Role::Failed,
+                    crate::Admission::Undetermined => Role::Incomplete,
+                },
+                state.admission.as_str(),
+            );
+            output.separator("; ");
+            output.push_str("context ");
+            output.span(
+                (state.context != crate::ContextState::Available).then_some(Role::Incomplete),
+                state.context.as_str(),
+            );
+            output.push('\n');
+            if let Some(source) = self.catalogue.source(state.sample) {
+                output.source("Sample input:", source);
+            }
+            if let Some(source) = self.catalogue.source(state.model) {
+                output.source("Model:", source);
+            }
+            output.push_str(&format!(
+                "Selected {} in model {} at {}\n",
+                state.kind.as_str(),
+                state.model.get(),
+                serde_json::to_string(&state.pointer).expect("selector encoding"),
+            ));
+        }
+        output.heading(if self.sample.is_some() {
+            "Run:"
+        } else {
+            "Esdieff:"
+        });
         output.push(' ');
         output.status(
             Role::disposition(self.outcome.disposition()),
@@ -1616,6 +1651,12 @@ impl Report<'_> {
         output.push_str(self.broader_state());
         output.push('\n');
         // Request details follow the summary as their own section.
+        if self.sample.is_some() {
+            human_diagnostics(&value, &mut output);
+            output.gap();
+            output.heading("Details:");
+            output.push('\n');
+        }
         output.gap();
         self.write_required_human(&mut output, &required);
         if self
@@ -1747,29 +1788,6 @@ impl Report<'_> {
             }
         }
         if let Some(state) = &self.sample {
-            output.push_str(&format!(
-                "Selected {} in model {} at {}\n",
-                state.kind.as_str(),
-                state.model.get(),
-                serde_json::to_string(&state.pointer).expect("selector encoding"),
-            ));
-            output.label("Sample");
-            output.push_str(&format!(" {}: ", state.sample.get()));
-            output.status(
-                match state.admission {
-                    crate::Admission::Admitted => Role::Passed,
-                    crate::Admission::Rejected => Role::Failed,
-                    crate::Admission::Undetermined => Role::Incomplete,
-                },
-                state.admission.as_str(),
-            );
-            output.separator("; ");
-            output.push_str("context ");
-            output.span(
-                (state.context != crate::ContextState::Available).then_some(Role::Incomplete),
-                state.context.as_str(),
-            );
-            output.push('\n');
             let coverage = self.requested_coverage();
             output.label("Requested coverage (sample_area):");
             output.push_list(
@@ -1935,96 +1953,8 @@ impl Report<'_> {
                     .collect::<Vec<_>>()
             ));
         }
-        let conditions = value["diagnostics"]["items"]
-            .as_array()
-            .expect("condition array");
-        let mut coverage_seen = [false; 3];
-        for condition in conditions {
-            let code = condition["code"].as_str().expect("code");
-            let group = match code {
-                "coverage.unavailable" => Some(0),
-                "coverage.advisory_unavailable" => Some(1),
-                "sample.coverage_unavailable" => Some(2),
-                _ => None,
-            };
-            let count = if let Some(group) = group {
-                if coverage_seen[group] {
-                    continue;
-                }
-                coverage_seen[group] = true;
-                conditions
-                    .iter()
-                    .filter(|item| item["code"] == code)
-                    .count()
-            } else {
-                1
-            };
-            output.gap();
-            output.status(
-                Role::severity(Severity::from_report(
-                    condition["severity"].as_str().expect("severity"),
-                )),
-                code,
-            );
-            output.push_str(&format!(
-                ": {}{}\n",
-                condition["message"].as_str().expect("message"),
-                if count > 1 {
-                    format!(" ({count} assessment areas)")
-                } else {
-                    String::new()
-                }
-            ));
-            if let Some(quality) = condition["arguments"]["quality"].as_str() {
-                output.push_str(&format!(
-                    "  Quality: {}\n",
-                    serde_json::to_string(quality).expect("quality name encoding")
-                ));
-            }
-            if let Some(location) = condition.get("primary") {
-                human_location(location, &mut output);
-                output.push('\n');
-            }
-            if let Some(replacement) = condition["arguments"]["replacement"].as_str() {
-                output.push_str("  ");
-                output.label("Direct symbol if intended:");
-                output.push_str(&format!(
-                    " {}\n",
-                    serde_json::to_string(replacement).expect("replacement encoding")
-                ));
-            }
-            for location in condition["related"].as_array().expect("related locations") {
-                output.push_str("  related ");
-                human_location(location, &mut output);
-                output.push('\n');
-            }
-        }
-        if !conditions.is_empty() {
-            output.gap();
-        }
-        output.label("Diagnostic details omitted:");
-        output.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
-        let reasons = value["diagnostics"]["reasons"]
-            .as_array()
-            .expect("limit reasons");
-        if !reasons.is_empty() {
-            output.label("Presentation limits:");
-            for reason in reasons {
-                output.push(' ');
-                output.push_str(reason.as_str().expect("limit reason"));
-            }
-            output.push('\n');
-        }
-        for omission in value["diagnostics"]["omissions"]
-            .as_array()
-            .expect("omission array")
-        {
-            output.label("Presentation omitted");
-            output.push_str(&format!(
-                " {}: {}\n",
-                omission["field"].as_str().expect("omitted field"),
-                omission["reason"].as_str().expect("omission reason")
-            ));
+        if self.sample.is_none() {
+            human_diagnostics(&value, &mut output);
         }
         if let Operation::Inspect {
             json: Some(payload),
@@ -3033,6 +2963,100 @@ impl Report<'_> {
             "mandatory reserve and optional precharge"
         );
         output
+    }
+}
+
+fn human_diagnostics(value: &Value, output: &mut HumanText) {
+    let conditions = value["diagnostics"]["items"]
+        .as_array()
+        .expect("condition array");
+    let mut coverage_seen = [false; 3];
+    for condition in conditions {
+        let code = condition["code"].as_str().expect("code");
+        let group = match code {
+            "coverage.unavailable" => Some(0),
+            "coverage.advisory_unavailable" => Some(1),
+            "sample.coverage_unavailable" => Some(2),
+            _ => None,
+        };
+        let count = if let Some(group) = group {
+            if coverage_seen[group] {
+                continue;
+            }
+            coverage_seen[group] = true;
+            conditions
+                .iter()
+                .filter(|item| item["code"] == code)
+                .count()
+        } else {
+            1
+        };
+        output.gap();
+        output.status(
+            Role::severity(Severity::from_report(
+                condition["severity"].as_str().expect("severity"),
+            )),
+            code,
+        );
+        output.push_str(&format!(
+            ": {}{}\n",
+            condition["message"].as_str().expect("message"),
+            if count > 1 {
+                format!(" ({count} assessment areas)")
+            } else {
+                String::new()
+            }
+        ));
+        if let Some(quality) = condition["arguments"]["quality"].as_str() {
+            output.push_str(&format!(
+                "  Quality: {}\n",
+                serde_json::to_string(quality).expect("quality name encoding")
+            ));
+        }
+        if let Some(location) = condition.get("primary") {
+            human_location(location, output);
+            output.push('\n');
+        }
+        if let Some(replacement) = condition["arguments"]["replacement"].as_str() {
+            output.push_str("  ");
+            output.label("Direct symbol if intended:");
+            output.push_str(&format!(
+                " {}\n",
+                serde_json::to_string(replacement).expect("replacement encoding")
+            ));
+        }
+        for location in condition["related"].as_array().expect("related locations") {
+            output.push_str("  related ");
+            human_location(location, output);
+            output.push('\n');
+        }
+    }
+    if !conditions.is_empty() {
+        output.gap();
+    }
+    output.label("Diagnostic details omitted:");
+    output.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
+    let reasons = value["diagnostics"]["reasons"]
+        .as_array()
+        .expect("limit reasons");
+    if !reasons.is_empty() {
+        output.label("Presentation limits:");
+        for reason in reasons {
+            output.push(' ');
+            output.push_str(reason.as_str().expect("limit reason"));
+        }
+        output.push('\n');
+    }
+    for omission in value["diagnostics"]["omissions"]
+        .as_array()
+        .expect("omission array")
+    {
+        output.label("Presentation omitted");
+        output.push_str(&format!(
+            " {}: {}\n",
+            omission["field"].as_str().expect("omitted field"),
+            omission["reason"].as_str().expect("omission reason")
+        ));
     }
 }
 

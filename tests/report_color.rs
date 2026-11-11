@@ -210,8 +210,8 @@ fn samples_style_admission_without_turning_assessed_or_inapplicable_into_validit
         assert_eq!(report.outcome().disposition(), disposition);
         let output = styled(&report);
         // The admission's symbol starts the sample line; the admission keeps its colour.
-        assert!(output.contains(&format!(
-            "\n{sequence}{mark}\x1b[0m\x1b[38;2;112;120;140mSample\x1b[0m "
+        assert!(output.starts_with(&format!(
+            "{sequence}{mark}\x1b[0m\x1b[38;2;112;120;140mSample\x1b[0m "
         )));
         assert!(output.contains(&format!("{sequence}{admission}\x1b[0m · context ")));
         assert!(!output.contains("\x1b[1;38;2;90;247;142massessed"));

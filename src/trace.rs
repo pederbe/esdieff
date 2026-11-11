@@ -369,7 +369,7 @@ impl Catalogue {
             }
             // Entries are listed in line order while they fit, and every later one is counted.
             if result.omitted == 0 {
-                let size = report::entry_bytes(&entry, request.document, id);
+                let size = report::entry_bytes(&entry, &result);
                 if size <= room {
                     room -= size;
                     result.entries.push(entry);
