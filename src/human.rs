@@ -1,6 +1,18 @@
 //! Explicit human presentation, independent of the process environment.
 use crate::{AssessmentStatus, Disposition, Severity, terminal_palette as palette};
-use std::ops::{Deref, Range};
+use std::{
+    borrow::Cow,
+    ops::{Deref, Range},
+};
+
+/// Keep supplied text on one inert terminal line without changing ordinary names.
+pub(crate) fn escaped(text: &str) -> Cow<'_, str> {
+    if text.chars().any(char::is_control) {
+        Cow::Owned(serde_json::to_string(text).expect("text encoding"))
+    } else {
+        Cow::Borrowed(text)
+    }
+}
 
 /// Presentation for human reports. Library rendering is plain unless opted in.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -102,6 +114,14 @@ pub(crate) struct HumanText {
 }
 
 impl HumanText {
+    pub(crate) fn warning_policy(&mut self, outcome: &crate::Outcome) {
+        if outcome.strict_warnings() && outcome.errors() == 0 && outcome.warnings() > 0 {
+            self.push_str(
+                "Warnings caused this run to fail because --strict-warnings is enabled.\n",
+            );
+        }
+    }
+
     /// A supplied display label, or its caller key when no label was retained.
     /// JSON quoting keeps source text from introducing terminal controls or new lines.
     pub(crate) fn source(&mut self, label: &str, source: &crate::Source) {

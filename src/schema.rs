@@ -95,6 +95,10 @@ impl Catalogue {
             prefix.quoted(source.role().as_str())?;
             prefix.emit(",\"acquisition\":")?;
             prefix.quoted(source.acquisition().as_str())?;
+            if let Some(label) = source.label() {
+                prefix.emit(",\"label\":")?;
+                prefix.quoted(label)?;
+            }
             prefix.emit("}")?;
         }
         prefix.emit("]")?;
@@ -127,6 +131,11 @@ impl Catalogue {
                 output.emit(",\"allOf\":[")?;
                 description(json, &mut output, 0).and_then(|()| output.emit("]}"))
             }
+            _ if source.acquisition() == crate::Acquisition::Failed => {
+                Err("selected input could not be read")
+            }
+            _ if source.parsed.errors > 0 => Err("selected input could not be decoded as JSON"),
+            Field::Unavailable(reason) => Err(reason),
             _ => Err("selected effective description is unavailable"),
         })();
         let schema = output.into_bytes();
@@ -368,7 +377,7 @@ fn description(
             "format" => return Err("format denotation and equality are not exportable"),
             "sdfType" => return Err("sdfType abstract meaning is not exportable"),
             "contentFormat" => return Err("content-format meaning is not exportable"),
-            "pattern" => return Err("pattern engine equivalence is not established for export"),
+            "pattern" => return Err("Pattern constraints are not supported by schema export"),
             _ => return Err("unsupported quality or extension vocabulary in selected description"),
         }
     }

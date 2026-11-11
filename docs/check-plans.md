@@ -224,6 +224,12 @@ or unavailable output. Human output lists the same named results and coverage,
 with accessible findings and locations when detail fits. A diff case adds a
 `Classification:` line and the native human diff report.
 
+The human report starts with a readable run summary and one result row per
+case, before source inventories and native reports under Details. Every case
+keeps its outcome, completion and sample admission or comparison classification
+when its native report is omitted. Invalid case requests name the plan location,
+document and selector, then later cases continue.
+
 ## Finite allowances
 
 Plans are at most 1 MiB, with the ordinary native JSON depth, node, decoding and

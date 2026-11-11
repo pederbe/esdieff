@@ -68,6 +68,16 @@ Only generation complete, fidelity established and a passed requested check perm
 
 For files, output is staged under a bounded temporary file in the existing destination directory and committed only after successful generation and policy checks; abandoned staging is cleaned up. Each file commit is atomic where the platform supports it, without a two-file transaction or stdout rollback guarantee. A permitted generated document is delivered before emitting the passed CLI report. The report's domain outcome does not itself assert host delivery; successful process status establishes delivery of both requested outputs. If the report later fails, exit 4 and stderr identify any document already delivered. A stdout document may be partially emitted on host failure and cannot be withdrawn; exit 4/stderr make the failure explicit. Reports go to their separate destination with a trailing newline and equivalent human/JSON conclusions. No report prose is mixed into document stdout.
 
+The CLI human report names the plan and both destinations, and states whether
+the document was written or withheld. A withheld document includes the reason.
+The library report describes generation, fidelity and checking without claiming
+host delivery. Findings appear before Details and retain original, effective
+and recipe locations. Without a requested check, the report says checking was
+not requested and points to `esdieff check`. If full human detail cannot fit,
+the CLI keeps a bounded delivery summary and outcome counts, and directs the
+reader to `--format json` for details. Explicit JSON reports retain their wire
+format and generated document stdout contains only SDF JSON.
+
 ## Ordinary acceptance fixture
 
 The reusable source contributes `Sensor / indoor` in `https://example.com/esdieff/capabilities`, with inline temperature Property data: type number, nullable false, minimum -50, maximum 150, multipleOf `0.10`, a `maxLength` of `18446744073709551616` that FullBaseline reports outside the CDDL `uint` domain, unit Cel, writable false; an inline Action input/output and Event output contain no references. It also declares `sdfRequired:["temperature"]` and a source description. An additional inline reusable `Switch` sdfObject provides a Boolean `enabled` Property in the same document. The reusable source remains byte-identical.

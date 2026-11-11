@@ -12,6 +12,8 @@ use crate::{
 
 /// Mandatory text is measured before any operation work. Slack covers fixed statuses,
 /// omission counters and processing summaries, including an unknown remainder.
+const CONDITION_SUMMARY_BYTES: usize = 512;
+
 pub(super) struct Envelope {
     identity: String,
     attempts: String,
@@ -64,7 +66,10 @@ impl Envelope {
         // cannot exceed the pointer's escaped size, including imported positions.
         let identity_size = escaped_size(request.pointer)
             .saturating_mul(2)
-            .saturating_add(256);
+            .saturating_add(256)
+            .saturating_add(catalogue.source(request.document).map_or(0, |source| {
+                escaped_size(source.label().unwrap_or(source.key())) + 32
+            }));
         let attempt_size = catalogue
             .retained_sources()
             .try_fold(0usize, |size, source| {
@@ -73,7 +78,7 @@ impl Envelope {
             .ok_or("reference source inventory exceeds report allowance")?;
         let reserve = identity_size
             .saturating_add(attempt_size)
-            .saturating_add(2048);
+            .saturating_add(2048 + CONDITION_SUMMARY_BYTES);
         let allocation_reserve = reserve.saturating_mul(3);
         if reserve > catalogue.limits.report_bytes
             || allocation_reserve > catalogue.limits.effective_allocation
@@ -355,9 +360,9 @@ impl Writer<'_> {
         let id = self.next_source;
         self.next_source += 1;
         Ok(Some((
-            format!("[source {id}](#source-{id})"),
+            format!("[location {id}](#source-{id})"),
             format!(
-                "\n<a id=\"source-{id}\"></a>\n\n- Source {id}: {label}, pointer {pointer}, {position}.\n"
+                "\n<a id=\"source-{id}\"></a>\n\n- Location {id}: {label}, pointer {pointer}, {position}.\n"
             ),
         )))
     }
@@ -813,10 +818,31 @@ pub(super) fn render<'a>(
         envelope.identity
     };
     use std::fmt::Write;
-    writeln!(markdown, "Documentation status: {status}.\n\nRFC 9880. This reference documents the effective interface. It is not a Full model assessment, compatibility verdict, satisfiability proof or device test. Run `esdieff check` separately. Format, unit and pattern spellings do not establish that every use of their meaning was checked.\n").expect("String write");
+    if let Some(source) = catalogue.source(request.document) {
+        writeln!(
+            markdown,
+            "Selected model: {}\n",
+            escape(source.label().unwrap_or(source.key()))
+        )
+        .expect("String write");
+    }
+    writeln!(markdown, "Documentation status: {status}.\n").expect("String write");
+    if let Some(condition) = writer.conditions.first() {
+        let reason = format!(
+            "Reason: {}. {}\n\n",
+            escape(condition.code),
+            escape(condition.message)
+        );
+        if reason.len() <= CONDITION_SUMMARY_BYTES {
+            markdown.push_str(&reason);
+        }
+    }
+    markdown.push_str("This reference describes the effective interface from RFC 9880. Run `esdieff check` for model assessment. Documentation does not establish compatibility, satisfiability or device behavior. Format, unit and pattern spellings do not establish that every use of their meaning was checked.\n\n");
     markdown.push_str(&writer.metadata);
-    markdown.push_str("## Contents\n\n");
-    markdown.push_str(&writer.contents);
+    if !writer.contents.is_empty() {
+        markdown.push_str("## Contents\n\n");
+        markdown.push_str(&writer.contents);
+    }
     markdown.push_str(&writer.body);
     markdown.push_str("\n## Source index\n\nSupplied source attempts:\n\n");
     markdown.push_str(&envelope.attempts);

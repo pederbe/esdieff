@@ -21,6 +21,12 @@ this mode writes the reason to stderr, exits with status 3 and writes nothing
 to stdout. Shell redirection may still create an empty file, so check the exit
 status before using the file.
 
+Each source attempt optionally includes its retained display `label` alongside
+its key. Refusals distinguish a selected input that could not be read or decoded
+from unavailable effective meaning and unsupported export constraints. Raw-schema
+refusals on stderr identify the requested file and pointer and suggest checking
+the model with its dependencies. Successful standalone schema bytes are unchanged.
+
 Select `property`, `action_input`, `action_output`, `event_output` or `context`.
 Action and Event pointers name the affordance, as in Sample-value checking.
 Context pointers name the Context definition itself. Supply dependencies as

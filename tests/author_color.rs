@@ -102,6 +102,20 @@ impl Drop for Fixture {
     }
 }
 
+// Delivery context changes with the destination. The operation report must retain its
+// content across terminal styling and stdout/file routing.
+fn operation_report(output: &[u8]) -> &[u8] {
+    let mut start = 0;
+    for _ in 0..3 {
+        start += output[start..]
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .unwrap()
+            + 1;
+    }
+    &output[start..]
+}
+
 #[test]
 fn color_controls_only_change_human_reports_and_never_generated_sdf_or_json_reports() {
     let fixture = Fixture::new(SOURCE);
@@ -130,7 +144,10 @@ fn color_controls_only_change_human_reports_and_never_generated_sdf_or_json_repo
         assert_eq!(output.stdout, document);
         let report_file = fs::read(fixture.0.join("report.txt")).unwrap();
         assert_eq!(report_file.contains(&0x1b), mode == "always");
-        assert_presents(&report_file, &report.stdout);
+        assert_presents(
+            operation_report(&report_file),
+            operation_report(&report.stdout),
+        );
         let output = fixture.run(&fixture.args("-", "report.json", "json", mode), &[]);
         assert!(output.status.success());
         assert_eq!(output.stdout, document);
@@ -176,8 +193,8 @@ fn automatic_author_styling_uses_the_report_destination_and_shared_environment_p
             .is_object()
     );
     assert_eq!(
-        fs::read(fixture.0.join("report.txt")).unwrap(),
-        ordinary.stdout
+        operation_report(&fs::read(fixture.0.join("report.txt")).unwrap()),
+        operation_report(&ordinary.stdout)
     );
     for (mode, environment, styled) in [
         ("always", vec![("NO_COLOR", "1"), ("TERM", "dumb")], true),
@@ -200,7 +217,10 @@ fn automatic_author_styling_uses_the_report_destination_and_shared_environment_p
         assert!(!output.stdout.contains(&0x1b));
         let report = fs::read(fixture.0.join("report.txt")).unwrap();
         assert_eq!(report.contains(&0x1b), styled);
-        assert_presents(&report, &ordinary.stdout);
+        assert_presents(
+            operation_report(&report),
+            operation_report(&ordinary.stdout),
+        );
     }
 }
 
@@ -248,7 +268,7 @@ fn optional_checking_failures_and_fidelity_limits_remain_visible_together() {
         let output = fixture.run(&args, &[]);
         assert_eq!(output.status.code(), Some(1));
         assert!(!fixture.0.join("document.json").exists());
-        assert!(plain(&output.stdout).contains("Author request error recipe at /objects/0"));
+        assert!(plain(&output.stdout).contains("author request \"error recipe\" at \"/objects/0"));
         let reference = reference.get_or_insert_with(|| output.stdout.clone());
         assert_presents(&output.stdout, reference);
     }

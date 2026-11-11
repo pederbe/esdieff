@@ -317,32 +317,30 @@ fn human_cases_agree_with_named_json_admissions_outcomes_and_completion() {
             assert!(human.stderr.is_empty());
             let text = String::from_utf8(human.stdout).unwrap();
             for case in wire["cases"].as_array().unwrap() {
-                let marker = format!("\nCase: {}\n", case["name"]);
-                let section = text
-                    .split_once(&marker)
-                    .unwrap()
-                    .1
-                    .split("\nCase:")
-                    .next()
+                let marker = format!(
+                    "- {} [{}]: ",
+                    case["name"],
+                    case["operation"].as_str().unwrap()
+                );
+                let summary = text.split_once("\nDetails:\n").unwrap().0;
+                let row = summary
+                    .lines()
+                    .find(|line| line.starts_with(&marker))
                     .unwrap();
-                for (heading, value) in [
-                    ("Disposition", &case["outcome"]["disposition"]),
-                    ("Complete", &case["outcome"]["complete"]),
-                    ("Admission", &case["admission"]),
-                    ("Classification", &case["classification"]),
+                assert!(
+                    row.starts_with(&format!(
+                        "{marker}{}, complete: {}",
+                        case["outcome"]["disposition"].as_str().unwrap(),
+                        case["outcome"]["complete"]
+                    )),
+                    "{row}"
+                );
+                for (heading, member) in [
+                    ("Admission", "admission"),
+                    ("Classification", "classification"),
                 ] {
-                    if !value.is_null() {
-                        let value = value
-                            .as_str()
-                            .map(str::to_owned)
-                            .unwrap_or_else(|| value.to_string());
-                        assert!(
-                            section
-                                .lines()
-                                .any(|line| line == format!("{heading}: {value}")),
-                            "{}: {heading}",
-                            case["name"]
-                        );
+                    if let Some(value) = case[member].as_str() {
+                        assert!(row.contains(&format!(", {heading}: {value}")), "{row}");
                     }
                 }
             }

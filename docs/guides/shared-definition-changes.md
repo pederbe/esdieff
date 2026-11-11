@@ -96,6 +96,11 @@ The command reports:
 
 ```text
 Revision comparison esdieff.revision-comparison/10: breaking
+Earlier input: "reuse-walkthrough/earlier/devices.sdf.json" (source 1)
+Earlier input: "reuse-walkthrough/earlier/shared.sdf.json" (source 2)
+Later input: "reuse-walkthrough/later/devices.sdf.json" (source 1)
+Later input: "reuse-walkthrough/later/shared.sdf.json" (source 2)
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 Documents: 2 compared, 0 removed, 0 added
 Differences: 1 breaking, 0 undetermined, 0 compatible

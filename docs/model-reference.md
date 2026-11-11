@@ -26,6 +26,11 @@ Use `-` once for standard input. Use `--` before input paths beginning with a
 hyphen. Shell redirection saves the reference. Output is UTF-8 Markdown with no
 terminal colors. Internal links remain usable when you move the document.
 
+The summary names the selected model file. When available, the first processing
+reason appears near the outcome. Source citations read **Location 1**,
+**Location 2** and so on. These number cited coordinates independently of input
+source IDs. Existing `#source-N` link anchors keep their identities.
+
 ## Explore shared definitions
 
 For a complete example connecting source explanations to client compatibility,

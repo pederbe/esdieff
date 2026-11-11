@@ -796,7 +796,7 @@ fn changed_report_discloses_the_delivered_document_and_new_output_alias_is_refus
     );
     let error = refused(output, 4);
     assert!(error.contains("identity changed"));
-    assert!(error.contains("already delivered (committed) to out.json"));
+    assert!(error.contains("already delivered (committed) to \"out.json\""));
     assert!(fixture.path("out.json").exists());
     assert_eq!(
         fs::read_to_string(fixture.path("report.json")).unwrap(),

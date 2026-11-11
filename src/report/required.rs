@@ -188,6 +188,66 @@ impl Report<'_> {
             counts(collection, presentation),
             presentation.reason,
         );
+        for owner in &presentation.owners {
+            output.label("Required owner:");
+            writeln!(
+                output,
+                " {} (declaration {}, complete {})",
+                owner["class"].as_str().unwrap_or("class unavailable"),
+                owner["state"].as_str().expect("state"),
+                owner["complete"]
+            )
+            .expect("String write");
+            for field in ["source_owner", "effective_owner"] {
+                if !owner[field].is_null() {
+                    output.push_str("  ");
+                    human_location(&owner[field], output);
+                    output.push('\n');
+                }
+            }
+            for reference in owner["references"].as_array().expect("references") {
+                writeln!(
+                    output,
+                    "  Reference {}: {}, form {}, text {}, complete {}",
+                    reference["occurrence"],
+                    reference["status"].as_str().expect("status"),
+                    reference["form"].as_str().unwrap_or("unavailable"),
+                    reference["text"],
+                    reference["complete"]
+                )
+                .expect("String write");
+                for field in ["source", "effective", "consumer"] {
+                    if !reference[field].is_null() {
+                        output.push_str("    ");
+                        human_location(&reference[field], output);
+                        output.push('\n');
+                    }
+                }
+                for location in reference["related"].as_array().expect("related") {
+                    output.push_str("    related ");
+                    human_location(location, output);
+                    output.push('\n');
+                }
+                for target in reference["targets"].as_array().expect("targets") {
+                    writeln!(
+                        output,
+                        "    Target {} {}: {}, complete {}",
+                        target["class"].as_str().expect("class"),
+                        target["given_name"],
+                        target["capability"].as_str().expect("capability"),
+                        target["complete"]
+                    )
+                    .expect("String write");
+                    for field in ["source_definition", "effective_definition"] {
+                        if !target[field].is_null() {
+                            output.push_str("      ");
+                            human_location(&target[field], output);
+                            output.push('\n');
+                        }
+                    }
+                }
+            }
+        }
     }
     pub(super) fn required_presentation(
         &self,

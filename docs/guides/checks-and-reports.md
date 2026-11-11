@@ -44,25 +44,39 @@ A **check plan** is a JSON file that names the model and sample files to supply 
 }
 ```
 
-Paths are relative to the plan, so the directory moves as a unit. Each case keeps its own scope, assessment level and warning policy. Copy the example directory and run it. The human report prints each case in full, so this command keeps the summary lines:
+Paths are relative to the plan, so the directory moves as a unit. Each case keeps its own scope, assessment level and warning policy. Copy the example directory and run it. The report starts with the run summary and every named case result. Native reports follow under Details. This excerpt stops before those details:
 
-<pre class="terminal"><code><span class="p">$</span> esdieff check --plan plan.json | grep -E '^(Case|Disposition|Admission|Check case summary)'
-Case: "Catalogue"
-Disposition: passed
-Case: "Thermostat model"
-Disposition: passed
-Case: "Comfortable target"
-Disposition: passed
-Admission: admitted
-Case: "Too hot target"
-Disposition: failed
-Admission: rejected
-Check case summary: {"admission_undetermined":0,"admitted":1,"complete":true,"complete_cases":4,"failed":1,"incomplete_cases":0,"omitted_reports":0,"passed":3,"rejected":1,"request_errors":0,"total":4,"undetermined":0,"verdict":"failed"}
+<pre class="terminal"><code><span class="p">$</span> esdieff check --plan plan.json
+<b><span class="h">Esdieff check run</span></b>: <b><span class="r">failed</span></b>
+...
+Cases: 3 passed, 1 failed, 0 undetermined, 0 invalid requests
+Complete cases: 4 of 4
+Samples: 1 admitted, 1 rejected, 0 undetermined
+Case reports omitted: 0
+
+Case results:
+- "Catalogue" [check]: <b><span class="g">passed</span></b>, complete: true
+  Errors: 0, warnings: 0, notices: 0, incomplete checks: 0
+- "Thermostat model" [check]: <b><span class="g">passed</span></b>, complete: true
+  Errors: 0, warnings: 0, notices: 0, incomplete checks: 0
+- "Comfortable target" [sample]: <b><span class="g">passed</span></b>, complete: true, <span class="m">Admission:</span> admitted
+  Errors: 0, warnings: 0, notices: 0, incomplete checks: 0
+- "Too hot target" [sample]: <b><span class="r">failed</span></b>, complete: true, <span class="m">Admission:</span> rejected
+  Errors: 1, warnings: 0, notices: 0, incomplete checks: 0
+
+...
 </code></pre>
 
 The run exits 1, because the rejected sample is a failed case. A plan has no expected-result field: a sample you intend to reject still fails, which keeps the verdict honest. Keep such samples in a separate plan, or check them with [recorded traces](testing-values.md#check-a-log-of-recorded-values), where an `expected` member turns an intended rejection into a pass. The [catalogue-check example](https://github.com/pederbe/esdieff/blob/main/examples/catalogue-check) is the smallest model-only plan, and a `diff` case can compare two revisions beside the checks, as [Repeatable catalogue checks](../check-plans.md) shows.
 
 ## Check a directory of models
+
+For the pipeline examples below, use Bash and enable `set -o pipefail` first.
+This preserves Esdieff's exit status when a report is passed to `jq`.
+
+```bash
+set -o pipefail
+```
 
 `--directory` selects every regular file ending in `.sdf.json` in a directory, so a check follows the collection as files are added. Run this on the repository's [directory-check example](https://github.com/pederbe/esdieff/blob/main/examples/directory-check), which holds a device, a shared type, a nested status model and an unfinished draft:
 
@@ -78,12 +92,19 @@ The run exits 1, because the rejected sample is a failed case. A plan has no exp
 <b><span class="r">✗ </span></b><b><span class="h">Esdieff:</span></b> <b><span class="r">failed</span></b>
 <span class="m">Complete:</span> true
 <span class="m">Errors:</span> <b><span class="r">1</span></b> · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
-...
+<span class="m">Scope:</span> catalogue
+<span class="m">Broader RFC coverage:</span> partial
+<span class="m">Input:</span> "examples/directory-check/device.sdf.json" (source 1)
+<span class="m">Input:</span> "examples/directory-check/draft/unfinished.sdf.json" (source 2)
+<span class="m">Input:</span> "examples/directory-check/nested/status.sdf.json" (source 3)
+Other requested inputs: 1 (listed in Details)
 
-<b><span class="r">✗ data.string</span></b>: A textual data quality must contain a string
-source 2 "/sdfData/Unfinished/type"
+<b><span class="r">✗ error</span></b> data.string: A textual data quality must contain a string
+<span class="m">Input:</span> "examples/directory-check/draft/unfinished.sdf.json" (source 2)
+source 2 "/sdfData/Unfinished/type" bytes 84..85
 
 <span class="m">Diagnostic details omitted:</span> 0
+...
 </code></pre>
 
 Repeat `--directory` for several collections, add explicit files beside them, and name a discovered root by its joined path, such as `--root examples/directory-check/device.sdf.json`. [Check a local model collection](../directory-discovery.md) states the selection rules and limits.
@@ -160,8 +181,8 @@ esdieff check --directory models --recursive --strict-warnings
 A missing `models` directory exits 2 and a named model file that is missing
 exits 3, so the step fails when the check could not run as well as when it
 found a problem. When you pipe a report into another program, such as `jq`, the
-shell reports that program's status instead. Run `set -o pipefail` before the
-pipeline to keep the check's status.
+shell reports that program's status instead. In Bash, run `set -o pipefail`
+before the pipeline to keep the check's status.
 
 An invalid invocation or undecodable plan writes its reason to standard error
 without a report. A valid plan whose individual case request is invalid still

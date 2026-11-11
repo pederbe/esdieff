@@ -139,7 +139,10 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
     let value: Value = serde_json::from_str(&to_json(result)).expect("edit report");
     let mut text = HumanText::new(style);
     text.heading("Edit");
-    text.push_str(&format!(" {}: ", result.request.key));
+    text.push_str(&format!(
+        " {}: ",
+        crate::human::escaped(&result.request.key)
+    ));
     text.status(
         Role::disposition(result.outcome.disposition()),
         result.outcome.disposition().as_str(),
@@ -167,6 +170,49 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         result.fidelity.as_str(),
     );
     text.push_str(&format!(" ({FIDELITY_CONTRACT})\n"));
+    text.push_list(
+        &format!(
+            "Errors: {}; warnings: {}; notices: {}; unfinished editing units: {}\n",
+            result.outcome.errors(),
+            result.outcome.warnings(),
+            result.outcome.notices(),
+            result.outcome.incomplete_checks()
+        ),
+        "; ",
+    );
+    text.warning_policy(&result.outcome);
+    for source in result
+        .catalogue()
+        .sources()
+        .filter(|source| source.role().is_model())
+        .take(3)
+    {
+        text.source("Input:", source);
+    }
+    if let Some(check) = &result.checking {
+        text.label("Checking:");
+        text.push_str(&format!(
+            " {}: ",
+            value["result"]["checking"]["assessment"]
+                .as_str()
+                .expect("assessment")
+        ));
+        let outcome = check.outcome();
+        text.status(
+            Role::disposition(outcome.disposition()),
+            outcome.disposition().as_str(),
+        );
+        text.push('\n');
+    } else {
+        text.label("Checking:");
+        text.push_str(" not requested. Run esdieff check to assess the generated model.\n");
+    }
+    crate::report::human_diagnostics(&value, result.catalogue(), &mut text);
+    text.gap();
+    text.heading("Details:");
+    text.push('\n');
+    text.label("Broader RFC coverage:");
+    text.push_str(" partial\n");
     text.muted_line(&format!(
         "Substitution: source {} with generated source {}",
         result.request.selected.get(),
@@ -189,17 +235,7 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
         ),
         ", ",
     );
-    text.label("Checking:");
-    if let Some(check) = &result.checking {
-        text.push_str(&format!(
-            " {}: ",
-            value["result"]["checking"]["assessment"]
-                .as_str()
-                .expect("assessment")
-        ));
-        let disposition = check.outcome().disposition();
-        text.status(Role::disposition(disposition), disposition.as_str());
-        text.push('\n');
+    if result.checking.is_some() {
         let coverage = &value["result"]["checking"]["coverage"]["requested"];
         text.label("Requested model coverage:");
         text.push_list(
@@ -228,62 +264,12 @@ pub(super) fn to_human(result: &EditResult, style: crate::HumanStyle) -> String 
                 ", ",
             );
         }
-    } else {
-        text.push_str(" not requested\n");
     }
-    text.label("Broader RFC coverage:");
-    text.push_str(" partial\n");
-    text.push_list(
-        &format!(
-            "Errors: {}, unfinished editing units: {}\n",
-            result.outcome.errors(),
-            result.outcome.incomplete_checks()
-        ),
-        ", ",
-    );
-    for condition in value["diagnostics"]["items"]
-        .as_array()
-        .expect("edit conditions")
-    {
-        let severity = condition["severity"].as_str().expect("severity");
-        text.gap();
-        text.status(
-            Role::severity(crate::Severity::from_report(severity)),
-            severity,
-        );
-        text.push_str(&format!(
-            " {}: {}\n",
-            condition["code"].as_str().expect("code"),
-            condition["message"].as_str().expect("message")
-        ));
-        for location in std::iter::once(&condition["primary"])
-            .chain(condition["related"].as_array().expect("related locations"))
-        {
-            if let Some(pointer) = location["pointer"].as_str() {
-                if location["kind"] == "edit_request" {
-                    text.push_str(&format!(
-                        "  request {} at {pointer}\n",
-                        location["key"].as_str().expect("request key")
-                    ));
-                } else if let Some(source) =
-                    location.get("source_id").or_else(|| location.get("root"))
-                {
-                    text.push_str(&format!(
-                        "  {} {source} at {pointer}\n",
-                        location["kind"].as_str().expect("location kind")
-                    ));
-                }
-            }
-        }
+    let limit = result.catalogue().limits.report_bytes;
+    if text.len() > limit {
+        return to_json(result);
     }
-    if value["diagnostics"]["truncated"] == true {
-        text.gap();
-        text.push_str(&format!(
-            "Diagnostic details omitted: {}\n",
-            value["diagnostics"]["omitted"]
-        ));
-    }
-    text.finish(result.catalogue().limits.report_bytes)
+    text.finish(limit)
 }
 
 struct Origin {

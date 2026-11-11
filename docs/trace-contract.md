@@ -107,6 +107,9 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"trace"`, 
 
 The human report identifies the trace input and model by their labels, or caller keys when labels were omitted. It shows the disposition, entry and admission counts, and a separate count of values not checked when any exist. An undetermined admission is distinct from a value that was not checked. When there are rejected values, it explains that an expected rejection can pass. Each listed entry shows its line, selector and outcome, label, admission and Expected admission, or states that its value was not checked. Each condition shows its severity, code, pointer and byte range, followed by the violated model rule and related effective and original source locations when retained. It gives the JSON report instead if it would not fit the report byte limit.
 
+An unavailable condition also shows its retained `arguments.reason`, so the
+human report explains the same cause as JSON without changing entry outcomes.
+
 ## Replaying Generated values
 
 `esdieff generate --format jsonl` writes one Trace entry per admitted or rejected Generated value, with its settled admission as `expected` and its Generation target as `label`, as the [generation contract](generation-contract.md#json-lines) describes. So its output is a Recorded trace. An unchanged model retains the expected admissions when replay completes the needed checks. Against a later revision, a changed definite admission fails its entry, so last release's values become regression vectors for the next. Missing selectors also fail. Unavailable needed meaning or exhausted processing capacity leaves affected entries undetermined.

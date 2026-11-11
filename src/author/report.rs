@@ -209,7 +209,10 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
     let value: Value = serde_json::from_str(&to_json(result)).expect("author report");
     let mut text = HumanText::new(style);
     text.heading("Author");
-    text.push_str(&format!(" {}: ", result.request.thing));
+    text.push_str(&format!(
+        " {}: ",
+        crate::human::escaped(&result.request.thing)
+    ));
     text.status(
         Role::disposition(result.outcome.disposition()),
         result.outcome.disposition().as_str(),
@@ -235,8 +238,6 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         result.fidelity.as_str(),
     );
     text.push('\n');
-    text.label("Broader RFC coverage:");
-    text.push_str(" partial\n");
     text.push_list(
         &format!(
             "Errors: {}; warnings: {}; notices: {}; unfinished authoring units: {}\n",
@@ -247,6 +248,39 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         ),
         "; ",
     );
+    text.warning_policy(&result.outcome);
+    for source in result
+        .catalogue()
+        .sources()
+        .filter(|source| source.role().is_model())
+        .take(3)
+    {
+        text.source("Input:", source);
+    }
+    if let Some(check) = &result.checking {
+        text.label("Requested checking");
+        text.push_str(&format!(
+            " {}: ",
+            check.wire["request"]["assessment"]
+                .as_str()
+                .unwrap_or("unavailable")
+        ));
+        let outcome = check.requested.outcome();
+        text.status(
+            Role::disposition(outcome.disposition()),
+            outcome.disposition().as_str(),
+        );
+        text.push('\n');
+    } else {
+        text.label("Checking:");
+        text.push_str(" not requested. Run esdieff check to assess the generated model.\n");
+    }
+    crate::report::human_diagnostics(&value, result.catalogue(), &mut text);
+    text.gap();
+    text.heading("Details:");
+    text.push('\n');
+    text.label("Broader RFC coverage:");
+    text.push_str(" partial\n");
     text.muted_line("Baseline: rfc9880/base-1");
     text.muted_line(&format!(
         "Selected generated root: {}",
@@ -282,22 +316,6 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
         ));
     }
     if let Some(check) = &result.checking {
-        text.label("Requested checking");
-        text.push_str(&format!(
-            " {}: ",
-            check.wire["request"]["assessment"]
-                .as_str()
-                .unwrap_or("unavailable"),
-        ));
-        let outcome = check.requested.outcome();
-        text.status(
-            Role::disposition(outcome.disposition()),
-            outcome.disposition().as_str(),
-        );
-        text.push_str(&format!(
-            " ({} incomplete assessment units)\n",
-            outcome.incomplete_checks()
-        ));
         let coverage = check.requested.coverage();
         text.muted_line(&format!(
             "Requested check inventory: {}",
@@ -332,45 +350,12 @@ pub(super) fn to_human(result: &AuthorResult, style: HumanStyle) -> String {
                 "; ",
             );
         }
-    } else {
-        text.label("Checking:");
-        text.push_str(" not requested\n");
     }
-    for condition in value["diagnostics"]["items"].as_array().expect("items") {
-        let severity = condition["severity"].as_str().expect("severity");
-        text.gap();
-        text.status(
-            Role::severity(crate::Severity::from_report(severity)),
-            severity,
-        );
-        text.push_str(&format!(
-            " {}: {}\n",
-            condition["code"].as_str().expect("code"),
-            condition["message"].as_str().expect("message")
-        ));
-        for related in condition["related"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter(|location| location["kind"] == "author_request")
-        {
-            text.push_str(&format!(
-                "  Author request {} at {}",
-                related["key"].as_str().expect("request key"),
-                related["pointer"].as_str().unwrap_or("unavailable")
-            ));
-            if let Some(span) = related["span"].as_array() {
-                text.push_str(&format!(" bytes {}..{}", span[0], span[1]));
-            }
-            text.push('\n');
-        }
+    let limit = result.catalogue().limits.report_bytes;
+    if text.len() > limit {
+        return to_json(result);
     }
-    if value["diagnostics"]["truncated"] == true {
-        text.gap();
-        text.label("Diagnostic details omitted:");
-        text.push_str(&format!(" {}\n", value["diagnostics"]["omitted"]));
-    }
-    text.finish(result.catalogue().limits.report_bytes)
+    text.finish(limit)
 }
 fn diagnostic_projection(result: &AuthorResult) -> DiagnosticProjection {
     let copied = result

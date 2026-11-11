@@ -48,6 +48,9 @@ Save the later revision as `v2/thermostat.sdf.json`. It raises the maximum to 35
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
+<span class="m">Earlier input:</span> "v1/thermostat.sdf.json" (source 1)
+<span class="m">Later input:</span> "v2/thermostat.sdf.json" (source 1)
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 <span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 1 compared · 0 removed · 0 added
 <span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · <b><span class="y">1 undetermined</span></b> · <b><span class="g">1 compatible</span></b>
@@ -131,6 +134,11 @@ lower the shared minimum there from -40 to -50. Keep the original `v1/` and
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old shared-v1 --new shared-v2
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
+<span class="m">Earlier input:</span> "shared-v1/thermostat.sdf.json" (source 1)
+<span class="m">Earlier input:</span> "shared-v1/types.sdf.json" (source 2)
+<span class="m">Later input:</span> "shared-v2/thermostat.sdf.json" (source 1)
+<span class="m">Later input:</span> "shared-v2/types.sdf.json" (source 2)
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 <span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 2 compared · 0 removed · 0 added
 <span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · 0 undetermined · 0 compatible
@@ -194,6 +202,9 @@ Review the file, delete any entry you do not intend, add a `note` to each if you
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json
 <b><span class="r">✗ </span></b><b><span class="h">Revision comparison</span></b> esdieff.revision-comparison/10: <b><span class="r">breaking</span></b>
 <b><span class="g">✔ </span></b><span class="m">Disposition:</span> <b><span class="g">passed</span></b>, with 1 breaking and 1 undetermined differences acknowledged
+<span class="m">Earlier input:</span> "v1/thermostat.sdf.json" (source 1)
+<span class="m">Later input:</span> "v2/thermostat.sdf.json" (source 1)
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 <span class="m">Perspective:</span> client. Client interactions only. Context metadata compatibility is not assessed.
 <span class="m">Documents:</span> 1 compared · 0 removed · 0 added
 <span class="m">Differences:</span> <b><span class="r">1 breaking</span></b> · <b><span class="y">1 undetermined</span></b> · <b><span class="g">1 compatible</span></b>
@@ -235,6 +246,12 @@ version before publishing the intended breaking revision.
 
 Disposition: failed, with 1 breaking, 1 undetermined and 1 compatible differences.
 
+Earlier input: `v1/thermostat.sdf.json`
+
+Later input: `v2/thermostat.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
+
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Warnings
@@ -253,6 +270,13 @@ Perspective: client. Client interactions only. Context metadata compatibility is
 
 - Changed quality `description` in `document` at `/sdfObject/Thermostat/sdfProperty/targetTemperature/description`
 </code></pre>
+
+For the pipeline below, use Bash and enable `set -o pipefail` first, so a
+failing comparison still fails the shell command after `jq` succeeds.
+
+```bash
+set -o pipefail
+```
 
 `--format sarif` writes a SARIF log that code-scanning tools such as GitHub's show as annotations on the model file. Acknowledged differences are marked as suppressed, so reviewers still see them while scanning treats them as intended:
 

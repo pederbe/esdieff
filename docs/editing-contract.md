@@ -73,6 +73,14 @@ An ordinary document is delivered only after complete generation and established
 
 Human/JSON reports and generated JSON use distinct destinations. Report color never changes generated document bytes or JSON reports. Source and plan bytes remain immutable. File destinations protect every supplied source and the plan against direct, symlink, hard-link and resolved-parent aliases. Document/report file identities must also differ. Existing outputs require their corresponding replacement flag and must be regular non-symlink files. A replacement flag never permits an input alias, and it does not apply to stdout.
 
+The CLI human summary names the plan and both destinations, states whether the
+document was written, and explains withholding. Checking status, warning counts
+and findings precede Details, including original, generated and edit-request
+locations. No requested check means no model-assessment claim. Library reports
+make no host-delivery claim. If human detail cannot fit, the CLI retains delivery
+status and outcome counts and points to `--format json` for details. Explicit
+JSON reports and generated document bytes keep their existing formats.
+
 Each file output rechecks destination and protected-input identities, writes and syncs bounded staging in the existing destination directory, rechecks again and then commits individually. Create-only output uses a hard link so an existing file cannot be overwritten. Explicit replacement of an existing file uses rename. There are at most 100 staging-name attempts. Named FIFO input identities are retained without opening their streams before acquisition.
 
 The document is delivered before the report. On any abandoned-staging failure, cleanup is attempted explicitly. Cleanup failure returns exit 4 and names the retained staging path, the original failure when present and whether the document was committed/delivered. A report failure after document delivery identifies that delivered document on stderr. Failed stdout delivery can leave partial bytes. There is no transaction across the two destinations or stdout rollback.

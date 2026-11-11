@@ -55,7 +55,9 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
         }));
         // Each finding starts after a blank line, and counts share one middle-dot list with
         // gray labels.
-        assert!(output.contains("\n\n\x1b[1;38;2;243;156;18m⚠ metadata.info_absent\x1b[0m: "));
+        assert!(
+            output.contains("\n\n\x1b[1;38;2;243;156;18m⚠ warning\x1b[0m metadata.info_absent: ")
+        );
         assert!(output.contains(
             " · \x1b[38;2;112;120;140mwarnings:\x1b[0m \x1b[1;38;2;243;156;18m1\x1b[0m · "
         ));
@@ -78,7 +80,17 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
                 esdieff::Severity::Notice => "\x1b[38;2;92;184;255m▶ ",
                 _ => unreachable!(),
             };
-            assert!(output.contains(&format!("{sequence}{}\x1b[0m: ", condition.code())));
+            let severity = match condition.severity() {
+                esdieff::Severity::Error => "error",
+                esdieff::Severity::Warning => "warning",
+                esdieff::Severity::Notice => "notice",
+                esdieff::Severity::Incomplete => "incomplete",
+                _ => unreachable!(),
+            };
+            assert!(output.contains(&format!(
+                "{sequence}{severity}\x1b[0m {}: ",
+                condition.code()
+            )));
         }
     }
     let catalogue = Catalogue::from_inputs(&[
@@ -101,7 +113,10 @@ fn outcomes_coverage_and_severities_retain_their_independent_roles() {
         .conditions()
         .find(|condition| condition.severity() == esdieff::Severity::Error)
         .unwrap();
-    assert!(output.contains(&format!("\x1b[1;38;2;255;92;87m✗ {}\x1b[0m", error.code())));
+    assert!(output.contains(&format!(
+        "\x1b[1;38;2;255;92;87m✗ error\x1b[0m {}",
+        error.code()
+    )));
 }
 
 #[test]
@@ -135,7 +150,7 @@ fn notice_codes_and_unfinished_requiredness_keep_their_separate_roles() {
         )
         .unwrap();
     let output = styled(&report);
-    assert!(output.contains("\x1b[38;2;92;184;255m▶ required.target_missing\x1b[0m: "));
+    assert!(output.contains("\x1b[38;2;92;184;255m▶ notice\x1b[0m required.target_missing: "));
     assert!(output.contains("\x1b[38;2;112;120;140mRequired declarations:\x1b[0m"));
 }
 

@@ -97,6 +97,12 @@ fn changelogs_list_differences_by_classification() {
 
 Disposition: failed, with 2 breaking, 1 undetermined and 2 compatible differences. 1 breaking and 0 undetermined differences are acknowledged.
 
+Earlier input: `old/lock.sdf.json`
+
+Later input: `new/lock.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
+
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Breaking differences
@@ -131,6 +137,12 @@ fn changelogs_leave_out_empty_sections() {
         "# Model changes
 
 Disposition: passed, with 0 breaking, 0 undetermined and 1 compatible differences.
+
+Earlier input: `old/lock.sdf.json`
+
+Later input: `new/lock.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 

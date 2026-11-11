@@ -330,8 +330,10 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
             .iter()
             .find(|source| source["revision"] == revision && source["id"] == *id)
             .and_then(|source| source["key"].as_str())
-            .unwrap_or("?")
-            .to_owned()
+            .map_or_else(
+                || "?".to_owned(),
+                |key| crate::human::escaped(key).into_owned(),
+            )
     };
     let mut text = HumanText::new(style);
     text.heading("Revision comparison");
@@ -350,6 +352,19 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
             acknowledged["breaking"], acknowledged["undetermined"]
         ));
     }
+    for (revision, label) in [("earlier", "Earlier input:"), ("later", "Later input:")] {
+        let catalogue = &comparison.catalogues[usize::from(revision == "later")];
+        for source in catalogue.sources().take(3) {
+            text.source(label, source);
+        }
+        let remaining = catalogue.sources().len().saturating_sub(3);
+        if remaining > 0 {
+            text.push_str(&format!(
+                "{remaining} more {revision} inputs are identified by document key below.\n"
+            ));
+        }
+    }
+    text.push_str("Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.\n");
     text.label("Perspective:");
     text.push_str(&format!(" {}. ", comparison.perspective.as_str()));
     text.push_str(comparison.perspective.scope_notice());
@@ -518,7 +533,7 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
                     format!(
                         "{} {}",
                         key(revision, root),
-                        pointer.as_str().unwrap_or("(pointer omitted)")
+                        crate::human::escaped(pointer.as_str().unwrap_or("(pointer omitted)"))
                     )
                 };
                 let location = place(&side["location"]["root"], &side["location"]["pointer"]);
@@ -566,8 +581,8 @@ pub(super) fn to_human(comparison: &RevisionComparison<'_>, style: crate::HumanS
                 if !side.is_null() {
                     text.push_str(&format!(
                         "    {revision} {} {}\n",
-                        side["document"].as_str().expect("document"),
-                        side["pointer"].as_str().expect("pointer")
+                        crate::human::escaped(side["document"].as_str().expect("document")),
+                        crate::human::escaped(side["pointer"].as_str().expect("pointer"))
                     ));
                 }
             }
@@ -588,7 +603,7 @@ fn named(value: &Value) -> String {
     match value["subject"].as_str().expect("subject") {
         "quality" => format!(
             "{kind} quality {}",
-            value["quality"].as_str().expect("quality")
+            crate::human::escaped(value["quality"].as_str().expect("quality"))
         ),
         "properties_entry" => format!("{kind} properties entry"),
         subject => format!("{kind} {subject}"),

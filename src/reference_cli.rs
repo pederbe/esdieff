@@ -88,7 +88,9 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         .id();
     let request = ReferenceRequest::new(id, pointer);
     let request = if uses { request.with_uses() } else { request };
-    let result = catalogue.reference(request).map_err(usage)?;
+    let result = catalogue
+        .reference(request)
+        .map_err(|reason| crate::selection_error("reference", document, Some(pointer), reason))?;
     crate::emit_report(result.to_markdown().trim_end_matches('\n'))?;
     Ok(result.disposition().exit_code())
 }

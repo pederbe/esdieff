@@ -1650,15 +1650,80 @@ impl Report<'_> {
         output.push(' ');
         output.push_str(self.broader_state());
         output.push('\n');
-        // Request details follow the summary as their own section.
-        if self.sample.is_some() {
-            human_diagnostics(&value, &mut output);
-            output.gap();
-            output.heading("Details:");
-            output.push('\n');
+        output.warning_policy(&self.outcome);
+        if self.sample.is_none() {
+            for id in self.scope.iter().take(3) {
+                if let Some(source) = self.catalogue.source(*id) {
+                    output.source("Input:", source);
+                }
+            }
+            if self.scope.len() > 3 {
+                output.push_str(&format!(
+                    "Other requested inputs: {} (listed in Details)\n",
+                    self.scope.len() - 3
+                ));
+            }
         }
-        output.gap();
         self.write_required_human(&mut output, &required);
+        if let Operation::Inspect {
+            json: Some(payload),
+            view,
+            pointer,
+            ..
+        } = self.operation
+        {
+            if output.len() + payload.raw_json().len() + pointer.len() * 6 + 128
+                <= self.catalogue.limits.report_bytes
+            {
+                output.gap();
+                output.heading("Inspection");
+                output.push_str(&format!(
+                    " {} at {}:\n",
+                    view.as_str(),
+                    serde_json::to_string(pointer).expect("pointer encoding")
+                ));
+                output.push_str(payload.raw_json());
+                output.push('\n');
+            } else {
+                output.gap();
+                output.label("Inspection content omitted:");
+                output.push_str(" report_limit\n");
+            }
+        }
+        if let Operation::Inspect {
+            json: None,
+            view: View::Effective,
+            pointer,
+            ..
+        } = self.operation
+            && let Some(payload) = self
+                .effective
+                .first()
+                .and_then(|model| model.generated.as_deref())
+        {
+            if output.len() + payload.len() + pointer.len() * 6 + 128
+                <= self.catalogue.limits.report_bytes
+            {
+                output.gap();
+                output.heading("Inspection");
+                output.push_str(&format!(
+                    " effective at {}:\n",
+                    serde_json::to_string(pointer).expect("pointer encoding")
+                ));
+                output.push_str(payload);
+                output.push('\n');
+            } else {
+                output.gap();
+                output.label("Inspection content omitted:");
+                output.push_str(" report_limit\n");
+            }
+        }
+        human_diagnostics(&value, self.catalogue, &mut output);
+        output.gap();
+        output.heading("Details:");
+        output.push('\n');
+        output.gap();
+
         if self
             .assessment_profile()
             .is_some_and(|profile| profile.registry_requested())
@@ -1723,11 +1788,7 @@ impl Report<'_> {
             }
             self.registry.write_human(&mut output);
         }
-        for owner in &required.owners {
-            use std::fmt::Write;
-            output.label("Required owner:");
-            writeln!(output, " {owner}").expect("String write");
-        }
+
         output.muted_line(&format!(
             "Requested assessment: {}",
             match self.operation {
@@ -1953,62 +2014,7 @@ impl Report<'_> {
                     .collect::<Vec<_>>()
             ));
         }
-        if self.sample.is_none() {
-            human_diagnostics(&value, &mut output);
-        }
-        if let Operation::Inspect {
-            json: Some(payload),
-            view,
-            pointer,
-            ..
-        } = self.operation
-        {
-            if output.len() + payload.raw_json().len() + pointer.len() * 6 + 128
-                <= self.catalogue.limits.report_bytes
-            {
-                output.gap();
-                output.heading("Inspection");
-                output.push_str(&format!(
-                    " {} at {}:\n",
-                    view.as_str(),
-                    serde_json::to_string(pointer).expect("pointer encoding")
-                ));
-                output.push_str(payload.raw_json());
-                output.push('\n');
-            } else {
-                output.gap();
-                output.label("Inspection content omitted:");
-                output.push_str(" report_limit\n");
-            }
-        }
-        if let Operation::Inspect {
-            json: None,
-            view: View::Effective,
-            pointer,
-            ..
-        } = self.operation
-            && let Some(payload) = self
-                .effective
-                .first()
-                .and_then(|model| model.generated.as_deref())
-        {
-            if output.len() + payload.len() + pointer.len() * 6 + 128
-                <= self.catalogue.limits.report_bytes
-            {
-                output.gap();
-                output.heading("Inspection");
-                output.push_str(&format!(
-                    " effective at {}:\n",
-                    serde_json::to_string(pointer).expect("pointer encoding")
-                ));
-                output.push_str(payload);
-                output.push('\n');
-            } else {
-                output.gap();
-                output.label("Inspection content omitted:");
-                output.push_str(" report_limit\n");
-            }
-        }
+
         if let Some(owners) = result["alternatives"].as_array() {
             for owner in owners {
                 output.label("Alternatives");
@@ -2966,7 +2972,11 @@ impl Report<'_> {
     }
 }
 
-fn human_diagnostics(value: &Value, output: &mut HumanText) {
+pub(crate) fn human_diagnostics(
+    value: &Value,
+    catalogue: &crate::Catalogue,
+    output: &mut HumanText,
+) {
     let conditions = value["diagnostics"]["items"]
         .as_array()
         .expect("condition array");
@@ -2992,12 +3002,9 @@ fn human_diagnostics(value: &Value, output: &mut HumanText) {
             1
         };
         output.gap();
-        output.status(
-            Role::severity(Severity::from_report(
-                condition["severity"].as_str().expect("severity"),
-            )),
-            code,
-        );
+        let severity = condition["severity"].as_str().expect("severity");
+        output.status(Role::severity(Severity::from_report(severity)), severity);
+        output.push_str(&format!(" {code}"));
         output.push_str(&format!(
             ": {}{}\n",
             condition["message"].as_str().expect("message"),
@@ -3014,6 +3021,16 @@ fn human_diagnostics(value: &Value, output: &mut HumanText) {
             ));
         }
         if let Some(location) = condition.get("primary") {
+            let id = location
+                .get("source_id")
+                .or_else(|| location.get("root"))
+                .and_then(Value::as_u64);
+            if let Some(source) = catalogue
+                .retained_sources()
+                .find(|source| Some(u64::from(source.id().get())) == id)
+            {
+                output.source("Input:", source);
+            }
             human_location(location, output);
             output.push('\n');
         }
@@ -3060,7 +3077,7 @@ fn human_diagnostics(value: &Value, output: &mut HumanText) {
     }
 }
 
-fn human_location(location: &Value, output: &mut HumanText) {
+pub(crate) fn human_location(location: &Value, output: &mut HumanText) {
     use std::fmt::Write;
     match location["kind"].as_str() {
         Some("source" | "sample") => {
@@ -3078,6 +3095,19 @@ fn human_location(location: &Value, output: &mut HumanText) {
             location["root"], location["pointer"]
         )
         .expect("String write"),
+        Some(kind @ ("author_request" | "edit_request")) => {
+            write!(
+                output,
+                "{} request {} at {}",
+                kind.trim_end_matches("_request"),
+                location["key"],
+                location["pointer"]
+            )
+            .expect("String write");
+            if let Some(span) = location["span"].as_array() {
+                write!(output, " bytes {}..{}", span[0], span[1]).expect("String write");
+            }
+        }
         _ => output.push_str("location unavailable"),
     }
 }

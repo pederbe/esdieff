@@ -41,10 +41,11 @@ The result is `undetermined`, with exit status 3. The report includes this
 excerpt for `Normal` and a separate finding for `Cool`:
 
 ```text
-reference.unavailable: supplied global target unavailable
+incomplete reference.unavailable: supplied global target unavailable
+Input: "reference-walkthrough/devices.sdf.json" (source 1)
 effective 1 "/sdfObject/Normal/sdfProperty/temperature"
-  related source 1 "/sdfObject/Normal/sdfProperty/temperature/sdfRef"
-  related source 1 "/sdfObject/Normal/sdfProperty/temperature"
+  related source 1 "/sdfObject/Normal/sdfProperty/temperature/sdfRef" bytes 153..183
+  related source 1 "/sdfObject/Normal/sdfProperty/temperature" bytes 141..185
 ```
 
 The effective location identifies the Property whose composition could not
@@ -95,12 +96,13 @@ The result is again `undetermined`, with exit status 3. The report now identifie
 both conflicting contributions:
 
 ```text
-reference.ambiguous: multiple supplied contributors address this global definition
+incomplete reference.ambiguous: multiple supplied contributors address this global definition
+Input: "reference-walkthrough/devices.sdf.json" (source 1)
 effective 1 "/sdfObject/Normal/sdfProperty/temperature"
-  related source 1 "/sdfObject/Normal/sdfProperty/temperature/sdfRef"
-  related source 1 "/sdfObject/Normal/sdfProperty/temperature"
-  related source 2 "/sdfData/Temperature"
-  related source 3 "/sdfData/Temperature"
+  related source 1 "/sdfObject/Normal/sdfProperty/temperature/sdfRef" bytes 153..183
+  related source 1 "/sdfObject/Normal/sdfProperty/temperature" bytes 141..185
+  related source 2 "/sdfData/Temperature" bytes 128..202
+  related source 3 "/sdfData/Temperature" bytes 128..202
 ```
 
 Sources 2 and 3 contribute the same addressed definition. Esdieff keeps that

@@ -10,6 +10,24 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn human_delivery_fallback_keeps_status_and_authoritative_totals() {
+        let catalogue = Catalogue::from_inputs(&[SourceInput::failed("missing")]).unwrap();
+        let report = catalogue.check(esdieff::CheckRequest::new()).unwrap();
+        let prefix = "Document not written: \"model.json\"\n";
+        for body in ["{}".to_owned(), "x".repeat(8 * 1024 * 1024)] {
+            let output = delivery_report(body, prefix, report.outcome());
+            assert!(output.starts_with(prefix));
+            assert!(output.contains("Run: undetermined\nComplete: false\n"));
+            assert!(output.contains("Errors: 0, warnings: 0, notices: 0, incomplete checks: 8\n"));
+            assert!(output.contains("Report details omitted"));
+            assert!(output.len() < 8 * 1024 * 1024);
+        }
+    }
+}
 pub(super) type Error = (u8, String);
 pub(super) fn usage(message: impl Into<String>) -> Error {
     (2, message.into())
@@ -33,6 +51,7 @@ pub(super) trait Operation: Sized {
 /// The generated document and report of a performed document operation.
 pub(super) trait OperationResult {
     fn document_deliverable(&self) -> bool;
+    fn withholding_reason(&self) -> &'static str;
     fn generated_document(&self) -> Option<&[u8]>;
     fn to_json(&self) -> String;
     fn to_human_with_style(&self, style: HumanStyle) -> String;
@@ -60,7 +79,13 @@ pub(super) fn run<O: Operation>(args: &[OsString], color: &mut ColorMode) -> Res
     if let Some(check) = options.check {
         request = request.checking(check).map_err(usage)?;
     }
-    let result = request.perform().map_err(usage)?;
+    let result = request.perform().map_err(|reason| {
+        usage(format!(
+            "{} plan {:?}: {reason}. Check the source keys and definition pointers in this plan",
+            O::NAME,
+            crate::display_label(options.plan).unwrap_or("[path omitted]".into())
+        ))
+    })?;
     let document = result
         .document_deliverable()
         .then(|| result.generated_document().expect("deliverable document"));
@@ -69,9 +94,45 @@ pub(super) fn run<O: Operation>(args: &[OsString], color: &mut ColorMode) -> Res
     } else {
         result.to_human_with_style(delivery.report_style(*color))
     };
-    delivery.emit(document, rendered)?;
+    let human_context =
+        (!options.json).then(|| (options.plan, result.withholding_reason(), result.outcome()));
+    delivery.emit(document, rendered, human_context)?;
     Ok(result.outcome().disposition().exit_code())
 }
+fn delivery_report(report: String, prefix: &str, outcome: &Outcome) -> String {
+    const REPORT_BYTES: usize = 8 * 1024 * 1024;
+    if report.starts_with('{') || report.len() + prefix.len() > REPORT_BYTES {
+        // A library JSON fallback stays machine-readable when explicitly requested as JSON.
+        // Human delivery output instead keeps the host status and authoritative totals.
+        return format!(
+            "{prefix}Run: {}\nComplete: {}\nErrors: {}, warnings: {}, notices: {}, incomplete checks: {}\nReport details omitted for the report size. Use --format json for the structured report.\n",
+            outcome.disposition().as_str(),
+            outcome.complete(),
+            outcome.errors(),
+            outcome.warnings(),
+            outcome.notices(),
+            outcome.incomplete_checks()
+        );
+    }
+    format!("{prefix}{report}")
+}
+
+pub(super) fn withholding_reason(
+    generation: esdieff::Generation,
+    fidelity: esdieff::Fidelity,
+    outcome: &Outcome,
+) -> &'static str {
+    if generation != esdieff::Generation::Complete {
+        "Document generation did not finish."
+    } else if fidelity != esdieff::Fidelity::Established {
+        "Document fidelity could not be confirmed."
+    } else if outcome.strict_warnings() && outcome.warnings() > 0 && outcome.errors() == 0 {
+        "Warnings prevented delivery because --strict-warnings is enabled."
+    } else {
+        "The requested checks did not pass."
+    }
+}
+
 pub(super) struct Options<'a> {
     pub(super) plan: &'a OsStr,
     pub(super) document: &'a OsStr,
@@ -88,10 +149,14 @@ impl Options<'_> {
         self.sources
             .iter()
             .map(|(key, path)| {
-                if *path == OsStr::new("-") {
+                let input = if *path == OsStr::new("-") {
                     SourceInput::stdin(key)
                 } else {
                     SourceInput::file(key, Path::new(path))
+                };
+                match path.to_str().filter(|label| label.len() <= 512) {
+                    Some(label) => input.label(label),
+                    None => input.omit_label(),
                 }
             })
             .collect()
@@ -453,8 +518,8 @@ impl Destination {
             let latest = identity(&input.path).map_err(|(_, reason)| host(reason))?;
             if input_policy == InputPolicy::Unchanged && latest != input.identity {
                 return Err(host(format!(
-                    "protected input identity changed after validation: {}",
-                    input.path.display()
+                    "protected input identity changed after validation: {:?}",
+                    input.path
                 )));
             }
             if current
@@ -527,8 +592,8 @@ impl Destination {
                 .unwrap_or_default();
             return Err(DeliveryFailure {
                 message: format!(
-                    "{primary}staging cleanup failed: {error}; retained staging at {}",
-                    staging.path.display()
+                    "{primary}staging cleanup failed: {error}; retained staging at {:?}",
+                    staging.path
                 ),
                 committed,
             });
@@ -671,19 +736,19 @@ impl Delivery {
             .as_ref()
             .map(|path| path.as_os_str())
             .unwrap_or_else(|| OsStr::new("-"));
+        let destination = crate::display_label(destination).unwrap_or("[path omitted]".into());
         if delivered {
-            format!(
-                "generated document already delivered (committed) to {}",
-                destination.to_string_lossy()
-            )
+            format!("generated document already delivered (committed) to {destination:?}")
         } else {
-            format!(
-                "generated document not delivered (not committed) to {}",
-                destination.to_string_lossy()
-            )
+            format!("generated document not delivered (not committed) to {destination:?}")
         }
     }
-    pub(super) fn emit(&self, document: Option<&[u8]>, mut report: String) -> Result<(), Error> {
+    pub(super) fn emit(
+        &self,
+        document: Option<&[u8]>,
+        mut report: String,
+        human_context: Option<(&OsStr, &str, &Outcome)>,
+    ) -> Result<(), Error> {
         if let Some(bytes) = document {
             self.document
                 .emit(bytes, &self.protected, &self.report, self.input_policy)
@@ -694,6 +759,37 @@ impl Delivery {
                         self.document_status(error.committed)
                     ))
                 })?;
+        }
+        if let Some((plan, reason, outcome)) = human_context {
+            let destination = |target: &Destination| {
+                target.path.as_ref().map_or_else(
+                    || "standard output (-)".to_owned(),
+                    |path| {
+                        format!(
+                            "{:?}",
+                            crate::display_label(path.as_os_str())
+                                .unwrap_or("[path omitted]".into())
+                        )
+                    },
+                )
+            };
+            let prefix = format!(
+                "Document {}: {}\n{}Plan: {:?}\nReport destination: {}\n",
+                if document.is_some() {
+                    "written"
+                } else {
+                    "not written"
+                },
+                destination(&self.document),
+                if document.is_some() {
+                    String::new()
+                } else {
+                    format!("Reason: {reason}\n")
+                },
+                crate::display_label(plan).unwrap_or("[path omitted]".into()),
+                destination(&self.report)
+            );
+            report = delivery_report(report, &prefix, outcome);
         }
         if !report.ends_with('\n') {
             report.push('\n');

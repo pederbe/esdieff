@@ -79,7 +79,7 @@ fn missing_required_source_selector_is_invocation_error_in_both_formats() {
             assert!(
                 String::from_utf8(missing.stderr)
                     .unwrap()
-                    .contains("unknown inspection selector")
+                    .contains("No value was found at the selected pointer")
             );
             let valid = inspect(view, "/sdfObject/O", format, text);
             assert_eq!(valid.status.code(), Some(0));

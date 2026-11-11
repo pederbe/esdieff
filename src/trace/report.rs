@@ -234,6 +234,9 @@ fn human_entry(lines: &mut HumanText, entry: &Entry, catalogue: &crate::Catalogu
         if let Some(("constraint", name)) = condition.argument {
             lines.push_str(&format!("\n    Model rule: {}", json!(name)));
         }
+        if let Some(("reason", reason)) = condition.argument {
+            lines.push_str(&format!("\n    Reason: {}", crate::human::escaped(reason)));
+        }
         for related in &condition.related {
             let pointer = match related {
                 Related::Effective { root, pointer } => {
