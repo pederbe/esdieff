@@ -166,12 +166,17 @@ fn within(result: &GenerationResult<'_>, limit: usize) -> String {
         true
     });
     let mut offset = 0;
-    for (description, end) in result.descriptions.iter().zip(ends) {
+    for (description, end) in result.descriptions.iter().zip(&mut ends) {
         if let Some(extra) = reasons_json(description, extra_room) {
             extra_room -= extra.len();
-            details.insert_str(end + offset - 1, &extra);
+            details.insert_str(*end + offset - 1, &extra);
             offset += extra.len();
         }
+        *end += offset;
+    }
+    // Reasons for later descriptions also precede any optional Choice evidence.
+    offset = 0;
+    for (description, end) in result.descriptions.iter().zip(ends) {
         if let Some(extra) = choice_json(&description.choice_evidence, extra_room) {
             extra_room -= extra.len();
             details.insert_str(end + offset - 1, &extra);
@@ -858,6 +863,44 @@ mod tests {
             projected["result"]["descriptions"][0]
                 .get("reasons")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn later_description_reasons_take_priority_over_earlier_choice_evidence() {
+        let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model",
+            br#"{"namespace":{"t":"https://example.test/missing"},"sdfProperty":{"a":{"const":1},"b":{"sdfRef":"t:#/sdfData/T"}}}"#)]).unwrap();
+        let result = catalogue
+            .generate(GenerationRequest::new(
+                catalogue.source_id("model").unwrap(),
+            ))
+            .unwrap();
+        let mut ordinary = String::new();
+        for (index, description) in result.descriptions.iter().enumerate() {
+            if index > 0 {
+                ordinary.push(',');
+            }
+            description_json(&mut ordinary, result.document(), description);
+        }
+        let cause = reasons_json(&result.descriptions[1], usize::MAX).unwrap();
+        let limit = serde_json::to_vec(&envelope(&result, 0)).unwrap().len()
+            + OMISSION_SLACK
+            + ordinary.len()
+            + cause.len();
+        let projected = within(&result, limit);
+        assert!(projected.len() <= limit);
+        let wire: Value = serde_json::from_str(&projected).unwrap();
+        let descriptions = &wire["result"]["descriptions"];
+        assert_eq!(descriptions.as_array().unwrap().len(), 2);
+        assert_eq!(
+            descriptions[1]["reasons"]["items"][0]["message"],
+            "supplied global target unavailable"
+        );
+        assert_eq!(descriptions[1]["reasons"]["omitted"], 0);
+        assert!(descriptions[0].get("choice_evidence").is_none());
+        assert_eq!(
+            wire["result"]["summary"]["admitted"],
+            result.count(Admission::Admitted)
         );
     }
 }
