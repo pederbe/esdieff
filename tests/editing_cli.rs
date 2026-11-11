@@ -620,7 +620,7 @@ fn closed_stdout_is_a_host_error_before_or_after_document_delivery() {
     args.extend(["--document-output", output_document.to_str().unwrap()]);
     let error = refused(cli_color_support::closed_stdout(&args, b""), 4);
     assert!(error.contains("already delivered (committed)"));
-    assert!(error.contains(output_document.to_str().unwrap()));
+    assert!(error.contains(&format!("{:?}", output_document.to_str().unwrap())));
     assert!(output_document.exists());
     assert_no_staging(&fixture);
 }
@@ -796,7 +796,7 @@ fn changed_report_discloses_the_delivered_document_and_new_output_alias_is_refus
     );
     let error = refused(output, 4);
     assert!(error.contains("identity changed"));
-    assert!(error.contains("already delivered (committed) to out.json"));
+    assert!(error.contains("already delivered (committed) to \"out.json\""));
     assert!(fixture.path("out.json").exists());
     assert_eq!(
         fs::read_to_string(fixture.path("report.json")).unwrap(),

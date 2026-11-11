@@ -89,13 +89,31 @@ const ACKNOWLEDGED: &str = r#"{"schema":"esdieff.acknowledged-differences","vers
      "earlier":{"document":"lock.sdf.json","pointer":"/sdfObject/Lock/sdfProperty/credential/maxLength"},
      "later":{"document":"lock.sdf.json","pointer":"/sdfObject/Lock/sdfProperty/credential/maxLength"}}]}"#;
 
+fn native_input_labels(expected: &str) -> String {
+    expected
+        .replace(
+            "old/lock.sdf.json",
+            &Path::new("old").join("lock.sdf.json").to_string_lossy(),
+        )
+        .replace(
+            "new/lock.sdf.json",
+            &Path::new("new").join("lock.sdf.json").to_string_lossy(),
+        )
+}
+
 #[test]
 fn changelogs_list_differences_by_classification() {
     assert_eq!(
         changelog(LOCK, &revised_lock(), Some(ACKNOWLEDGED), 1),
-        "# Model changes
+        native_input_labels("# Model changes
 
 Disposition: failed, with 2 breaking, 1 undetermined and 2 compatible differences. 1 breaking and 0 undetermined differences are acknowledged.
+
+Earlier input: `old/lock.sdf.json`
+
+Later input: `new/lock.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
@@ -115,7 +133,7 @@ Perspective: client. Client interactions only. Context metadata compatibility is
 ## Acknowledged differences
 
 - Breaking: changed quality `maxLength` in `lock.sdf.json` at `/sdfObject/Lock/sdfProperty/credential/maxLength` (witness `\"aaaaaaa\"` for client-supplied data, earlier admitted, later rejected)
-"
+")
     );
 }
 
@@ -128,16 +146,22 @@ fn changelogs_leave_out_empty_sections() {
     let text = changelog(LOCK, &described, None, 0);
     assert_eq!(
         text,
-        "# Model changes
+        native_input_labels("# Model changes
 
 Disposition: passed, with 0 breaking, 0 undetermined and 1 compatible differences.
+
+Earlier input: `old/lock.sdf.json`
+
+Later input: `new/lock.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 
 ## Compatible differences
 
 - Changed quality `description` in `lock.sdf.json` at `/sdfObject/Lock/sdfProperty/credential/description`
-"
+")
     );
     let unit = LOCK.replacen(
         "\"type\": \"string\",",

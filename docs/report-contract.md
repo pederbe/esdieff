@@ -183,6 +183,15 @@ omit the identifier.
 
 ## Outcomes, conditions and truncation
 
+Human reports put the requested result and findings before routine metadata.
+Inspection shows the selected JSON before Details. Findings include their
+severity word in both plain and styled output, plus the input label or caller
+key beside the primary source identity. Source/effective and author/edit
+request locations keep their distinct meanings. Required-declaration inspection
+uses readable owner, reference and target rows. When warnings alone fail a
+strict run, the summary explains the `--strict-warnings` policy. Supplied names,
+pointers and labels escape active control characters in text output.
+
 `outcome` contains `complete`, retained aggregate `errors`, `warnings`, `notices`, `incomplete_checks`, `strict_warnings`, and `disposition`. Requested work is complete only when every applicable requested requirement is assessed or established not applicable. Definite errors and scoped incompleteness can coexist. `failed` means an error exists or strict warnings are selected and at least one warning exists; otherwise unfinished work gives `undetermined`; otherwise `passed`. A failed incomplete result keeps `complete:false`. Strict warning policy changes disposition/exit eligibility, not warning severity, condition code, baseline meaning or error count.
 
 Conditions have stable string `code`, severity (`error`, `warning`, `notice`, `incomplete`), basis, requirement/proof identity where applicable, optional primary source/effective/sample location, related locations and bounded structured arguments. Human `message` is explanatory and unstable. Report ordering is deterministic for the same supplied identities/request/version where practical, but consumers must not rely on ordering or wording. Codes are not message templates. For example:
@@ -349,6 +358,10 @@ description coverage, RFC assessment coverage and operation completeness.
 Missing evidence fields in earlier reports mean unavailable observations,
 not zero coverage.
 
+Optional selection and description/value reasons explain unfinished generation.
+Their [bounded representation](generation-contract.md#reasons-for-incomplete-generation) uses
+remaining space after ordinary results and preserves rejection-only `codes`.
+
 Operation `generate` uses version `1.5` under [ADR 0041: Generated values settled by Sample-value checking](adr/0041-generated-values-settled-by-sample-value-checking.md). It reports the Generated values of one selected model document and their admissions. Composition spends the request's allowance, each description's values are built on an allowance of their own, and each value is checked with the allowance one `sample` request receives, so running out leaves only the affected description partial. The 64-value and 1024-description ceilings keep the request finite, and every description and kept value is charged the report bytes its largest rendering needs, so every output format fits `report_bytes`. Values and descriptions that do not fit are counted with `byte_limit` and `report_limit` records and leave the operation undetermined. The shared source, outcome and diagnostic meanings remain intact, and the [generation contract](generation-contract.md#report-15) specifies every field.
 
 | Object | Required fields and types | Meaning |
@@ -389,6 +402,10 @@ The log stays within the report byte limit, which it applies on its own, so it c
 `diff --format markdown` and `RevisionComparison::to_markdown()` give a Markdown changelog of a Revision comparison for release notes, following [ADR 0043: SARIF and Markdown report projections](adr/0043-sarif-and-markdown-report-projections.md). Like the SARIF log, it projects the same report as the JSON format, renders only the differences that report retained and changes no disposition or exit code.
 
 It starts with the title `# Model changes` and a disposition line that counts breaking, undetermined and compatible differences, and the acknowledged ones when acknowledgements were supplied. A `Warnings` section lists each Version warning with the later document, its version or the place it is absent, the earlier version, the breaking count and the code. Sections follow for unacknowledged breaking, unacknowledged undetermined, compatible and acknowledged differences, in that order, and a section without differences is left out. Each item is one list entry naming the kind, the subject, the document's source key and the effective pointer, taken from the later revision's side when it has one. An undetermined item adds its reason and code, and an item with a Breaking witness adds the witness value, its Client direction and both admissions. An acknowledged item starts with its classification.
+
+Human and Markdown comparisons name the earlier and later input files before
+the differences and explain the effective Thing/Object interface scope. Display
+labels do not change document correspondence or acknowledgement identities.
 
 Model text appears only in code spans, including Given Names in pointers, quality names, source keys and witness values. A span's fence is longer than any run of backticks inside it, and control characters, line breaks among them, become `\uXXXX` escapes, so a name can neither end its span nor start a new block. Reason messages are plain text with Markdown punctuation escaped.
 

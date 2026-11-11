@@ -14,6 +14,8 @@ half-degree steps, into values to test with.
 $ esdieff generate --document thermostat.sdf.json --kind property \
     --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
 ✔ Generated values esdieff.generation/3: passed
+Model: "thermostat.sdf.json" (source 1)
+Selection: property at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
 Values: 2 admitted · 8 rejected · 0 undetermined
 Descriptions: 1
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.

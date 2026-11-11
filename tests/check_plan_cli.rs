@@ -273,7 +273,9 @@ fn sample_request_errors_retain_only_tagged_fields_and_continue_independent_case
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.contains("wrong class"));
     assert!(human.contains("Admission: admitted"));
-    assert!(human.contains(&serde_json::to_string(&result["summary"]).unwrap()));
+    assert!(human.starts_with("Esdieff check run: invalid\n"));
+    assert!(human.contains("Cases: 2 passed, 0 failed, 0 undetermined, 3 invalid requests"));
+    assert!(!human.contains("Check case summary: {"));
     let styled = String::from_utf8(run(&plan, &["--color", "always"]).stdout).unwrap();
     assert!(styled.contains(
         "\n\x1b[1;38;2;255;92;87m✗ \x1b[0m\x1b[1;38;2;255;92;87mCase request error:\x1b[0m "
@@ -1106,7 +1108,7 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     }
     let bytes = serde_json::to_vec(&json!({"info":{},"sdfData":{"D":qualities}})).unwrap();
     let model = files.write("device.json", &bytes);
-    let cases:Vec<Value>=(0..64).map(|index| json!({"name":format!("case {index}"),"operation":"check","scope":{"kind":"catalogue"},"strict_warnings":index==63})).collect();
+    let cases:Vec<Value>=(0..64).map(|index| json!({"name":format!("case {index}"),"operation":"check","scope":if index==63 {json!({"kind":"selected","roots":["device"]})} else {json!({"kind":"catalogue"})},"strict_warnings":index==63})).collect();
     let plan = files.plan(json!(cases));
     let output = run(&plan, &["--format", "json"]);
     let result = wire(&output, 1);
@@ -1127,7 +1129,8 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     );
     assert!(result["cases"][63].get("report").is_none());
     let direct = Command::new(env!("CARGO_BIN_EXE_esdieff"))
-        .args(["check", "--strict-warnings", "--format", "json"])
+        .args(["check", "--strict-warnings", "--format", "json", "--root"])
+        .arg(&model)
         .arg(model)
         .output()
         .unwrap();
@@ -1142,6 +1145,16 @@ fn native_truncation_and_outer_omission_keep_later_failures_and_all_case_counts(
     let human = String::from_utf8(human.stdout).unwrap();
     assert!(human.contains("case 63"));
     assert!(human.contains("Native report omitted: run-report-budget"));
+    let last = human.split_once("\nCase: \"case 63\" [check]\n").unwrap().1;
+    assert!(last.contains("Assessment: initial-v1\n"));
+    assert!(last.contains("Scope: selected\nRoot: \"device\" (source 1)\n"));
+    assert!(last.contains("Warning policy: strict\n"));
+    assert!(last.contains("Requested coverage (assessment_area): total 8"));
+    assert!(last.contains("Broader RFC coverage: partial\n"));
+    let summary = human.split_once("\nDetails:\n").unwrap().0;
+    assert!(
+        summary.contains("Warnings caused this case to fail because strict_warnings is enabled.")
+    );
 }
 
 #[test]
@@ -1890,10 +1903,10 @@ fn human_run_output_shows_each_diff_case_classification_and_native_report() {
     assert_eq!(human.status.code(), Some(1));
     let text = String::from_utf8(human.stdout).unwrap();
     let (open, intended) = text
-        .split_once("\nCase: \"open\"\n")
+        .split_once("\nCase: \"open\" [diff]\n")
         .unwrap()
         .1
-        .split_once("\nCase: \"intended\"\n")
+        .split_once("\nCase: \"intended\" [diff]\n")
         .unwrap();
     let native =
         |extra: &[&str]| String::from_utf8(direct_diff(&earlier, &later, extra).stdout).unwrap();
@@ -1905,23 +1918,26 @@ fn human_run_output_shows_each_diff_case_classification_and_native_report() {
             native(&["--acknowledged", acknowledged.to_str().unwrap()]),
         ),
     ] {
-        assert!(section.starts_with("Operation: diff\n"), "{section}");
-        assert!(section.contains(&format!("\nDisposition: {disposition}\n")));
-        assert!(section.contains("\nClassification: breaking\n"));
+        assert!(text.contains(&format!(
+            "{} [diff]: {disposition}, complete: true, Classification: breaking",
+            if disposition == "failed" {
+                "\"open\""
+            } else {
+                "\"intended\""
+            }
+        )));
         assert!(section.contains(native.trim_end()), "{section}");
     }
     let colored = run(&plan, &["--color", "always"]);
     assert_eq!(colored.status.code(), Some(1));
     let colored = String::from_utf8(colored.stdout).unwrap();
-    assert!(colored.starts_with(
-        "\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m\n\x1b[38;2;112;120;140mPlan:\x1b[0m "
-    ));
-    for (sequence, mark, disposition) in [
-        ("\x1b[1;38;2;255;92;87m", "✗ ", "failed"),
-        ("\x1b[1;38;2;90;247;142m", "✔ ", "passed"),
+    assert!(colored.starts_with("\x1b[1;38;2;189;147;249mEsdieff check run\x1b[0m: "));
+    for (sequence, disposition) in [
+        ("\x1b[1;38;2;255;92;87m", "failed"),
+        ("\x1b[1;38;2;90;247;142m", "passed"),
     ] {
         assert!(colored.contains(&format!(
-            "\n{sequence}{mark}\x1b[0m\x1b[38;2;112;120;140mDisposition:\x1b[0m {sequence}{disposition}\x1b[0m\n"
+            "[diff]: {sequence}{disposition}\x1b[0m, complete: true"
         )));
     }
 }

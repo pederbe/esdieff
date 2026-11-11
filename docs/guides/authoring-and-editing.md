@@ -78,11 +78,20 @@ the declaration is required. The thermostat refinement lowers the maximum to
 `source` matches the key you give the file with `--source KEY PATH`. The `key` and `generated_key` name the request and the generated document in reports. Run the recipe, and ask for an initial check of the result in the same step:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff author --plan recipe.json --source capabilities capabilities.sdf.json --document-output climate-unit.sdf.json --check initial-v1
+Document written: "climate-unit.sdf.json"
+Plan: "recipe.json"
+Report destination: standard output (-)
 <b><span class="g">✔ </span></b><b><span class="h">Author</span></b> ClimateUnit: <b><span class="g">passed</span></b>
 <span class="m">Generation:</span> <b><span class="g">complete</span></b>
 <span class="m">Fidelity:</span> <b><span class="g">established</span></b>
-<span class="m">Broader RFC coverage:</span> partial
 Errors: 0 · warnings: 0 · notices: 0 · unfinished authoring units: 0
+<span class="m">Input:</span> "capabilities.sdf.json" (source 1)
+<span class="m">Input:</span> "climate-unit" (source 2)
+<b><span class="g">✔ </span></b><span class="m">Requested checking</span> esdieff.initial/1: <b><span class="g">passed</span></b>
+<span class="m">Diagnostic details omitted:</span> 0
+
+<b><span class="h">Details:</span></b>
+<span class="m">Broader RFC coverage:</span> partial
 <span class="m">Baseline: rfc9880/base-1</span>
 <span class="m">Selected generated root: 2</span>
 <span class="m">Dependency sources: 1</span>
@@ -90,12 +99,14 @@ Errors: 0 · warnings: 0 · notices: 0 · unfinished authoring units: 0
 <span class="m">Unavailable required sources: none</span>
 <span class="m">Source 1 "capabilities": Model, Acquired</span>
 <span class="m">Source 2 "climate-unit": Generated, Generated</span>
-<b><span class="g">✔ </span></b><span class="m">Requested checking</span> esdieff.initial/1: <b><span class="g">passed</span></b> (0 incomplete assessment units)
 <span class="m">Requested check inventory: esdieff.initial/1</span>
 <span class="m">Requested check coverage</span> (assessment_area): total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
 </code></pre>
 
-`Generation: complete` says the document was assembled, and `Fidelity: established` says Esdieff verified that every generated reference still points at its source and every refinement value kept its exact spelling. The document is written only when both hold and the requested check passes. Here is the generated `climate-unit.sdf.json`:
+`Document written` confirms the output destination. `Generation: complete` says the document was assembled, and `Fidelity: established` says Esdieff verified that every generated reference still points at its source and every refinement value kept its exact spelling. The document is written only when both hold and the requested check passes. A failed or unfinished check instead says `Document not written` and explains
+why. When replacing an existing output, withholding preserves that file. If you
+omit `--check`, the report says checking was not requested. Here is the generated
+`climate-unit.sdf.json`:
 
 ```json
 {
@@ -131,19 +142,25 @@ Errors: 0 · warnings: 0 · notices: 0 · unfinished authoring units: 0
 The thermostat keeps its link to the capabilities document and overrides only the maximum. Inspect the effective property to confirm what the product presents, supplying both files:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff inspect --view effective --document climate-unit.sdf.json --pointer /sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature climate-unit.sdf.json capabilities.sdf.json
-...
+<b><span class="g">✔ </span></b><b><span class="h">Esdieff:</span></b> <b><span class="g">passed</span></b>
+<span class="m">Complete:</span> true
+<span class="m">Errors:</span> 0 · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
+<span class="m">Scope:</span> selected
+<span class="m">Broader RFC coverage:</span> partial
+<span class="m">Input:</span> "climate-unit.sdf.json" (source 1)
 
 <b><span class="h">Inspection</span></b> effective at "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature":
 {"type":"number","nullable":false,"minimum":5,"maximum":25,"multipleOf":0.5,"unit":"Cel","readable":true,"writable":true}
 ...
-override at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/maximum"; source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/maximum"; source 2 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum"; imported at source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfRef"
-inherited at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/multipleOf"; source 2 "/sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf"; imported at source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfRef"
+override at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature"; source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature" bytes 387..430; source 2 "/sdfObject/Thermostat/sdfProperty/targetTemperature" bytes 293..459; imported at source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfRef" bytes 297..325
+override at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/maximum"; source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/maximum" bytes 414..416; source 2 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum" bytes 367..369; imported at source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfRef" bytes 297..325
+inherited at effective 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfProperty/targetTemperature/multipleOf"; source 2 "/sdfObject/Thermostat/sdfProperty/targetTemperature/multipleOf" bytes 395..398; imported at source 1 "/sdfThing/ClimateUnit/sdfObject/thermostat/sdfRef" bytes 297..325
 </code></pre>
 
 The `maximum` is an `override` from the generated document, and the step is `inherited` from the capabilities file. Running the same command again refuses to overwrite the output until you add `--replace-document`:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff author --plan recipe.json --source capabilities capabilities.sdf.json --document-output climate-unit.sdf.json --check initial-v1
-<b><span class="r">esdieff:</span></b> existing output requires explicit replacement of a regular non-symlink file
+<b><span class="r">esdieff:</span></b> output "climate-unit.sdf.json" already exists. Choose another destination or use --replace-document to replace it
 </code></pre>
 
 Use `--report-output report.json --format json` to save the report beside the document, and `--check full-baseline` for the complete assessment. A refinement member set to `null` deletes the inherited member. The [authoring contract](../authoring-contract.md) lists every plan field, the refinement rules and the limits.
@@ -184,19 +201,26 @@ Starting from the thermostat model as `thermostat.sdf.json`, save this plan as `
 Run it the same way as a recipe:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff edit --plan edits.json --source thermostat thermostat.sdf.json --document-output thermostat-winter.sdf.json --check initial-v1
+Document written: "thermostat-winter.sdf.json"
+Plan: "edits.json"
+Report destination: standard output (-)
 <b><span class="g">✔ </span></b><b><span class="h">Edit</span></b> winter-edits: <b><span class="g">passed</span></b>
 <span class="m">Generation:</span> <b><span class="g">complete</span></b>
 <span class="m">Fidelity:</span> <b><span class="g">established</span></b> (esdieff.authored-quality-edit/1)
+Errors: 0 · warnings: 0 · notices: 0 · unfinished editing units: 0
+<span class="m">Input:</span> "thermostat-winter" (source 2)
+<b><span class="g">✔ </span></b><span class="m">Checking:</span> esdieff.initial/1: <b><span class="g">passed</span></b>
+<span class="m">Diagnostic details omitted:</span> 0
+
+<b><span class="h">Details:</span></b>
+<span class="m">Broader RFC coverage:</span> partial
 <span class="m">Substitution: source 1 with generated source 2</span>
 <span class="m">Root sources: [2]</span>
 <span class="m">Dependency sources: []</span>
 <span class="m">Assessed sources: [2]</span>
 <span class="m">Unavailable required sources: []</span>
 <span class="m">Requested editing coverage:</span> total 1 · assessed 1 · undetermined 0
-<b><span class="g">✔ </span></b><span class="m">Checking:</span> esdieff.initial/1: <b><span class="g">passed</span></b>
 <span class="m">Requested model coverage:</span> total 8 · assessed 8 · not applicable 0 · unassessed 0 · undetermined 0
-<span class="m">Broader RFC coverage:</span> partial
-Errors: 0 · unfinished editing units: 0
 </code></pre>
 
 Fidelity here means that every requested change was made and that everything else, including the spelling of every number, is unchanged. Esdieff reformats the output as indented JSON, so expect whitespace differences but no value differences. Each edit must target a member that exists: `replace` and `remove` both refuse an absent quality, which keeps a plan from silently doing nothing after the model changes under it.
@@ -207,6 +231,12 @@ Compare the result with the original to see exactly what changed and what it mea
 # Model changes
 
 Disposition: failed, with 1 breaking, 0 undetermined and 2 compatible differences.
+
+Earlier input: `thermostat.sdf.json`
+
+Later input: `thermostat-winter.sdf.json`
+
+Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.
 
 Perspective: client. Client interactions only. Context metadata compatibility is not assessed.
 

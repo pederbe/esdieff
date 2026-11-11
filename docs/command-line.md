@@ -88,6 +88,11 @@ description of `MODEL` when `--kind` and `--pointer` are left out. The two
 options come together or not at all. `--format jsonl` writes the values as
 JSON Lines that `trace` can check.
 
+Automatic selection covers Properties and Action/Event data. Select Context
+explicitly with `--kind context` and `--pointer`. An unfinished human report
+shows retained reasons. JSON Lines contains settled values only, so check the
+exit status before treating the file as a complete corpus.
+
 ## trace
 
 ```text
@@ -151,6 +156,10 @@ for each model file. `--check` also checks the generated document.
 `--report-output` writes the report to a file instead of standard output.
 An existing destination is replaced only with `--replace-document` or
 `--replace-report`.
+
+The human report confirms whether the document was written and explains any
+withholding. Generation and fidelity alone permit delivery when `--check` is
+omitted, and the report makes that unchecked status explicit.
 
 ## edit
 

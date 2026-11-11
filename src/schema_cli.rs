@@ -98,12 +98,12 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         .id();
     let result = catalogue
         .export_schema(SchemaRequest::new(id, kind, pointer))
-        .map_err(usage)?;
+        .map_err(|reason| crate::selection_error("schema", document, Some(pointer), reason))?;
     let rendered = if format == Some("schema") {
         result.schema().ok_or_else(|| {
             (
                 3,
-                result.reason().unwrap_or("schema unavailable").to_owned(),
+                format!("schema export for {:?} at {pointer:?}: {}. Run esdieff check on the model and its supplied dependencies for findings", crate::display_label(document).unwrap_or("[path omitted]".into()), result.reason().unwrap_or("schema unavailable")),
             )
         })?
     } else {

@@ -70,6 +70,29 @@ fn missing_value(flag: &str) -> (u8, String) {
         "{flag} requires a value. Run esdieff --help for usage"
     ))
 }
+fn selection_reason(reason: &str) -> &str {
+    match reason {
+        "unknown inspection selector" => "No value was found at the selected pointer",
+        other => other,
+    }
+}
+fn selection_error(
+    operation: &str,
+    document: &OsStr,
+    pointer: Option<&str>,
+    reason: &str,
+) -> (u8, String) {
+    let reason = selection_reason(reason);
+    let document = display_label(document).unwrap_or("[path omitted]".into());
+    let selection = match pointer {
+        Some(pointer) if pointer.len() <= 8192 => format!(" at {pointer:?}"),
+        Some(_) => " at [pointer exceeds 8192 bytes]".to_owned(),
+        None => String::new(),
+    };
+    usage(format!(
+        "{operation} selection in {document:?}{selection}: {reason}. Check the document and pointer. Run esdieff {operation} --help for examples"
+    ))
+}
 fn duplicate_option(flag: &str) -> (u8, String) {
     usage(format!("{flag} may be supplied only once"))
 }
@@ -520,7 +543,14 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
                 .sample(*ids.last().expect("registered sample"))
                 .strict_warnings(options.strict),
             )
-            .map_err(usage)?
+            .map_err(|reason| {
+                selection_error(
+                    "sample",
+                    options.document.expect("validated document"),
+                    options.pointer,
+                    reason,
+                )
+            })?
     } else if options.inspect {
         catalogue
             .inspect(
@@ -532,7 +562,14 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
                 .required_declarations(options.required)
                 .strict_warnings(options.strict),
             )
-            .map_err(usage)?
+            .map_err(|reason| {
+                selection_error(
+                    "inspect",
+                    options.document.expect("validated document"),
+                    options.pointer,
+                    reason,
+                )
+            })?
     } else {
         let mut request = CheckRequest::new()
             .assessment(options.assessment)

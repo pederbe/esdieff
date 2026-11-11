@@ -44,6 +44,27 @@ Each `GeneratedDescription` has its Sample selector `kind()` and `pointer()`, it
 
 Each `GeneratedValue` has its `target()`, its `to_json()` text, in which each number keeps the spelling it was generated with, its `admission()` and its `codes()`, the distinct condition codes behind a rejection, at most 8, such as `sample.bound`.
 
+## Reasons for incomplete generation
+
+Incomplete generation retains the first available explanation from selection,
+construction or value checking. `GenerationResult::selection_reason()`,
+`GeneratedDescription::reason()` and `GeneratedValue::reason()` expose these
+bounded observations. They explain unfinished work without running another
+check. A value's `codes()` still contains rejection codes only, so it remains
+empty for an undetermined value.
+
+JSON report 1.5 optionally adds `result.selection_reason`, a string, and
+`reasons` on each GeneratedDescription. A reasons object contains `items` and
+`omitted`. Each item has a `message` string and `value_index`, either null for
+the description or a zero-based index into its retained `values` array. The
+description reason comes first, then value reasons in retained value order.
+`omitted` counts known reason rows that did not fit. These fields use space
+remaining after ordinary description and value records, before optional Choice
+evidence. If even the container cannot fit, the field is absent. Absence means
+no explanation is available in that rendering, including older reports. It
+does not establish completion. Human reports show the same retained reasons
+and count any omitted reason rows. JSON Lines entries remain unchanged.
+
 ## Corpus evidence
 
 Use corpus evidence to see what the retained candidates establish before using
@@ -282,6 +303,10 @@ The JSON report is `schema:"esdieff.report", version:"1.5", operation:"generate"
 | GeneratedValue | target:string; value:any JSON value; admission:`"admitted"|"rejected"|"undetermined"`; codes:string[] | value is the generated JSON, with each number in its generated spelling. codes is empty unless the value is rejected. Optional evidence is one [corpus evidence](#corpus-evidence) category string. |
 
 `baseline.interpretations` names the value interpretations that the checks relied on, as model reports name them. An explicit Context request also records the supported draft and its limitations in `baseline.extensions`. Every source stays in `sources`. Description details are written in selection order within the report byte limit, and any that do not fit are counted, never silently dropped. The human report shows the disposition, the value counts, then each description with its state and one line per value with its admission, its target padded to at most 40 characters, its value and its rejection codes. It is written one description at a time and gives the JSON report instead as soon as it would not fit the report byte limit.
+
+The human summary also names the model input and selection. Automatic selection
+explains that Context needs explicit `--kind context` and `--pointer`. A complete
+empty selection reports that no eligible value descriptions were found.
 
 ## JSON Lines
 

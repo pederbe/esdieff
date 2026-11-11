@@ -16,7 +16,7 @@ that contains `esdieff.exe` from the extracted ZIP.
 ```text
 Esdieff: undetermined
 ...
-reference.unavailable: supplied global target unavailable
+incomplete reference.unavailable: supplied global target unavailable
 ```
 
 The model refers to a definition in a file you did not supply. Esdieff resolves
@@ -34,7 +34,7 @@ shows how to find which definition is missing.
 ## A model file could not be read
 
 ```text
-input.acquisition: Could not read source content: No such file or directory (os error 2). Check the path and read permissions
+incomplete input.acquisition: Could not read source content: No such file or directory (os error 2). Check the path and read permissions
 ```
 
 Esdieff could not read a file you named. The report's source line identifies the
@@ -49,7 +49,7 @@ which checks could not finish after the file failure.
 ## JSON grammar violation
 
 ```text
-json.syntax: JSON grammar violation
+error json.syntax: JSON grammar violation
 ```
 
 The file is not valid JSON, so the check fails with status 1. The finding shows
@@ -84,7 +84,7 @@ as `thermostat.sdf.json` instead.
 ## A CI step passes although the check failed
 
 The check's output is piped into another program, such as `jq`, and the shell
-reports that program's status. Run `set -o pipefail` before the pipeline, or
+reports that program's status. In Bash, run `set -o pipefail` before the pipeline, or
 run the check as its own step. [Use exit statuses](guides/checks-and-reports.md#use-exit-statuses)
 lists what each status means.
 

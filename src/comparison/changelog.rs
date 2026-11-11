@@ -39,6 +39,15 @@ pub(super) fn render(comparison: &RevisionComparison<'_>) -> String {
         ));
     }
     text.push_str("\n\n");
+    for (index, label) in ["Earlier input", "Later input"].into_iter().enumerate() {
+        for source in comparison.catalogues[index].sources().take(3) {
+            text.push_str(&format!(
+                "{label}: {}\n\n",
+                code(source.label().unwrap_or(source.key()))
+            ));
+        }
+    }
+    text.push_str("Interface scope: effective Things and Objects, including inherited content. Standalone top-level affordances and data are excluded.\n\n");
     text.push_str(&format!(
         "Perspective: {}. ",
         comparison.perspective.as_str()

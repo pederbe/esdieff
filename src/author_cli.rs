@@ -27,6 +27,9 @@ impl Operation for AuthorRequest {
     }
 }
 impl OperationResult for AuthorResult {
+    fn withholding_reason(&self) -> &'static str {
+        document_cli::withholding_reason(self.generation(), self.fidelity(), self.outcome())
+    }
     fn document_deliverable(&self) -> bool {
         AuthorResult::document_deliverable(self)
     }

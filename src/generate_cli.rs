@@ -29,7 +29,14 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
     if let Some((kind, pointer)) = options.selector {
         request = request.select(kind, pointer);
     }
-    let result = catalogue.generate(request).map_err(usage)?;
+    let result = catalogue.generate(request).map_err(|reason| {
+        crate::selection_error(
+            "generate",
+            options.document,
+            options.selector.map(|(_, pointer)| pointer),
+            reason,
+        )
+    })?;
     // Every format fits the report byte limit, since generation charges each value the bytes
     // its largest rendering needs.
     let rendered = match options.format {

@@ -101,7 +101,7 @@ fn an_excluded_oma_id_is_a_registration_error_in_json_and_human_reports() {
     );
     assert!(human.contains("Errors: 1;"), "{human}");
     assert!(
-        human.contains("\nextension.recorded_value_excluded: "),
+        human.contains("\nerror extension.recorded_value_excluded: "),
         "{human}"
     );
     assert!(

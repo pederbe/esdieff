@@ -730,6 +730,124 @@ fn native_json(report: &Native<'_>) -> Result<String, Error> {
 fn native_fields(native: &str) -> Result<BTreeMap<&str, &RawValue>, Error> {
     serde_json::from_str(native).map_err(|e| host(format!("cannot retain native envelope: {e}")))
 }
+
+/// Fixed aggregate coverage remains interpretable when optional native detail is omitted.
+fn coverage_context(native: &str) -> Result<String, Error> {
+    let coverage = native_fields(native)?;
+    let mut output = String::new();
+    for (heading, field) in [("Requested", "requested"), ("Requirement", "requirements")] {
+        if let Some(raw) = coverage.get(field) {
+            let counts = native_fields(raw.get())?;
+            if counts["inventory"].get() != "null" {
+                writeln!(
+                    output,
+                    "{heading} inventory: {}",
+                    counts["inventory"].get().trim_matches('"')
+                )
+                .expect("String write");
+            }
+            writeln!(output,
+                "{heading} coverage ({}): total {}, assessed {}, not applicable {}, unassessed {}, undetermined {}",
+                counts["count_unit"].get().trim_matches('"'),
+                if counts["total"].get() == "null" { "unknown" } else { counts["total"].get() },
+                counts["assessed"].get(), counts["not_applicable"].get(),
+                counts["unassessed"].get(), counts["undetermined"].get()
+            ).expect("String write");
+        }
+    }
+    let broader = native_fields(coverage["broader"].get())?;
+    writeln!(
+        output,
+        "Broader RFC coverage: {}",
+        broader["state"].get().trim_matches('"')
+    )
+    .expect("String write");
+    Ok(output)
+}
+
+fn omitted_case_request(
+    output: &mut String,
+    case: &Case<'_>,
+    sources: &[Source<'_>],
+    ids: &[SourceId],
+) {
+    match &case.operation {
+        Operation::Check { roots, assessment } => {
+            let profile = match assessment {
+                Assessment::Initial => "initial-v1",
+                Assessment::ExpandedNumeric => "expanded-numeric-v1",
+                Assessment::ExpandedConsistency => "expanded-consistency-v1",
+                Assessment::FullBaseline => "full-baseline",
+                _ => "unknown",
+            };
+            writeln!(
+                output,
+                "Assessment: {profile}\nScope: {}",
+                if roots.is_empty() {
+                    "catalogue"
+                } else {
+                    "selected"
+                }
+            )
+            .expect("String write");
+            for root in roots {
+                writeln!(
+                    output,
+                    "Root: {} (source {})",
+                    encode_text(sources[*root].key),
+                    ids[*root].get()
+                )
+                .expect("String write");
+            }
+        }
+        Operation::Sample {
+            document,
+            kind,
+            pointer,
+            sample,
+        } => {
+            writeln!(
+                output,
+                "Selection: {} in {} (source {}) at {}\nSample: {} (source {})",
+                kind.as_str(),
+                encode_text(sources[*document].key),
+                ids[*document].get(),
+                encode_text(pointer),
+                encode_text(sources[*sample].key),
+                ids[*sample].get()
+            )
+            .expect("String write");
+        }
+        Operation::Diff {
+            perspective,
+            documents,
+            ..
+        } => {
+            writeln!(output, "Perspective: {}\nScope: effective Thing and Object interfaces. Context metadata compatibility is not assessed.", perspective.as_str()).expect("String write");
+            for (side, documents) in ["Earlier", "Later"].into_iter().zip(documents) {
+                for source in documents {
+                    writeln!(
+                        output,
+                        "{side} input {}: {}",
+                        encode_text(source.key),
+                        encode_text(
+                            &crate::display_label(source.path.as_os_str())
+                                .unwrap_or(source.key.into())
+                        )
+                    )
+                    .expect("String write");
+                }
+            }
+            return;
+        }
+    }
+    writeln!(
+        output,
+        "Warning policy: {}",
+        if case.strict { "strict" } else { "ordinary" }
+    )
+    .expect("String write");
+}
 fn request_error(
     case: &Case<'_>,
     ids: &[SourceId],
@@ -825,6 +943,7 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
     let mut output = String::with_capacity(REPORT_BYTES);
     let mut detail = REPORT_BYTES - plan.reserve;
     let mut summary = Summary::default();
+    let mut case_summaries = String::new();
     let identity = format!(
         "{{\"path\":{},\"schema\":\"esdieff.check-plan\",\"version\":\"1\"}}",
         encode_text(&path.to_string_lossy())
@@ -845,14 +964,25 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             output.push_str(fields["sources"].get());
             output.push_str(",\"cases\":[");
         } else {
-            let style = color.stdout();
-            output.push_str(&format!(
-                "{}\n{} {identity}\n{} {}\n",
-                style.span(Role::Heading, "Esdieff check run"),
-                style.span(Role::Label, "Plan:"),
-                style.span(Role::Label, "Sources:"),
-                fields["sources"].get()
-            ));
+            writeln!(output, "{}", color.stdout().span(Role::Label, "Inputs:"))
+                .expect("String write");
+            for source in catalogue.sources() {
+                writeln!(
+                    output,
+                    "source {} {} {}: {:?}, JSON {}, {} retained bytes",
+                    source.id().get(),
+                    encode_text(source.key()),
+                    encode_text(source.label().unwrap_or(source.key())),
+                    source.acquisition(),
+                    if source.json().present().is_some() {
+                        "retained"
+                    } else {
+                        "unavailable"
+                    },
+                    source.raw_bytes().len()
+                )
+                .expect("String write");
+            }
         }
     }
     for (index, case) in plan.cases.iter().enumerate() {
@@ -869,19 +999,45 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             Err(message) => {
                 let record = request_error(case, &ids, index, message)?;
                 summary.request_errors += 1;
-                if !json_output {
+                if json_output {
+                    output.push_str(&record);
+                } else {
                     let style = color.stdout();
-                    write!(
-                        output,
-                        "\n{}{} ",
-                        style.disposition_mark(esdieff::Disposition::Failed),
-                        style.failure("Case request error:")
+                    writeln!(
+                        case_summaries,
+                        "- {} [{}]: invalid request",
+                        encode_text(case.name),
+                        case.operation.name()
                     )
                     .expect("String write");
-                }
-                output.push_str(&record);
-                if !json_output {
-                    output.push('\n');
+                    writeln!(
+                        output,
+                        "\n{}{} {} [{}]\n{} {}\nPlan location: /cases/{index}",
+                        style.disposition_mark(Disposition::Failed),
+                        style.failure("Case request error:"),
+                        encode_text(case.name),
+                        case.operation.name(),
+                        style.failure("Reason:"),
+                        crate::selection_reason(message)
+                    )
+                    .expect("String write");
+                    if let Operation::Sample {
+                        document,
+                        kind,
+                        pointer,
+                        sample,
+                    } = &case.operation
+                    {
+                        writeln!(
+                            output,
+                            "Selection: {} in {} at {}\nSample: {}",
+                            kind.as_str(),
+                            encode_text(&plan.sources[*document].path.to_string_lossy()),
+                            encode_text(pointer),
+                            encode_text(&plan.sources[*sample].path.to_string_lossy())
+                        )
+                        .expect("String write");
+                    }
                 }
                 continue;
             }
@@ -929,39 +1085,61 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             }
             output.push('}');
         } else {
-            let coverage: BTreeMap<&str, &RawValue> =
-                serde_json::from_str(fields["coverage"].get())
-                    .map_err(|e| host(format!("cannot disclose native coverage: {e}")))?;
-            let broader: BTreeMap<&str, &RawValue> =
-                serde_json::from_str(coverage["broader"].get())
-                    .map_err(|e| host(format!("cannot disclose broader coverage: {e}")))?;
             let style = color.stdout();
-            let label = |text| style.span(Role::Label, text);
-            output.push_str(&format!(
-                "\n{} {}\n{} {}\n{} {}\n{}{} {}\n{} {complete}\n{} {}\n{} {}\n{} {}\n{} {}\n",
+            write!(
+                case_summaries,
+                "- {} [{}]: {}, complete: {complete}",
+                encode_text(case.name),
+                case.operation.name(),
+                style.disposition(disposition)
+            )
+            .expect("String write");
+            if let Some((_, heading, value)) = tag {
+                write!(
+                    case_summaries,
+                    ", {} {value}",
+                    style.span(Role::Label, &format!("{heading}:"))
+                )
+                .expect("String write");
+            }
+            case_summaries.push('\n');
+            match &report {
+                Native::Report(report) => {
+                    let outcome = report.outcome();
+                    writeln!(
+                        case_summaries,
+                        "  Errors: {}, warnings: {}, notices: {}, incomplete checks: {}",
+                        outcome.errors(),
+                        outcome.warnings(),
+                        outcome.notices(),
+                        outcome.incomplete_checks()
+                    )
+                    .expect("String write");
+                    if outcome.strict_warnings() && outcome.warnings() > 0 && outcome.errors() == 0
+                    {
+                        case_summaries.push_str("  Warnings caused this case to fail because strict_warnings is enabled.\n");
+                    }
+                }
+                Native::Comparison(comparison) => {
+                    writeln!(
+                        case_summaries,
+                        "  Differences: {} breaking, {} undetermined, {} compatible",
+                        comparison.count(Classification::Breaking),
+                        comparison.count(Classification::Undetermined),
+                        comparison.count(Classification::Compatible)
+                    )
+                    .expect("String write");
+                }
+            }
+            writeln!(
+                output,
+                "\n{} {} [{}]",
                 style.span(Role::Heading, "Case:"),
                 encode_text(case.name),
-                label("Operation:"),
-                case.operation.name(),
-                label("Scope/profile/selector:"),
-                fields["request"].get(),
-                style.disposition_mark(disposition),
-                label("Disposition:"),
-                style.disposition(disposition),
-                label("Complete:"),
-                label("Outcome:"),
-                fields["outcome"].get(),
-                label("Broader RFC coverage:"),
-                broader["state"].get().trim_matches('"'),
-                label("Baseline:"),
-                fields["baseline"].get(),
-                label("Policy:"),
-                fields["policy"].get()
-            ));
-            if let Some((_, heading, value)) = tag {
-                let heading = format!("{heading}:");
-                output.push_str(&format!("{} {value}\n", label(&heading)));
-            }
+                case.operation.name()
+            )
+            .expect("String write");
+            let coverage = coverage_context(fields["coverage"].get())?;
             drop(fields);
             drop(native);
             let human = report.to_human(if color.stdout().enabled() {
@@ -978,14 +1156,37 @@ pub(crate) fn run(path: &Path, json_output: bool, color: ColorMode) -> Result<u8
             } else {
                 summary.omitted += 1;
                 output.push_str("Native report omitted: run-report-budget\n");
+                omitted_case_request(&mut output, case, &plan.sources, &ids);
+                output.push_str(&coverage);
             }
         }
     }
     if json_output {
         output.push_str(&format!("],\"summary\":{}}}\n", summary.wire()));
     } else {
-        let summary_label = color.stdout().span(Role::Label, "Check case summary:");
-        output.push_str(&format!("\n{summary_label} {}\n", summary.wire()));
+        let style = color.stdout();
+        let verdict = match summary.exit() {
+            2 => style.failure("invalid").into_owned(),
+            1 => style.disposition(Disposition::Failed).into_owned(),
+            3 => style.disposition(Disposition::Undetermined).into_owned(),
+            _ => style.disposition(Disposition::Passed).into_owned(),
+        };
+        let header = format!(
+            "{}: {verdict}\nPlan: {}\nCases: {} passed, {} failed, {} undetermined, {} invalid requests\nComplete cases: {} of {}\nSamples: {} admitted, {} rejected, {} undetermined\nCase reports omitted: {}\n\nCase results:\n{case_summaries}\nDetails:\n",
+            style.span(Role::Heading, "Esdieff check run"),
+            encode_text(&path.to_string_lossy()),
+            summary.passed,
+            summary.failed,
+            summary.undetermined,
+            summary.request_errors,
+            summary.complete,
+            summary.total,
+            summary.admitted,
+            summary.rejected,
+            summary.admission_undetermined,
+            summary.omitted,
+        );
+        output.insert_str(0, &header);
     }
     if output.len() > REPORT_BYTES {
         return Err(host("run report exceeds admitted envelope"));
