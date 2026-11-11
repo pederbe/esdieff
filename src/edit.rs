@@ -221,7 +221,7 @@ impl EditRequest {
             if reserve + profile.report_reserve() > self.catalogue.limits.report_bytes {
                 return Err("report cannot reserve combined edit and checking envelope");
             }
-            profile.admit_reporting(reserve, self.catalogue.limits.report_bytes, false)?;
+            profile.admit_reporting(reserve, self.catalogue.limits.report_bytes)?;
         }
         Ok(())
     }

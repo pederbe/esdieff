@@ -159,7 +159,7 @@ fn wire(comparison: &RevisionComparison<'_>) -> Value {
         // Fixed Context and link draft support, two unit and three content-format registry records, well within
         // both Catalogues' fixed reserves.
         "baseline":{"id":"rfc9880/base-1","rfc":"9880","corrections":[],"interpretations":interpretations,"deviations":[],"registry_knowledge":comparison.registry.wire(false),"extensions":crate::link::extensions(true, true)},
-        "policy":{"restrictions":["A002"],"strict_warnings":false,"compatibility_scope":"client_interactions","perspective":comparison.perspective.as_str(),"recorded_registry":comparison.registry.policy.as_str(),
+        "policy":{"restrictions":["A002"],"strict_warnings":false,"compatibility_scope":"client_interactions","perspective":comparison.perspective.as_str(),"recorded_registry":"use_recorded",
             "acknowledgements":comparison.acknowledgements.map_or(0, |supplied| supplied.entries().len())},
         "outcome":{"complete":complete,"errors":errors,"warnings":warnings,"notices":0,"incomplete_checks":u32::from(!complete),"strict_warnings":false,"disposition":comparison.disposition().as_str()},
         "coverage":{"requested":{"inventory":null,"count_unit":"comparison","total":1,"assessed":u32::from(complete),"not_applicable":0,"unassessed":0,"undetermined":u32::from(!complete)},

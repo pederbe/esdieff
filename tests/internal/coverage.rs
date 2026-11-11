@@ -273,7 +273,7 @@ fn exclusive_guards_and_needed_failures_do_not_credit_unrelated_requirements() {
             if profile == Assessment::Initial {
                 assert_eq!(
                     report
-                        .assessment_area_status("document-envelope/1")
+                        .producer_status("document-envelope/1")
                         .require()
                         .unwrap(),
                     AssessmentStatus::Undetermined
@@ -433,10 +433,7 @@ fn malformed_alternative_cannot_establish_model_completion() {
         AssessmentStatus::Undetermined
     );
     assert_eq!(
-        report
-            .assessment_area_status("advisory-four/1")
-            .require()
-            .unwrap(),
+        report.producer_status("advisory-four/1").require().unwrap(),
         AssessmentStatus::Undetermined
     );
     assert!(!report.outcome().complete());
@@ -497,10 +494,8 @@ fn broader_state_preserves_strict_warning_and_other_operation_meanings() {
     }
     for profile in [
         Assessment::Initial,
-        Assessment::ExpandedModified,
-        Assessment::ExpandedUnits,
-        Assessment::ExpandedContentFormat,
-        Assessment::ExpandedPatternSyntax,
+        Assessment::ExpandedNumeric,
+        Assessment::ExpandedConsistency,
     ] {
         let report = catalogue
             .check(CheckRequest::new().assessment(profile))
@@ -631,27 +626,6 @@ fn copied_required_identity_leaves_unit_and_content_format_to_the_composed_conte
             }
             for member in [19, 20] {
                 assert_eq!(status(&report, member), Assessed, "M{member:03} in {text}");
-            }
-            for (assessment, areas) in [
-                (
-                    Assessment::ExpandedUnits,
-                    ["unit-spelling/1", "unit-registry-guidance/1"],
-                ),
-                (
-                    Assessment::ExpandedContentFormat,
-                    ["content-format-syntax/1", "content-format-registry/1"],
-                ),
-            ] {
-                let report = catalogue
-                    .check(CheckRequest::new().assessment(assessment))
-                    .unwrap();
-                for area in areas {
-                    assert_eq!(
-                        report.assessment_area_status(area).require().unwrap(),
-                        expected,
-                        "{area} in {text}"
-                    );
-                }
             }
         }
     }

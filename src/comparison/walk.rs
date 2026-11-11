@@ -33,23 +33,19 @@ pub(super) struct Outcome<'a> {
     pub(super) records: Vec<Record<'a>>,
     pub(super) counts: [u32; 3],
     pub(super) unretained: u32,
-    /// The recorded evidence policy for unit names and content formats, and the sections
-    /// consulted.
+    /// The recorded registry sections consulted for unit names and content formats.
     pub(super) registry: crate::registry::State,
     /// The value interpretations that Breaking witnesses relied on.
     pub(super) interpretations: ValueInterpretations,
 }
 impl Outcome<'_> {
-    pub(super) fn new(policy: crate::RecordedRegistryPolicy, perspective: Perspective) -> Self {
+    pub(super) fn new(perspective: Perspective) -> Self {
         Self {
             perspective,
             records: Vec::new(),
             counts: [0; 3],
             unretained: 0,
-            registry: crate::registry::State {
-                policy,
-                ..Default::default()
-            },
+            registry: crate::registry::State::default(),
             interpretations: ValueInterpretations::default(),
         }
     }
@@ -781,16 +777,12 @@ impl<'c, 'a> Walk<'c, 'a> {
     /// Classify a changed unit, looking up each name in the recorded SenML evidence on the
     /// one operation allowance.
     fn unit(&mut self, members: Members<'c>) -> Verdict {
-        use super::UnitReason;
         use crate::units::{Counter, Unfinished, lookup};
         let names = members.map(|json| json.map(|json| json.text().present()));
         let (registry, work) = (&mut self.outcome.registry, &mut self.allowance.budget.work);
         classify::unit(names, |name| match lookup(name, false, registry, work) {
             Ok((Counter::Unknown, _)) => Ok(None),
             Ok((_, legacy)) => Ok(Some(legacy)),
-            Err(Unfinished::Withheld) => {
-                Err(UndeterminedReason::Unit(UnitReason::EvidenceWithheld))
-            }
             Err(Unfinished::Limited) => Err(UndeterminedReason::limit("comparison work limit")),
         })
     }

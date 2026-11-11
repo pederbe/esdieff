@@ -35,7 +35,7 @@ fn common_header_and_simultaneous_owners_fit_unchanged_c() {
                     .acquisition_uri(&uri).version_token(&version).digest(&digest);
                 if omitted_label { input.omit_label() } else { input.label(&label) }
             }).collect();
-            for (profile, extra) in [(Assessment::Initial, 0), (Assessment::ExpandedModified, 1024)] {
+            for (profile, extra) in [(Assessment::Initial, 0), (Assessment::FullBaseline, crate::registry::FULL_RESERVE + crate::pattern::REPORT_RESERVE)] {
                 let cat = Catalogue::with_limits(&inputs, Limits::default().report_bytes(c + extra)).unwrap();
                 assert_eq!(cat.reserve, c);
                 let report = cat.check(CheckRequest::new().assessment(profile)).unwrap();
@@ -50,9 +50,9 @@ fn common_header_and_simultaneous_owners_fit_unchanged_c() {
                 let fallback = report.render_human(0);
                 assert!(json.len() <= c + extra && human.len() <= c + extra && fallback.len() <= c + extra);
                 let forced: Value = serde_json::from_str(&fallback).unwrap();
-                assert_eq!(forced["coverage"]["requested"]["total"], if profile == Assessment::Initial { 8 } else { 9 });
+                assert_eq!(forced["coverage"]["requested"]["total"], if profile == Assessment::Initial { 8 } else { 13 });
                 assert!(forced["baseline"]["registry_knowledge"].as_array().unwrap().is_empty());
-                assert!(forced["policy"].get("recorded_registry").is_none());
+                if profile == Assessment::FullBaseline { assert_eq!(forced["policy"]["recorded_registry"], "use_recorded"); } else { assert!(forced["policy"].get("recorded_registry").is_none()); }
                 println!("common profile={profile:?} sources={count} omitted_label={omitted_label} C={c} header={} source_bound_common={} observed_graph_bound={owners} ownership_limit={} json={} human={} forced_fallback={}", std::mem::size_of_val(&report), common_owner_bytes(), 4 * (c + extra), json.len(), human.len(), fallback.len());
             }
             let cat = Catalogue::with_limits(&inputs, Limits::default().report_bytes(c)).unwrap();
@@ -100,51 +100,46 @@ fn maximum_inspection_selector_and_old_result_keep_separate_charges() {
 
 #[test]
 fn actual_registry_producers_survive_exact_admission_omission_and_fallback() {
-    use crate::{Limits, RecordedRegistryPolicy, SourceInput};
+    use crate::{Limits, SourceInput};
     for key in ["authored", "fixture"] {
     let c = 6 * key.len() + 4096 + 16384;
-    for (profile, e, mask) in [
-        (Assessment::ExpandedContentFormat, crate::registry::CONTENT_RESERVE, 28),
-        (Assessment::ExpandedUnits, crate::registry::UNIT_RESERVE, 3),
-        (Assessment::FullBaseline, crate::registry::FULL_RESERVE, 63),
-    ] {
+    let (profile, e, mask) = (Assessment::FullBaseline, crate::registry::FULL_RESERVE, 63);
+
         let input = [SourceInput::supplied(key, br#"{"info":{}}"#)];
-        let p = if profile == Assessment::FullBaseline { crate::pattern::REPORT_RESERVE } else { 0 };
+        let p = crate::pattern::REPORT_RESERVE;
         let cap = c + e + p;
         let small = Catalogue::with_limits(&input, Limits::default().report_bytes(cap - 1)).unwrap();
         assert_eq!(small.check(CheckRequest::new().assessment(profile)).err(), Some(if p > 0 { "report cannot reserve the pattern assessment envelope" } else { "report cannot reserve the registry assessment envelope" }));
         let cat = Catalogue::with_limits(&input, Limits::default().report_bytes(cap).diagnostic_bytes(1).conditions(1)).unwrap();
         assert_eq!(cat.reserve, c);
-        for policy in [RecordedRegistryPolicy::UseRecorded, RecordedRegistryPolicy::WithholdRecorded] {
+
             for consulted in [0, 1, 3, 4, 12, 15, 28, 31, 32, 63] {
                 let used = consulted & mask;
-                let mut report = cat.check(CheckRequest::new().assessment(profile).recorded_registry_policy(policy)).unwrap();
+                let mut report = cat.check(CheckRequest::new().assessment(profile)).unwrap();
                 // Supply admitted owner observations to the real producer. This is
                 // deliberately not a declaration lookup or scanner observation.
-                if policy == RecordedRegistryPolicy::UseRecorded { report.registry.consulted = used; }
-                else { report.registry.withheld = used; }
-                report.registry.interpretations = if profile == Assessment::FullBaseline { 7 } else { 4 };
+                report.registry.consulted = used;
+                report.registry.interpretations = 7;
                 let json = report.to_json();
                 let human = report.to_human();
                 let fallback = report.render_human(0);
                 for encoded in [&json, &fallback] {
                     assert!(encoded.len() <= cap);
                     let wire: Value = serde_json::from_str(encoded).unwrap();
-                    assert_eq!(wire["policy"]["recorded_registry"], policy.as_str());
+                    assert_eq!(wire["policy"]["recorded_registry"], "use_recorded");
                     let records = wire["baseline"]["registry_knowledge"].as_array().unwrap();
                     assert_eq!(records.len(), used.count_ones() as usize);
                     for record in records {
-                        assert_eq!(record.as_object().unwrap().len(), if policy == RecordedRegistryPolicy::UseRecorded { 10 } else { 4 });
-                        assert_eq!(record["snapshot"].is_null(), policy == RecordedRegistryPolicy::WithholdRecorded);
+                        assert_eq!(record.as_object().unwrap().len(), 10);
+                        assert!(!record["snapshot"].is_null());
                     }
                     assert!(wire["coverage"]["rows"].as_array().unwrap().is_empty());
                     assert!(wire["diagnostics"]["items"].as_array().unwrap().is_empty());
                     assert_eq!(wire["outcome"]["complete"], report.outcome().complete());
                 }
                 assert!(human.len() <= cap);
-                println!("extension key={key} profile={profile:?} policy={policy:?} records={} cap={cap} json={} human={} forced_fallback={}", used.count_ones(), json.len(), human.len(), fallback.len());
+                println!("extension key={key} profile={profile:?} records={} cap={cap} json={} human={} forced_fallback={}", used.count_ones(), json.len(), human.len(), fallback.len());
             }
-        }
         let limited = Catalogue::with_limits(&input, Limits::default().report_bytes(cap).effective_allocation_bytes(1)).unwrap();
         let report = limited.check(CheckRequest::new().assessment(profile)).unwrap();
         assert!(report.registry.owner_failed);
@@ -155,11 +150,10 @@ fn actual_registry_producers_survive_exact_admission_omission_and_fallback() {
         }
         let wire: Value = serde_json::from_str(&report.render_human(0)).unwrap();
         assert!(wire["baseline"]["registry_knowledge"].as_array().unwrap().is_empty());
-        if profile != Assessment::ExpandedContentFormat { assert!(wire["result"]["unit_guidance"]["counts"].is_null()); }
-        if profile == Assessment::ExpandedContentFormat {
-            for area in crate::content_format::AREAS { assert!(matches!(report.assessment_area_status(area), Field::Present(AssessmentStatus::Undetermined))); }
+        if profile != Assessment::FullBaseline { assert!(wire["result"]["unit_guidance"]["counts"].is_null()); }
+        if profile == Assessment::FullBaseline {
+            for area in crate::content_format::AREAS { assert!(matches!(report.producer_status(area), Field::Present(AssessmentStatus::Undetermined))); }
         }
-    }
     }
 }
 
@@ -187,21 +181,21 @@ fn actual_sample_header_and_retained_result_fit_unchanged_allowance() {
 
 #[test]
 fn real_two_phase_counts_and_fallback_keep_each_coordinate_once() {
-    use crate::{Limits, RecordedRegistryPolicy, SourceInput};
+    use crate::{Limits, SourceInput};
     let bytes = br#"{"info":{},"sdfData":{"A":{"contentFormat":"application/json;p=x@gzip@gzip"},"B":{"contentFormat":"65536"},"C":{"contentFormat":"text/plain;"},"D":{"contentFormat":"60","sdfChoice":{"Inherited":{},"Override":{"contentFormat":"application/json@zstd"}}}}}"#;
-    for policy in [RecordedRegistryPolicy::UseRecorded, RecordedRegistryPolicy::WithholdRecorded] {
+
         let original = Catalogue::from_inputs(&[SourceInput::supplied("authored", bytes)]).unwrap();
-        let original = original.check(CheckRequest::new().assessment(Assessment::ExpandedContentFormat).recorded_registry_policy(policy)).unwrap();
+        let original = original.check(CheckRequest::new().assessment(Assessment::FullBaseline)).unwrap();
         let counts = original.content.as_ref().unwrap().counts;
         assert_eq!(&counts[..2], &[6,6]);
         assert_eq!(counts[2], 7); // Three A tokens, D and its two independent alternatives.
-        assert_eq!(counts[3], if policy == RecordedRegistryPolicy::UseRecorded { 0 } else { 7 });
+        assert_eq!(counts[3], 0);
         assert_eq!(original.outcome().errors(), 2);
         assert_eq!(original.diagnostics().conditions().filter(|c| c.code() == "content_format.syntax").count(), 1);
         assert_eq!(original.diagnostics().conditions().filter(|c| c.code() == "content_format.number_range").count(), 1);
-        assert_eq!(original.diagnostics().conditions().filter(|c| c.code() == "content_format.parameter_semantics_unassessed").count(), 1);
-        let catalogue = Catalogue::with_limits(&[SourceInput::supplied("authored", bytes)], Limits::default().report_bytes(39644).diagnostic_bytes(1).conditions(1)).unwrap();
-        let report = catalogue.check(CheckRequest::new().assessment(Assessment::ExpandedContentFormat).recorded_registry_policy(policy)).unwrap();
+        assert_eq!(original.diagnostics().conditions().filter(|c| c.code() == "content_format.model_meaning_unassessed").count(), 1);
+        let catalogue = Catalogue::with_limits(&[SourceInput::supplied("authored", bytes)], Limits::default().report_bytes(52147).diagnostic_bytes(1).conditions(1)).unwrap();
+        let report = catalogue.check(CheckRequest::new().assessment(Assessment::FullBaseline)).unwrap();
         assert_eq!(report.content.as_ref().unwrap().counts, counts);
         assert_eq!(report.outcome().errors(), 2);
         assert_eq!(report.structure.findings.len(), 0);
@@ -212,10 +206,9 @@ fn real_two_phase_counts_and_fallback_keep_each_coordinate_once() {
             let wire: Value = serde_json::from_str(encoded).unwrap();
             assert_eq!(wire["outcome"]["errors"], 2);
             assert_eq!(wire["baseline"]["registry_knowledge"].as_array().unwrap().len(), 3);
-            assert!(encoded.len() <=39644);
+            assert!(encoded.len() <=52147);
         }
-        println!("real two-phase policy={policy:?} counts={counts:?} errors2 json={} human={} forced_fallback={}", json.len(), human.len(), fallback.len());
-    }
+        println!("real two-phase counts={counts:?} errors2 json={} human={} forced_fallback={}", json.len(), human.len(), fallback.len());
 }
 
 #[test]

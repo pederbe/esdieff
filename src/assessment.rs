@@ -9,10 +9,6 @@ pub(crate) const MODIFIED_AREA: &str = "modified-date-time/1";
 pub(crate) enum StatusSource {
     Initial(usize),
     Advisory,
-    Modified,
-    Units(usize),
-    ContentFormat(usize),
-    Pattern,
     Numeric,
     Consistency(usize),
     Requirements,
@@ -70,10 +66,6 @@ const FULL_AREAS: [Area; 13] = {
 };
 
 pub(crate) struct Capabilities {
-    pub(crate) modified: bool,
-    pub(crate) units: bool,
-    pub(crate) content_format: bool,
-    pub(crate) pattern: bool,
     pub(crate) numeric: bool,
     pub(crate) consistency: bool,
     pub(crate) full: bool,
@@ -82,7 +74,6 @@ pub(crate) struct Capabilities {
 struct Reserves {
     registry: usize,
     pattern: usize,
-    expanded: usize,
 }
 
 pub(crate) struct Profile {
@@ -104,20 +95,16 @@ impl Profile {
         self.areas.len() + self.additions.len()
     }
     pub(crate) fn registry_requested(&self) -> bool {
-        self.enabled.units || self.enabled.content_format
+        self.enabled.full
     }
     pub(crate) fn report_reserve(&self) -> usize {
-        self.reserves.registry + self.reserves.pattern + self.reserves.expanded
+        self.reserves.registry + self.reserves.pattern
     }
     pub(crate) fn admit_reporting(
         &self,
         reserve: usize,
         report_bytes: usize,
-        registry_policy: bool,
     ) -> Result<(), &'static str> {
-        if registry_policy && !self.registry_requested() {
-            return Err("recorded registry policy requires a registry assessment");
-        }
         if self.registry_requested() {
             crate::registry::qualify()?;
         }
@@ -131,9 +118,6 @@ impl Profile {
         {
             return Err("report cannot reserve the pattern assessment envelope");
         }
-        if self.reserves.expanded != 0 && reserve + self.reserves.expanded > report_bytes {
-            return Err("report cannot reserve the expanded assessment envelope");
-        }
         Ok(())
     }
 }
@@ -144,10 +128,6 @@ const INITIAL: Profile = Profile {
     areas: &INITIAL_AREAS,
     additions: &[],
     enabled: Capabilities {
-        modified: false,
-        units: false,
-        content_format: false,
-        pattern: false,
         numeric: false,
         consistency: false,
         full: false,
@@ -155,103 +135,12 @@ const INITIAL: Profile = Profile {
     reserves: Reserves {
         registry: 0,
         pattern: 0,
-        expanded: 0,
     },
 };
 
 pub(crate) const fn profile(assessment: Assessment) -> &'static Profile {
     match assessment {
         Assessment::Initial => &INITIAL,
-        Assessment::ExpandedModified => {
-            const {
-                &Profile {
-                    identity: "esdieff.expanded.modified/1",
-                    inventory: "esdieff.expanded.modified/1",
-                    additions: &[Area::new(MODIFIED_AREA, StatusSource::Modified, false)],
-                    enabled: Capabilities {
-                        modified: true,
-                        ..INITIAL.enabled
-                    },
-                    reserves: Reserves {
-                        expanded: 1024,
-                        ..INITIAL.reserves
-                    },
-                    ..INITIAL
-                }
-            }
-        }
-        Assessment::ExpandedUnits => {
-            const {
-                &Profile {
-                    identity: "esdieff.expanded.units/1",
-                    inventory: "esdieff.expanded.units/1",
-                    additions: &[
-                        Area::new(crate::units::AREAS[0], StatusSource::Units(0), false),
-                        Area::new(crate::units::AREAS[1], StatusSource::Units(1), false),
-                    ],
-                    enabled: Capabilities {
-                        units: true,
-                        ..INITIAL.enabled
-                    },
-                    reserves: Reserves {
-                        registry: crate::registry::UNIT_RESERVE,
-                        ..INITIAL.reserves
-                    },
-                    ..INITIAL
-                }
-            }
-        }
-        Assessment::ExpandedContentFormat => {
-            const {
-                &Profile {
-                    identity: "esdieff.expanded.content-format/1",
-                    inventory: "esdieff.expanded.content-format/1",
-                    additions: &[
-                        Area::new(
-                            crate::content_format::AREAS[0],
-                            StatusSource::ContentFormat(0),
-                            false,
-                        ),
-                        Area::new(
-                            crate::content_format::AREAS[1],
-                            StatusSource::ContentFormat(1),
-                            false,
-                        ),
-                    ],
-                    enabled: Capabilities {
-                        content_format: true,
-                        ..INITIAL.enabled
-                    },
-                    reserves: Reserves {
-                        registry: crate::registry::CONTENT_RESERVE,
-                        ..INITIAL.reserves
-                    },
-                    ..INITIAL
-                }
-            }
-        }
-        Assessment::ExpandedPatternSyntax => {
-            const {
-                &Profile {
-                    identity: "esdieff.expanded.pattern-syntax/1",
-                    inventory: "esdieff.expanded.pattern-syntax/1",
-                    additions: &[Area::new(
-                        crate::pattern::AREA,
-                        StatusSource::Pattern,
-                        false,
-                    )],
-                    enabled: Capabilities {
-                        pattern: true,
-                        ..INITIAL.enabled
-                    },
-                    reserves: Reserves {
-                        pattern: crate::pattern::REPORT_RESERVE,
-                        ..INITIAL.reserves
-                    },
-                    ..INITIAL
-                }
-            }
-        }
         Assessment::ExpandedNumeric => {
             const {
                 &Profile {
@@ -301,10 +190,6 @@ pub(crate) const fn profile(assessment: Assessment) -> &'static Profile {
             areas: &FULL_AREAS,
             additions: &[],
             enabled: Capabilities {
-                modified: true,
-                units: true,
-                content_format: true,
-                pattern: true,
                 full: true,
                 // Full model requirements do not request independent expanded advice.
                 numeric: false,
@@ -314,7 +199,6 @@ pub(crate) const fn profile(assessment: Assessment) -> &'static Profile {
             reserves: Reserves {
                 registry: crate::registry::FULL_RESERVE,
                 pattern: crate::pattern::REPORT_RESERVE,
-                expanded: 0,
             },
         },
     }

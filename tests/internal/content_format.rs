@@ -1,7 +1,7 @@
 //! Public declaration assessment follows ADR 0029: Content-format declarations
 //! and recorded registry guidance, independently of retained diagnostic details.
+use esdieff::Limits;
 use esdieff::{Assessment, AssessmentStatus, Catalogue, CheckRequest, Field, SourceInput};
-use esdieff::{Limits, RecordedRegistryPolicy};
 use serde_json::{Value, json};
 
 const SYNTAX: &str = "content-format-syntax/1";
@@ -10,7 +10,7 @@ fn declaration(text: &str) -> Vec<u8> {
     serde_json::to_vec(&json!({"info":{},"sdfData":{"Payload":{"contentFormat":text}}})).unwrap()
 }
 fn expanded() -> CheckRequest {
-    CheckRequest::new().assessment(Assessment::ExpandedContentFormat)
+    CheckRequest::new().assessment(Assessment::FullBaseline)
 }
 
 #[test]
@@ -20,23 +20,20 @@ fn malformed_declaration_is_added_only_to_the_explicit_inventory() {
     let initial = cat.check(CheckRequest::new()).unwrap();
     assert_eq!(initial.outcome().errors(), 0);
     assert_eq!(initial.requested_coverage().total(), Some(8));
-    assert!(matches!(
-        initial.assessment_area_status(SYNTAX),
-        Field::Absent
-    ));
+    assert!(matches!(initial.producer_status(SYNTAX), Field::Absent));
     let report = cat.check(expanded()).unwrap();
     assert_eq!(report.outcome().errors(), 1);
-    assert_eq!(report.requested_coverage().total(), Some(10));
+    assert_eq!(report.requested_coverage().total(), Some(13));
     assert_eq!(
         report.requested_coverage().inventory(),
-        Some("esdieff.expanded.content-format/1")
+        Some("esdieff.full-model/1")
     );
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert!(matches!(
-        report.assessment_area_status(REGISTRY),
+        report.producer_status(REGISTRY),
         Field::Present(AssessmentStatus::NotApplicable)
     ));
     assert!(
@@ -57,7 +54,7 @@ fn malformed_declaration_is_added_only_to_the_explicit_inventory() {
 }
 
 #[test]
-fn recorded_positive_unknown_withheld_and_excluded_meaning_are_distinct() {
+fn recorded_positive_unknown_and_excluded_meaning_are_distinct() {
     for (text, registry, status, code) in [
         (
             "60",
@@ -81,7 +78,7 @@ fn recorded_positive_unknown_withheld_and_excluded_meaning_are_distinct() {
             "text/plain;p=\"@identity\"",
             "media-types",
             AssessmentStatus::Assessed,
-            "content_format.parameter_semantics_unassessed",
+            "content_format.model_meaning_unassessed",
         ),
         (
             "application/json@identity",
@@ -96,13 +93,13 @@ fn recorded_positive_unknown_withheld_and_excluded_meaning_are_distinct() {
         assert_eq!(report.outcome().errors(), 0, "{text}");
         assert!(
             matches!(
-                report.assessment_area_status(SYNTAX),
+                report.producer_status(SYNTAX),
                 Field::Present(AssessmentStatus::Assessed)
             ),
             "{text}"
         );
         assert!(
-            matches!(report.assessment_area_status(REGISTRY), Field::Present(s) if s == status),
+            matches!(report.producer_status(REGISTRY), Field::Present(s) if s == status),
             "{text}"
         );
         assert!(
@@ -116,24 +113,6 @@ fn recorded_positive_unknown_withheld_and_excluded_meaning_are_distinct() {
             report.registry_knowledge("iana.senml-units"),
             Field::Absent
         ));
-        let withheld = cat
-            .check(expanded().recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded))
-            .unwrap();
-        assert_eq!(withheld.outcome().errors(), 0);
-        assert!(matches!(
-            withheld.assessment_area_status(REGISTRY),
-            Field::Present(AssessmentStatus::Undetermined)
-        ));
-        assert!(
-            withheld
-                .diagnostics()
-                .conditions()
-                .any(|c| c.code() == "content_format.registry_knowledge_withheld")
-        );
-        let unavailable = withheld.registry_knowledge(registry).require().unwrap();
-        assert_eq!(unavailable.state(), "unavailable");
-        assert_eq!(unavailable.snapshot(), None);
-        assert_eq!(unavailable.reason(), Some("caller_withheld"));
     }
 }
 
@@ -171,7 +150,7 @@ fn every_positive_record_is_reachable_and_flags_are_dated_advice() {
             assert_eq!(report.outcome().errors(), 0, "{text}");
             assert!(
                 matches!(
-                    report.assessment_area_status(REGISTRY),
+                    report.producer_status(REGISTRY),
                     Field::Present(AssessmentStatus::Assessed)
                 ),
                 "{text}"
@@ -204,46 +183,30 @@ fn all_optional_details_can_be_zero_without_losing_counts_or_used_facts() {
         "C":{"contentFormat":"application/json@gzip"}
     }}))
     .unwrap();
-    for policy in [
-        RecordedRegistryPolicy::UseRecorded,
-        RecordedRegistryPolicy::WithholdRecorded,
-    ] {
-        let cat = Catalogue::with_limits(
-            &[SourceInput::supplied("authored", &bytes)],
-            Limits::default().report_bytes(39644),
-        )
-        .unwrap();
-        let report = cat
-            .check(expanded().recorded_registry_policy(policy))
-            .unwrap();
-        assert_eq!(report.outcome().errors(), 1);
-        let coverage = report.requested_coverage();
-        assert_eq!(
-            coverage.assessed(),
-            if policy == RecordedRegistryPolicy::UseRecorded {
-                8
-            } else {
-                7
-            }
-        );
-        assert_eq!(coverage.unassessed(), 0);
-        assert_eq!(coverage.not_applicable(), 2);
-        assert_eq!(
-            coverage.undetermined(),
-            u32::from(policy == RecordedRegistryPolicy::WithholdRecorded)
-        );
-        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        assert!(wire["coverage"]["rows"].as_array().unwrap().is_empty());
-        assert!(wire["diagnostics"]["items"].as_array().unwrap().is_empty());
-        assert_eq!(
-            wire["baseline"]["registry_knowledge"]
-                .as_array()
-                .unwrap()
-                .len(),
-            3
-        );
-        assert!(report.to_human().contains("coap-content-formats"));
-    }
+
+    let cat = Catalogue::with_limits(
+        &[SourceInput::supplied("authored", &bytes)],
+        Limits::default().report_bytes(52147),
+    )
+    .unwrap();
+    let report = cat.check(expanded()).unwrap();
+    assert_eq!(report.outcome().errors(), 1);
+    let coverage = report.requested_coverage();
+    assert_eq!(coverage.assessed(), 6);
+    assert_eq!(coverage.unassessed(), 0);
+    assert_eq!(coverage.not_applicable(), 7);
+    assert_eq!(coverage.undetermined(), 0);
+    let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+    assert!(wire["coverage"]["rows"].as_array().unwrap().is_empty());
+    assert!(wire["diagnostics"]["items"].as_array().unwrap().is_empty());
+    assert_eq!(
+        wire["baseline"]["registry_knowledge"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert!(report.to_human().contains("coap-content-formats"));
 }
 
 #[test]
@@ -257,11 +220,11 @@ fn source_bound_shared_work_distinguishes_before_and_after_first_comparison() {
         .unwrap();
         let report = cat.check(expanded()).unwrap();
         let syntax = matches!(
-            report.assessment_area_status(SYNTAX),
+            report.producer_status(SYNTAX),
             Field::Present(AssessmentStatus::Assessed)
         );
         let completed = matches!(
-            report.assessment_area_status(REGISTRY),
+            report.producer_status(REGISTRY),
             Field::Present(AssessmentStatus::Assessed)
         );
         (
@@ -295,11 +258,11 @@ fn source_bound_shared_work_distinguishes_before_and_after_first_comparison() {
         let report = cat.check(expanded()).unwrap();
         assert_eq!(report.outcome().errors(), 0);
         assert!(matches!(
-            report.assessment_area_status(SYNTAX),
+            report.producer_status(SYNTAX),
             Field::Present(AssessmentStatus::Assessed)
         ));
         assert!(matches!(
-            report.assessment_area_status(REGISTRY),
+            report.producer_status(REGISTRY),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         assert_eq!(
@@ -330,28 +293,6 @@ fn source_bound_shared_work_distinguishes_before_and_after_first_comparison() {
                 .any(|c| c.code() == "operation.limit")
         );
     }
-    let cat = Catalogue::with_limits(
-        &[SourceInput::supplied("authored", &bytes)],
-        Limits::default().decoding_work(first - 1),
-    )
-    .unwrap();
-    let report = cat
-        .check(expanded().recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded))
-        .unwrap();
-    assert_eq!(
-        report
-            .registry_knowledge("coap-content-formats")
-            .require()
-            .unwrap()
-            .state(),
-        "unavailable"
-    );
-    assert!(
-        report
-            .diagnostics()
-            .conditions()
-            .any(|c| c.code() == "content_format.registry_knowledge_withheld")
-    );
 }
 
 #[test]
@@ -362,57 +303,34 @@ fn full_produces_five_real_facts_and_preserves_other_assessments() {
         "C":{"type":"number","nullable":false,"minimum":3,"maximum":1,"sdfRequired":["#/sdfData/A"]}
     }}))
     .unwrap();
-    for policy in [
-        RecordedRegistryPolicy::UseRecorded,
-        RecordedRegistryPolicy::WithholdRecorded,
-    ] {
-        let cat = Catalogue::from_inputs(&[SourceInput::supplied("authored", &bytes)]).unwrap();
-        let report = cat
-            .check(
-                CheckRequest::new()
-                    .assessment(Assessment::FullBaseline)
-                    .recorded_registry_policy(policy),
-            )
-            .unwrap();
-        assert!(matches!(
-            report.assessment_area_status(SYNTAX),
-            Field::Absent
-        ));
-        assert!(matches!(
-            report.assessment_area_status("never-known"),
-            Field::Absent
-        ));
-        assert_eq!(report.requested_coverage().total(), Some(13));
-        assert!(!report.outcome().complete());
-        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        let facts = wire["baseline"]["registry_knowledge"].as_array().unwrap();
-        // Withheld unit lookup stops before needing its secondary table.
-        assert_eq!(
-            facts.len(),
-            if policy == RecordedRegistryPolicy::UseRecorded {
-                5
-            } else {
-                4
-            }
-        );
-        assert_eq!(
-            wire["policy"]["recorded_registry"],
-            if policy == RecordedRegistryPolicy::UseRecorded {
-                "use_recorded"
-            } else {
-                "withhold_recorded"
-            }
-        );
-        assert!(
-            report
-                .diagnostics()
-                .conditions()
-                .any(|c| c.code() == "proof.empty_numeric_interval"),
-            "{wire}"
-        );
-        assert!(wire["result"]["unit_guidance"].is_object());
-        assert!(wire["result"].get("content_format").is_none());
-    }
+
+    let cat = Catalogue::from_inputs(&[SourceInput::supplied("authored", &bytes)]).unwrap();
+    let report = cat
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+        .unwrap();
+    assert!(matches!(
+        report.assessment_area_status(SYNTAX),
+        Field::Absent
+    ));
+    assert!(matches!(
+        report.producer_status("never-known"),
+        Field::Absent
+    ));
+    assert_eq!(report.requested_coverage().total(), Some(13));
+    assert!(!report.outcome().complete());
+    let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+    let facts = wire["baseline"]["registry_knowledge"].as_array().unwrap();
+    assert_eq!(facts.len(), 5);
+    assert_eq!(wire["policy"]["recorded_registry"], "use_recorded");
+    assert!(
+        report
+            .diagnostics()
+            .conditions()
+            .any(|c| c.code() == "proof.empty_numeric_interval"),
+        "{wire}"
+    );
+    assert!(wire["result"]["unit_guidance"].is_object());
+    assert!(wire["result"].get("content_format").is_none());
 }
 
 #[test]
@@ -428,11 +346,11 @@ fn registry_work_cannot_complete_unvisited_later_declaration_grammar() {
         let report = cat.check(expanded()).unwrap();
         if report.outcome().errors() == 0
             && matches!(
-                report.assessment_area_status(SYNTAX),
+                report.producer_status(SYNTAX),
                 Field::Present(AssessmentStatus::Assessed)
             )
             && matches!(
-                report.assessment_area_status(REGISTRY),
+                report.producer_status(REGISTRY),
                 Field::Present(AssessmentStatus::Undetermined)
             )
             && report

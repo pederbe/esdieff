@@ -3,8 +3,8 @@
 //! meaning.
 use esdieff::{
     Catalogue, Classification, ComparisonRequest, ContentFormatReason, Difference, DifferenceKind,
-    DifferenceSubject, Direction, Limits, Presence, RecordedRegistryPolicy, Revision,
-    RevisionComparison, SourceInput, UndeterminedReason,
+    DifferenceSubject, Direction, Limits, Presence, Revision, RevisionComparison, SourceInput,
+    UndeterminedReason,
 };
 use serde_json::{Value, json};
 
@@ -197,105 +197,6 @@ fn added_removed_and_unestablished_content_formats_are_undetermined() {
         added.reason().unwrap().message(),
         "content format is added, which changes the stated meaning of values"
     );
-}
-
-#[test]
-fn withheld_evidence_leaves_content_format_changes_that_need_it_undetermined() {
-    let [earlier, later] = revisions(
-        payloads(&[
-            ("identifier", "50"),
-            ("coding", "application/json@gzip"),
-            ("media", "application/json"),
-            ("unsupported", "image/gif"),
-        ]),
-        payloads(&[
-            ("identifier", "application/json"),
-            ("coding", "application/json"),
-            ("media", "text/plain"),
-            ("unsupported", "50"),
-        ]),
-    );
-    let comparison = ComparisonRequest::new(&earlier, &later)
-        .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded)
-        .compare()
-        .unwrap();
-    let withheld = "registry.caller_withheld";
-    assert_eq!(
-        rows(&comparison),
-        [
-            ("coding".to_owned(), Classification::Undetermined, withheld),
-            (
-                "identifier".to_owned(),
-                Classification::Undetermined,
-                withheld
-            ),
-            // The supported media rules need no recorded evidence.
-            ("media".to_owned(), Classification::Breaking, ""),
-            (
-                "unsupported".to_owned(),
-                Classification::Undetermined,
-                "comparison.content_format_unestablished"
-            ),
-        ]
-    );
-    let identifier = comparison
-        .differences()
-        .find(|difference| {
-            pointer(difference, Revision::Later).ends_with("/identifier/contentFormat")
-        })
-        .unwrap();
-    assert_eq!(
-        identifier.reason(),
-        Some(UndeterminedReason::ContentFormat(
-            ContentFormatReason::EvidenceWithheld
-        ))
-    );
-    for registry in ["coap-content-formats", "http-content-codings"] {
-        let knowledge = comparison.registry_knowledge(registry).require().unwrap();
-        assert_eq!(
-            (knowledge.state(), knowledge.reason()),
-            ("unavailable", Some("caller_withheld"))
-        );
-    }
-
-    let wire: Value = serde_json::from_str(&comparison.to_json()).unwrap();
-    assert_eq!(wire["policy"]["recorded_registry"], "withhold_recorded");
-    assert_eq!(
-        wire["baseline"]["registry_knowledge"],
-        json!([
-            {"registry": "coap-content-formats", "state": "unavailable", "snapshot": null,
-                "reason": "caller_withheld"},
-            {"registry": "http-content-codings", "state": "unavailable", "snapshot": null,
-                "reason": "caller_withheld"},
-        ])
-    );
-    assert_eq!(
-        wire["baseline"]["interpretations"],
-        json!(["content-format-model-meaning/1"])
-    );
-    let difference = wire["result"]["differences"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|difference| {
-            difference["later"]["location"]["pointer"]
-                == "/sdfObject/Device/sdfProperty/identifier/contentFormat"
-        })
-        .unwrap();
-    assert_eq!(difference["quality"], "contentFormat");
-    assert_eq!(
-        difference["reason"],
-        json!({"code": withheld, "message": "the request withholds recorded content-format evidence"})
-    );
-    let human = comparison.to_human();
-    for expected in [
-        "  changed quality contentFormat (client-supplied and thing-supplied data): the request withholds recorded content-format evidence\n    earlier device /sdfObject/Device/sdfProperty/identifier/contentFormat\n",
-        "Registry coap-content-formats: unavailable; snapshot null; reason caller_withheld\n",
-        "Registry http-content-codings: unavailable; snapshot null; reason caller_withheld\n",
-        "Interpretation: content-format-model-meaning/1\n",
-    ] {
-        assert!(human.contains(expected), "{expected}\n{human}");
-    }
 }
 
 #[test]

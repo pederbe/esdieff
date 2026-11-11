@@ -309,7 +309,7 @@ fn checking_request_rejects_repeated_or_unsupported_assessment_and_small_reserve
     );
     assert!(
         request(SOURCE)
-            .checking(Assessment::ExpandedModified)
+            .checking(Assessment::ExpandedNumeric)
             .is_err()
     );
     let catalogue = Catalogue::with_limits(

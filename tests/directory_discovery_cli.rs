@@ -927,10 +927,6 @@ fn discovered_root_keeps_dependency_and_unused_definition_scope_across_profiles(
     assert_eq!(catalogue["outcome"]["errors"], 1);
     for profile in [
         "initial-v1",
-        "expanded-modified-v1",
-        "expanded-units-v1",
-        "expanded-content-format-v1",
-        "expanded-pattern-syntax-v1",
         "expanded-numeric-v1",
         "expanded-consistency-v1",
         "full-baseline",
@@ -977,38 +973,29 @@ fn discovered_root_keeps_dependency_and_unused_definition_scope_across_profiles(
             );
         }
     }
-    for profile in [
-        "expanded-units-v1",
-        "expanded-content-format-v1",
-        "full-baseline",
-    ] {
-        for policy in ["recorded", "withheld"] {
-            let options = [
-                start[0],
-                start[1],
-                start[2],
-                OsStr::new("--assessment"),
-                OsStr::new(profile),
-                OsStr::new("--registry-knowledge"),
-                OsStr::new(policy),
-            ];
-            let discovered = run(&options
-                .iter()
-                .copied()
-                .chain([
-                    OsStr::new("--directory"),
-                    tree.0.as_os_str(),
-                    OsStr::new("--recursive"),
-                ])
-                .collect::<Vec<_>>());
-            let direct = run(&options
-                .iter()
-                .copied()
-                .chain([donor.as_os_str(), root.as_os_str()])
-                .collect::<Vec<_>>());
-            assert_eq!(report(&discovered, 1), report(&direct, 1));
-        }
-    }
+
+    let options = [
+        start[0],
+        start[1],
+        start[2],
+        OsStr::new("--assessment"),
+        OsStr::new("full-baseline"),
+    ];
+    let discovered = run(&options
+        .iter()
+        .copied()
+        .chain([
+            OsStr::new("--directory"),
+            tree.0.as_os_str(),
+            OsStr::new("--recursive"),
+        ])
+        .collect::<Vec<_>>());
+    let direct = run(&options
+        .iter()
+        .copied()
+        .chain([donor.as_os_str(), root.as_os_str()])
+        .collect::<Vec<_>>());
+    assert_eq!(report(&discovered, 1), report(&direct, 1));
 }
 #[cfg(unix)]
 #[test]
@@ -1186,12 +1173,6 @@ fn invalid_selection_and_options_stop_before_consuming_stdin() {
             OsStr::new("--root"),
             model.as_os_str(),
             model.as_os_str(),
-        ],
-        vec![
-            OsStr::new("--directory"),
-            tree.0.as_os_str(),
-            OsStr::new("--registry-knowledge"),
-            OsStr::new("recorded"),
         ],
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_esdieff"))

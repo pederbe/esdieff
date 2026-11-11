@@ -18,7 +18,6 @@ pub(crate) struct State {
     pub(crate) statuses: [u8; 2],
     pub(crate) used: u8,
     pub(crate) needed: u8,
-    pub(crate) withheld: u8,
     pub(crate) reasons: u8,
     pub(crate) padding: [u8; 2],
     pub(crate) counts: [u32; 4],
@@ -187,7 +186,7 @@ mod tests {
 
     #[test]
     fn actual_six_record_owner_envelope_is_independently_qualified() {
-        use crate::{Field, RecordedRegistryPolicy};
+        use crate::Field;
         use std::mem::{align_of, size_of};
         crate::registry::qualify().unwrap();
         assert!(crate::sample::mandatory_storage_supported());
@@ -202,20 +201,11 @@ mod tests {
         let fallback = records.clone();
         assert!(fallback.as_array().unwrap().capacity() <= 8);
         assert!(serde_json::to_string(&records).unwrap().len() < 3176);
-        let withheld = crate::registry::State {
-            withheld: 63,
-            policy: RecordedRegistryPolicy::WithholdRecorded,
-            ..Default::default()
-        };
         for index in 0..crate::registry::RECORDS {
             let facts = crate::registry::facts(index).unwrap();
             assert_eq!(
                 state.view(facts.registry).require().unwrap().snapshot(),
                 Some(facts.snapshot)
-            );
-            assert_eq!(
-                withheld.view(facts.registry).require().unwrap().snapshot(),
-                None
             );
             assert!(matches!(
                 crate::registry::State::default().view(facts.registry),

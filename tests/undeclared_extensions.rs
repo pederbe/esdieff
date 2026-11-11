@@ -3,8 +3,7 @@
 //! Follows ADR 0037: Undeclared extension vocabulary.
 mod undeclared_extension_support;
 use esdieff::{
-    Assessment, AssessmentStatus, Catalogue, CheckRequest, InspectRequest, RecordedRegistryPolicy,
-    SourceInput, View,
+    Assessment, AssessmentStatus, Catalogue, CheckRequest, InspectRequest, SourceInput, View,
 };
 use serde_json::{Value, json};
 use undeclared_extension_support::temperature;
@@ -336,21 +335,6 @@ fn recorded_extension_vocabulary_names_the_reading_only_where_its_record_went_un
         );
     }
     assert!(!recorded.names_reading());
-    // Without that evidence, conclusions that set it aside rely on the ADR 0037 reading.
-    let withheld = check_sources(&[("model", &document)], |_| {
-        CheckRequest::new()
-            .assessment(Assessment::FullBaseline)
-            .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded)
-    });
-    assert_eq!(withheld.status(28), AssessmentStatus::Undetermined);
-    for member in [42, 45] {
-        assert_eq!(
-            withheld.status(member),
-            AssessmentStatus::Assessed,
-            "M{member}"
-        );
-    }
-    assert!(withheld.names_reading());
     let stepped = json!({"info": {}, "sdfData": {"Step": {
         "oma:id": 7, "type": "integer", "minimum": 1, "maximum": 2, "multipleOf": 5,
         "nullable": false

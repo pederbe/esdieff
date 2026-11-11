@@ -957,7 +957,7 @@ fn invalid_plans_and_invocations_never_deliver_a_document() {
             "--document-output",
             "out.json",
             "--check",
-            "expanded-units-v1",
+            "expanded-numeric-v1",
         ],
         vec![
             "--document-output",

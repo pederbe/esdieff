@@ -717,9 +717,6 @@ _Avoid_: Definite RFC violation, agreed deviation when no departed requirement h
 **Recorded registry evidence**:
 A deliberately captured set of positive registry facts whose edition identifies its scope and date. A positive match establishes membership in that evidence; a miss leaves current registration unknown, following [ADR 0027: Unit names and recorded registry guidance](docs/adr/0027-unit-names-and-recorded-registry-guidance.md).
 
-**Recorded evidence policy**:
-An embedding's request-level choice to use or withhold the bundled dated registry evidence. Withholding makes needed evidence unavailable for that request without asserting that the recorded table is physically absent.
-
 **Registry consultation**:
 Actual comparison against a recorded registry table, independent of whether a match or a completed lookup was established.
 

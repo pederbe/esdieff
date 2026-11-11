@@ -48,21 +48,13 @@ pub fn assert_requested_counts(report: &esdieff::Report<'_>) {
             areas = FULL_AREAS.to_vec();
             "esdieff.full-model/1"
         }
-        esdieff::Assessment::ExpandedModified => {
-            areas.push("modified-date-time/1");
-            "esdieff.expanded.modified/1"
+        esdieff::Assessment::ExpandedNumeric => {
+            areas.push("advisory-numeric-three/1");
+            "esdieff.expanded.numeric/1"
         }
-        esdieff::Assessment::ExpandedUnits => {
-            areas.extend(["unit-spelling/1", "unit-registry-guidance/1"]);
-            "esdieff.expanded.units/1"
-        }
-        esdieff::Assessment::ExpandedContentFormat => {
-            areas.extend(["content-format-syntax/1", "content-format-registry/1"]);
-            "esdieff.expanded.content-format/1"
-        }
-        esdieff::Assessment::ExpandedPatternSyntax => {
-            areas.push("pattern-syntax/1");
-            "esdieff.expanded.pattern-syntax/1"
+        esdieff::Assessment::ExpandedConsistency => {
+            areas.extend(["const-consistency/1", "default-consistency/1"]);
+            "esdieff.expanded.consistency/1"
         }
         _ => panic!("unhandled assessment inventory"),
     };
@@ -132,9 +124,9 @@ pub fn assert_wire_counts(wire: &serde_json::Value) {
 pub fn requirement_binding(inventory: Option<&str>) -> Field<&'static str> {
     match inventory {
         Some("esdieff.full-model/1") => Field::Present("rfc9880.model/1"),
-        Some("esdieff.initial/1" | "esdieff.expanded.modified/1" | "esdieff.expanded.units/1") => {
-            Field::Absent
-        }
+        Some(
+            "esdieff.initial/1" | "esdieff.expanded.numeric/1" | "esdieff.expanded.consistency/1",
+        ) => Field::Absent,
         _ => Field::Unavailable("requested inventory binding unavailable"),
     }
 }

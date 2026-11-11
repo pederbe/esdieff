@@ -41,14 +41,14 @@ fn selected_values_preserve_independent_unit_advisory_and_required_results() {
         .check(
             CheckRequest::new()
                 .root(model)
-                .assessment(Assessment::ExpandedUnits),
+                .assessment(Assessment::FullBaseline),
         )
         .unwrap();
     assert_eq!(
         (checked.outcome().errors(), checked.outcome().warnings()),
         (1, 4)
     );
-    assert_eq!(checked.requested_coverage().total(), Some(10));
+    assert_eq!(checked.requested_coverage().total(), Some(13));
     assert!(checked.unit_guidance().require().unwrap().known_primary() >= 3);
     let before = checked.to_json();
     for code in [
@@ -166,7 +166,7 @@ fn future_formats_and_nullable_rules_keep_model_units_independent() {
         )
         .unwrap();
         let checked = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert!(
             checked
@@ -334,7 +334,7 @@ fn prior_unit_check_does_not_refill_selected_exact_work() {
     .unwrap();
     for _ in 0..2 {
         let checked = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert!(
             checked

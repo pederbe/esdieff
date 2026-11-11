@@ -1,5 +1,9 @@
 # 0033: Content-format model meaning
 
+The public assessment choices and registry-withholding behavior described here
+are superseded by [ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md).
+The validation rules and recorded facts below remain in use where not superseded.
+
 ## Context
 
 A Full model assessment must establish the content-format declaration's modeled

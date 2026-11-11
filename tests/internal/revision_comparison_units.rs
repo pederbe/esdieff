@@ -2,8 +2,8 @@
 //! comparison and ADR 0027: Unit names and recorded registry guidance.
 use esdieff::{
     Catalogue, Classification, ComparisonRequest, Difference, DifferenceKind, DifferenceSubject,
-    Direction, Disposition, Limits, Presence, RecordedRegistryPolicy, Revision, RevisionComparison,
-    SourceInput, UndeterminedReason, UnitReason,
+    Direction, Disposition, Limits, Presence, Revision, RevisionComparison, SourceInput,
+    UndeterminedReason,
 };
 use serde_json::{Value, json};
 
@@ -171,78 +171,6 @@ fn legacy_uri_and_unrecorded_names_and_added_or_removed_units_are_undetermined()
         voltage.side(Revision::Later).unwrap().presence(),
         Presence::Absent
     );
-}
-
-#[test]
-fn withheld_evidence_leaves_unit_changes_that_need_it_undetermined() {
-    let earlier = monitor(&[("temperature", Some("Cel")), ("power", None)]);
-    let later = monitor(&[("temperature", Some("K")), ("power", Some("W"))]);
-    let earlier = catalogue(&[("monitor", &earlier)]);
-    let later = catalogue(&[("monitor", &later)]);
-    let comparison = ComparisonRequest::new(&earlier, &later)
-        .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded)
-        .compare()
-        .unwrap();
-    assert_eq!(comparison.outcome(), Classification::Undetermined);
-    let row = |property: &str, code| (property.to_owned(), Classification::Undetermined, code);
-    assert_eq!(
-        unit_rows(&comparison),
-        [
-            // An added unit needs no recorded evidence.
-            row("power", "comparison.unit_added"),
-            row("temperature", "registry.caller_withheld"),
-        ]
-    );
-    let temperature = comparison
-        .differences()
-        .find(|difference| {
-            difference.reason() == Some(UndeterminedReason::Unit(UnitReason::EvidenceWithheld))
-        })
-        .unwrap();
-    assert_eq!(
-        pointer(&temperature, Revision::Later),
-        "/sdfObject/Monitor/sdfProperty/temperature/unit"
-    );
-    let senml = comparison
-        .registry_knowledge("iana.senml-units")
-        .require()
-        .unwrap();
-    assert_eq!(
-        (senml.state(), senml.reason()),
-        ("unavailable", Some("caller_withheld"))
-    );
-    assert!(
-        comparison
-            .registry_knowledge("iana.secondary-units")
-            .present()
-            .is_none()
-    );
-
-    let wire: Value = serde_json::from_str(&comparison.to_json()).unwrap();
-    assert_eq!(wire["policy"]["recorded_registry"], "withhold_recorded");
-    assert_eq!(
-        wire["baseline"]["registry_knowledge"],
-        json!([{"registry": "iana.senml-units", "state": "unavailable", "snapshot": null,
-            "reason": "caller_withheld"}])
-    );
-    let withheld = wire["result"]["differences"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|difference| difference["reason"]["code"] == "registry.caller_withheld")
-        .unwrap();
-    assert_eq!(withheld["quality"], "unit");
-    assert_eq!(
-        withheld["reason"]["message"],
-        "the request withholds recorded unit evidence"
-    );
-    let human = comparison.to_human();
-    assert!(human.contains(
-        "  changed quality unit (thing-supplied data): the request withholds recorded unit evidence\n    earlier monitor /sdfObject/Monitor/sdfProperty/temperature/unit\n"
-    ));
-    assert!(human.contains(
-        "Registry iana.senml-units: unavailable; snapshot null; reason caller_withheld\n"
-    ));
 }
 
 #[test]

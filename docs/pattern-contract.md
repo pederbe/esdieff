@@ -9,11 +9,10 @@ The current implementation decision is
 
 ## Effective syntax
 
-Request `Assessment::ExpandedPatternSyntax` or use
-`esdieff check --assessment expanded-pattern-syntax-v1 model.sdf.json`.
-The immutable profile `esdieff.expanded.pattern-syntax/1` adds `pattern-syntax/1`
-to the initial eight assessment areas. `FullBaseline` binds the same syntax
-checking to M047 in `full.pattern-format/1` of its fixed 13-area inventory.
+Request `Assessment::FullBaseline` or use
+`esdieff check --assessment full-baseline model.sdf.json`.
+`FullBaseline` binds syntax checking to M047 in `full.pattern-format/1`
+of its fixed 13-area inventory.
 Other assessments, source/effective inspection and Sample retain their purposes.
 
 Composition precedes syntax checking. Surviving inherited and overridden

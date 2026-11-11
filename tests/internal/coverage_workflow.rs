@@ -16,8 +16,7 @@ fn one(text: &[u8], limits: Limits) -> Catalogue {
 }
 
 #[test]
-fn competing_request_admission_failures_keep_root_policy_and_envelope_precedence() {
-    use esdieff::RecordedRegistryPolicy;
+fn competing_request_admission_failures_keep_root_and_envelope_precedence() {
     let catalogue = Catalogue::with_limits(
         &[SourceInput::supplied("m", b"{}")],
         Limits::default().report_bytes(20_486),
@@ -29,9 +28,7 @@ fn competing_request_admission_failures_keep_root_policy_and_envelope_precedence
     ])
     .unwrap();
     let unknown = other.source_id("second").unwrap();
-    let incompatible = CheckRequest::new()
-        .assessment(Assessment::ExpandedModified)
-        .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded);
+    let incompatible = CheckRequest::new().assessment(Assessment::FullBaseline);
     assert_eq!(
         catalogue.check(incompatible.clone().root(unknown)).err(),
         Some("unknown or duplicate selected root")
@@ -43,34 +40,13 @@ fn competing_request_admission_failures_keep_root_policy_and_envelope_precedence
     );
     assert_eq!(
         catalogue.check(incompatible).err(),
-        Some("recorded registry policy requires a registry assessment")
+        Some("report cannot reserve the registry assessment envelope")
     );
-    for (assessment, error) in [
-        (
-            Assessment::FullBaseline,
-            "report cannot reserve the registry assessment envelope",
-        ),
-        (
-            Assessment::ExpandedPatternSyntax,
-            "report cannot reserve the pattern assessment envelope",
-        ),
-        (
-            Assessment::ExpandedModified,
-            "report cannot reserve the expanded assessment envelope",
-        ),
-    ] {
-        assert_eq!(
-            catalogue
-                .check(CheckRequest::new().assessment(assessment))
-                .err(),
-            Some(error)
-        );
-    }
 }
 
 fn assert_unfinished_basis(report: &esdieff::Report<'_>, area: &str, code: &str, basis: &str) {
     assert_eq!(
-        report.assessment_area_status(area).require().unwrap(),
+        report.producer_status(area).require().unwrap(),
         AssessmentStatus::Undetermined
     );
     assert!(!report.outcome().complete());
@@ -183,34 +159,6 @@ fn unfinished_initial_feature_work_has_a_generic_establishment_basis() {
 }
 
 #[test]
-fn expanded_human_coverage_is_emitted_once_with_specialized_status() {
-    for (bytes, profile, area, errors) in [
-        (br#"{"info":{"modified":"2016-12-31T23:59:60Z"},"sdfProperty":{"p":{"type":"number"}}}"#.as_slice(), Assessment::ExpandedModified, "modified-date-time/1", 0),
-        (br#"{"info":{},"sdfProperty":{"p":{"pattern":"["}}}"#.as_slice(), Assessment::ExpandedPatternSyntax, "pattern-syntax/1", 1),
-    ] {
-        let catalogue = one(bytes, Limits::default());
-        let report = catalogue.check(CheckRequest::new().assessment(profile)).unwrap();
-        assert_eq!(report.assessment_area_status(area).require().unwrap(), AssessmentStatus::Assessed);
-        assert!(report.outcome().complete());
-        assert_eq!(report.outcome().errors(), errors);
-        assert_eq!(report.outcome().disposition(), if errors == 0 { Disposition::Passed } else { Disposition::Failed });
-        assert_eq!(report.requested_coverage().total(), Some(9));
-        coverage_support::assert_requested_counts(&report);
-        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        assert_eq!(wire["outcome"]["complete"], true);
-        assert_eq!(wire["outcome"]["errors"], errors);
-        let human = report.to_human();
-        assert_eq!(human.matches("Requested coverage (assessment_area): total ").count(), 1);
-        assert!(human.contains(&format!("Assessment area {area}: assessed")));
-        if profile == Assessment::ExpandedModified {
-            assert!(wire["baseline"]["temporal_knowledge"].is_object());
-            assert!(human.contains("Temporal knowledge: "));
-            assert!(human.contains("Temporal knowledge SHA256: transitions "));
-        }
-    }
-}
-
-#[test]
 fn workflow() {
     let ordinary = one(
         br#"{"info":{},"sdfData":{"D":{"type":"string","pattern":"["}}}"#,
@@ -262,7 +210,7 @@ fn workflow() {
         full.diagnostics()
             .conditions()
             .any(|c| c.code() == "metadata.modified_calendar"),
-        "Full executes already available requested expanded modified rule"
+        "Full executes the retained modified-date rule"
     );
     assert!(full.outcome().errors() > 0);
     assert!(!full.outcome().complete());
@@ -419,14 +367,8 @@ fn workflow() {
     let terse = terse.check(CheckRequest::new()).unwrap();
     for area in INITIAL_AREAS {
         assert_eq!(
-            format!(
-                "{:?}",
-                verbose.assessment_area_status(area).require().unwrap()
-            ),
-            format!(
-                "{:?}",
-                terse.assessment_area_status(area).require().unwrap()
-            )
+            format!("{:?}", verbose.producer_status(area).require().unwrap()),
+            format!("{:?}", terse.producer_status(area).require().unwrap())
         );
     }
     let verbose_wire: Value = serde_json::from_str(&verbose.to_json()).unwrap();
@@ -560,7 +502,9 @@ fn requirement_detail_evolution_and_omission() {
     for change in ["policy", "registry", "condition_owner"] {
         let mut changed = wire.clone();
         match change {
-            "policy" => changed["policy"]["recorded_registry"] = serde_json::json!("withheld"),
+            "policy" => {
+                changed["policy"]["recorded_registry"] = serde_json::json!("unknown_policy")
+            }
             "registry" => {
                 changed["baseline"]["registry_knowledge"][0]["scope"] =
                     serde_json::json!("different")

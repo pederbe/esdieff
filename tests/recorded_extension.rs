@@ -2,7 +2,7 @@
 //! extension vocabulary.
 use esdieff::{
     Assessment, AssessmentStatus, BasisKind, Catalogue, CheckRequest, Condition, Diagnostics,
-    Disposition, Field, RecordedRegistryPolicy, Report, ReportLocation, Severity, SourceInput,
+    Disposition, Field, Report, ReportLocation, Severity, SourceInput,
 };
 use sha2::{Digest, Sha256};
 
@@ -246,54 +246,6 @@ fn values_outside_the_uint_domain_are_registration_errors() {
 }
 
 #[test]
-fn withheld_evidence_leaves_the_oma_id_conclusion_unavailable() {
-    let catalogue = model(TEMPERATURE);
-    for id in ["3303", r#""3303""#] {
-        let text = String::from_utf8(TEMPERATURE.to_vec())
-            .unwrap()
-            .replace(r#""oma:id": 3303"#, &format!(r#""oma:id": {id}"#));
-        assert!(text.contains(&format!(r#""oma:id": {id},"#)));
-        let catalogue = model(text.as_bytes());
-        let report = catalogue
-            .check(
-                CheckRequest::new()
-                    .assessment(Assessment::FullBaseline)
-                    .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded),
-            )
-            .unwrap();
-        assert_eq!(report.outcome().disposition(), Disposition::Undetermined);
-        assert_eq!(report.outcome().errors(), 0);
-        assert_eq!(status(&report, 28), AssessmentStatus::Undetermined);
-        for member in [42, 45, 46] {
-            assert_eq!(status(&report, member), AssessmentStatus::Assessed);
-        }
-        assert_eq!(optional_notices(&report), 0);
-        let record = report.registry_knowledge(REGISTRY).require().unwrap();
-        assert_eq!(
-            (record.state(), record.reason(), record.snapshot()),
-            ("unavailable", Some("caller_withheld"), None)
-        );
-        let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
-        assert_eq!(wire["policy"]["recorded_registry"], "withhold_recorded");
-        let listed = wire["baseline"]["registry_knowledge"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|entry| entry["registry"] == REGISTRY)
-            .unwrap();
-        assert_eq!(listed.as_object().unwrap().len(), 4);
-    }
-    let report = catalogue
-        .check(
-            CheckRequest::new()
-                .assessment(Assessment::FullBaseline)
-                .recorded_registry_policy(RecordedRegistryPolicy::UseRecorded),
-        )
-        .unwrap();
-    assert_eq!(report.outcome().disposition(), Disposition::Passed);
-}
-
-#[test]
 fn full_notice_counts_only_vocabulary_still_unsupported() {
     let text = String::from_utf8(TEMPERATURE.to_vec()).unwrap().replace(
         r#""oma:id": 5601,"#,
@@ -313,10 +265,6 @@ fn initial_and_expanded_assessments_keep_their_inventories_and_notice() {
     let catalogue = model(TEMPERATURE);
     for (assessment, areas) in [
         (Assessment::Initial, 8),
-        (Assessment::ExpandedModified, 9),
-        (Assessment::ExpandedUnits, 10),
-        (Assessment::ExpandedContentFormat, 10),
-        (Assessment::ExpandedPatternSyntax, 9),
         (Assessment::ExpandedNumeric, 9),
         (Assessment::ExpandedConsistency, 10),
     ] {
@@ -333,14 +281,6 @@ fn initial_and_expanded_assessments_keep_their_inventories_and_notice() {
         assert_eq!(wire["coverage"]["requested"]["total"], areas);
         assert_eq!(report.outcome().disposition(), Disposition::Passed);
     }
-    let report = catalogue
-        .check(
-            CheckRequest::new()
-                .assessment(Assessment::ExpandedUnits)
-                .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded),
-        )
-        .unwrap();
-    assert!(matches!(report.registry_knowledge(REGISTRY), Field::Absent));
 }
 
 /// M028 and the excluded-value errors, as effective pointer and related source document

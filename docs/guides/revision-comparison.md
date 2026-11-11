@@ -183,6 +183,12 @@ The comparison report and exit status stay as before, and `reviewed.json` lists 
 }
 </code></pre>
 
+Entries act as standing exceptions for the named locations and kinds of change.
+They do not record exact values or the comparison perspective. A later edit at
+the same field can also match an entry if its classification stays the same.
+Review or regenerate the file when changing the comparison baseline or
+perspective.
+
 Review the file, delete any entry you do not intend, add a `note` to each if you like, and keep it with the model. Then supply it:
 
 <pre class="terminal"><code><span class="p">$</span> esdieff diff --old v1/thermostat.sdf.json --new v2/thermostat.sdf.json --acknowledged reviewed.json

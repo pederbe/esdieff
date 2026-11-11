@@ -586,18 +586,11 @@ fn compound_aggregates_and_native_modified_assessment_survive_detail_limits() {
     ] {
         let catalogue =
             Catalogue::with_limits(&[SourceInput::supplied("model", text)], limits).unwrap();
-        for assessment in [
-            Assessment::Initial,
-            Assessment::FullBaseline,
-            Assessment::ExpandedModified,
-        ] {
+        for assessment in [Assessment::Initial, Assessment::FullBaseline] {
             let report = catalogue
                 .check(CheckRequest::new().assessment(assessment))
                 .unwrap();
-            let expanded = matches!(
-                assessment,
-                Assessment::ExpandedModified | Assessment::FullBaseline
-            );
+            let expanded = matches!(assessment, Assessment::FullBaseline);
             // properties is wider here because no object item type establishes it.
             assert_eq!(report.outcome().errors(), if expanded { 6 } else { 5 });
             assert_eq!(report.outcome().notices(), 1);
@@ -605,18 +598,18 @@ fn compound_aggregates_and_native_modified_assessment_survive_detail_limits() {
             coverage_support::assert_requested_counts(&report);
             let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
             assert!(wire["baseline"].get("temporal_knowledge").is_none());
-            if assessment == Assessment::ExpandedModified {
+            if assessment == Assessment::FullBaseline {
                 assert!(matches!(
-                    report.assessment_area_status("modified-date-time/1"),
+                    report.producer_status("modified-date-time/1"),
                     Field::Present(AssessmentStatus::Assessed)
                 ));
-                assert_eq!(report.requested_coverage().total(), Some(9));
+                assert_eq!(report.requested_coverage().total(), Some(13));
                 coverage_support::assert_requested_counts(&report);
                 assert_eq!(report.requested_coverage().unassessed(), 0);
             } else if assessment == Assessment::Initial {
                 assert_eq!(report.requested_coverage().total(), Some(8));
                 assert!(matches!(
-                    report.assessment_area_status("modified-date-time/1"),
+                    report.producer_status("modified-date-time/1"),
                     Field::Absent
                 ));
             } else {

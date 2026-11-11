@@ -57,13 +57,13 @@ fn stdin_check_completes_initial_work_in_both_formats() {
 }
 
 #[test]
-fn expanded_modified_request_checks_metadata_in_both_formats() {
+fn full_request_checks_metadata_in_both_formats() {
     let source = br#"{"info":{"modified":"1900-02-29"}}"#;
     let output = run(
         &[
             "check",
             "--assessment",
-            "expanded-modified-v1",
+            "full-baseline",
             "--format",
             "json",
             "-",
@@ -73,12 +73,12 @@ fn expanded_modified_request_checks_metadata_in_both_formats() {
     assert_eq!(output.status.code(), Some(1));
     assert!(output.stderr.is_empty());
     let wire: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(wire["request"]["assessment"], "esdieff.expanded.modified/1");
+    assert_eq!(wire["request"]["assessment"], "rfc9880/base-1");
     assert_eq!(
         wire["coverage"]["requested"]["inventory"],
-        "esdieff.expanded.modified/1"
+        "esdieff.full-model/1"
     );
-    assert_eq!(wire["coverage"]["requested"]["total"], 9);
+    assert_eq!(wire["coverage"]["requested"]["total"], 13);
     coverage_support::assert_wire_counts(&wire);
     assert_eq!(wire["outcome"]["errors"], 1);
     coverage_support::assert_wire_counts(&wire);
@@ -90,15 +90,12 @@ fn expanded_modified_request_checks_metadata_in_both_formats() {
             .any(|item| item["code"] == "metadata.modified_calendar")
     );
 
-    let human = run(
-        &["check", "--assessment", "expanded-modified-v1", "-"],
-        source,
-    );
+    let human = run(&["check", "--assessment", "full-baseline", "-"], source);
     assert_eq!(human.status.code(), Some(1));
     assert!(human.stderr.is_empty());
     let human = String::from_utf8(human.stdout).unwrap();
-    assert!(human.contains("esdieff.expanded.modified/1"));
-    assert!(human.contains("Assessment area modified-date-time/1: assessed"));
+    assert!(human.contains("rfc9880/base-1"));
+    assert!(human.contains("Requested inventory: esdieff.full-model/1"));
     assert!(human.contains("metadata.modified_calendar"));
     let ordinary = run(&["check", "--format", "json", "-"], source);
     assert_eq!(ordinary.status.code(), Some(0));

@@ -1,5 +1,9 @@
 # 0028: Bounded effective model pattern syntax
 
+The public assessment choices and registry-withholding behavior described here
+are superseded by [ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md).
+The validation rules and recorded facts below remain in use where not superseded.
+
 The parser, worker and resource-accounting implementation is superseded by
 [ADR 0056: Fixed internal safeguards and Rust patterns](0056-fixed-internal-safeguards-and-rust-patterns.md).
 The text below retains the historical decision. Effective scopes, semantic

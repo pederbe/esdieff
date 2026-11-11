@@ -65,8 +65,7 @@ impl SetAside {
     }
     /// Whether a result relied on reading the noted vocabulary as ignorable. Recorded
     /// extension vocabulary relies on it only when the report did not consult its recorded
-    /// evidence, as in a Sample report, an assessment other than Full or a Full check that
-    /// withholds recorded evidence, following ADR 0038: Recorded extension vocabulary.
+    /// evidence, as in a Sample report or an assessment other than Full, following ADR 0038: Recorded extension vocabulary.
     pub(crate) fn relies_on_reading(self, recorded_consulted: bool) -> bool {
         self.undeclared || self.recorded && !recorded_consulted
     }

@@ -262,7 +262,6 @@ pub(super) fn content_format(
         Ok(true) => None,
         Ok(false) => Some(Verdict::Breaking),
         Err(Unsettled::Unestablished) => content_format(ContentFormatReason::Unestablished),
-        Err(Unsettled::Withheld) => content_format(ContentFormatReason::EvidenceWithheld),
         Err(Unsettled::Limited) => Some(Verdict::Undetermined(UndeterminedReason::limit(
             "comparison work limit",
         ))),

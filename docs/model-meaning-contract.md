@@ -213,14 +213,11 @@ from
 [ADR 0037: Undeclared extension vocabulary](adr/0037-undeclared-extension-vocabulary.md),
 and the report names it as the [report contract](report-contract.md) describes.
 That covers the numeric advice and declared-value consistency of the expanded
-assessments and a FullBaseline check that withholds recorded evidence.
+assessments.
 
 The check consults Recorded registry evidence `omna.sdf-quality-names` and lists
 it in `baseline.registry_knowledge` once a value was compared with the recorded
-domain. A caller that withholds recorded evidence gets that record as
-unavailable with reason `caller_withheld`, no value is reported as excluded and
-M028 stays undetermined. The
-evidence combines two sources, both retrieved on 16 October 2026. The
+domain. The evidence combines two sources, both retrieved on 16 October 2026. The
 [IANA SDF registry XML](https://www.iana.org/assignments/sdf/sdf.xml) was
 retrieved at `2026-10-16T08:38:44Z`. Its SDF Quality Name Prefixes registry
 holds one record, `oma`, dated 2026-05-12 and referring to the OMNA registry.

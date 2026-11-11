@@ -166,10 +166,6 @@ fn unfinished_check_basis(area: &str, status: AssessmentStatus) -> &'static str 
 #[non_exhaustive]
 pub enum Assessment {
     Initial,
-    ExpandedModified,
-    ExpandedUnits,
-    ExpandedContentFormat,
-    ExpandedPatternSyntax,
     ExpandedNumeric,
     ExpandedConsistency,
     FullBaseline,
@@ -481,7 +477,6 @@ pub struct CheckRequest {
     assessment: Assessment,
     strict: bool,
     too_many_roots: bool,
-    registry_policy: Option<crate::RecordedRegistryPolicy>,
 }
 impl Default for CheckRequest {
     fn default() -> Self {
@@ -490,7 +485,6 @@ impl Default for CheckRequest {
             assessment: Assessment::Initial,
             strict: false,
             too_many_roots: false,
-            registry_policy: None,
         }
     }
 }
@@ -512,11 +506,6 @@ impl CheckRequest {
     }
     pub fn strict_warnings(mut self, value: bool) -> Self {
         self.strict = value;
-        self
-    }
-    /// Control whether this request may use the bundled dated registry evidence.
-    pub fn recorded_registry_policy(mut self, value: crate::RecordedRegistryPolicy) -> Self {
-        self.registry_policy = Some(value);
         self
     }
 }
@@ -625,7 +614,6 @@ pub struct Report<'a> {
     effective_limit: Option<(SourceId, crate::effective::Failure)>,
     dependencies: Vec<SourceId>,
     unavailable_dependencies: Vec<SourceId>,
-    modified_sources: usize,
     required: Option<crate::effective::Collection<'a>>,
     units: Option<crate::units::State>,
     content: Option<crate::content_format::State>,
@@ -709,7 +697,6 @@ impl Catalogue {
             effective_limit,
             dependencies,
             unavailable_dependencies,
-            modified_sources: 0,
             sample: Some(state),
             required: None,
             units: None,
@@ -732,15 +719,11 @@ impl Catalogue {
         }
         validate_roots(self, &request.roots)?;
         let profile = crate::assessment::profile(request.assessment);
-        profile.admit_reporting(
-            self.reserve,
-            self.limits.report_bytes,
-            request.registry_policy.is_some(),
-        )?;
-        let units_requested = profile.enabled.units;
-        let content_requested = profile.enabled.content_format;
+        profile.admit_reporting(self.reserve, self.limits.report_bytes)?;
+        let units_requested = profile.enabled.full;
+        let content_requested = profile.enabled.full;
         let registry_requested = profile.registry_requested();
-        let pattern_requested = profile.enabled.pattern;
+        let pattern_requested = profile.enabled.full;
         // Charge the new assessment's source eligibility pass before it visits
         // any row, including rows excluded because their source role is Sample.
         let registry_scope_limited = registry_requested
@@ -761,7 +744,6 @@ impl Catalogue {
             .sum();
         use crate::registry::{CONTENT_RECORDS, RECORDED_EXTENSION_RECORDS, UNIT_RECORDS, bits};
         let mut registry = crate::registry::State {
-            policy: request.registry_policy.unwrap_or_default(),
             requested: (u8::from(units_requested) * bits(UNIT_RECORDS))
                 | (u8::from(content_requested) * bits(CONTENT_RECORDS))
                 | (u8::from(profile.enabled.full) * bits(RECORDED_EXTENSION_RECORDS)),
@@ -838,7 +820,7 @@ impl Catalogue {
             &mut effective_limit,
         );
         let modified_sources = scope.len() + dependencies.len();
-        if profile.enabled.modified {
+        if profile.enabled.full {
             for id in &dependencies {
                 let mut gate = crate::structure::FeatureContext::Limited;
                 'models: for model in &effective {
@@ -995,7 +977,6 @@ impl Catalogue {
             effective_limit,
             dependencies,
             unavailable_dependencies,
-            modified_sources,
             required: None,
             units,
             content,
@@ -1084,7 +1065,6 @@ impl Catalogue {
             effective_limit: scope_limit,
             dependencies,
             unavailable_dependencies,
-            modified_sources: 0,
             required: None,
             units: None,
             content: None,
@@ -1196,7 +1176,6 @@ impl Catalogue {
             effective_limit: scope_limit,
             dependencies,
             unavailable_dependencies,
-            modified_sources: 0,
             required: Some(required),
             units: None,
             content: None,
@@ -1325,7 +1304,7 @@ impl Report<'_> {
     pub fn unit_guidance(&self) -> Field<crate::UnitGuidance<'_>> {
         if !self
             .assessment_profile()
-            .is_some_and(|profile| profile.enabled.units)
+            .is_some_and(|profile| profile.enabled.full)
         {
             return Field::Absent;
         }
@@ -1363,20 +1342,38 @@ impl Report<'_> {
                 .map_or(Field::Absent, |area| Field::Present(self.area_status(area))),
         }
     }
+    /// Unit tests inspect the retained producers independently of the public inventory.
+    #[cfg(test)]
+    pub(crate) fn producer_status(&self, id: &str) -> Field<AssessmentStatus> {
+        if !matches!(self.assessment(), Some(Assessment::FullBaseline)) {
+            return self.assessment_area_status(id);
+        }
+        let status = match id {
+            "modified-date-time/1" => self
+                .structure
+                .modified
+                .status(self.scope.len() + self.dependencies.len()),
+            "unit-spelling/1" | "unit-registry-guidance/1" => self
+                .units
+                .as_ref()
+                .map_or(AssessmentStatus::Undetermined, |state| {
+                    state.status(usize::from(id == "unit-registry-guidance/1"))
+                }),
+            "content-format-syntax/1" | "content-format-registry/1" => self
+                .content
+                .as_ref()
+                .map_or(AssessmentStatus::Undetermined, |state| {
+                    state.status(usize::from(id == "content-format-registry/1"))
+                }),
+            "pattern-syntax/1" => self.structure.pattern.status(),
+            _ => return self.assessment_area_status(id),
+        };
+        Field::Present(status)
+    }
     fn area_status(&self, area: &crate::assessment::Area) -> AssessmentStatus {
         match area.status {
             StatusSource::Initial(index) => self.structure.coverage.initial[index],
             StatusSource::Advisory => self.structure.advisory.status(),
-            StatusSource::Modified => self.structure.modified.status(self.modified_sources),
-            StatusSource::Units(index) => self
-                .units
-                .as_ref()
-                .map_or(AssessmentStatus::Undetermined, |state| state.status(index)),
-            StatusSource::ContentFormat(index) => self
-                .content
-                .as_ref()
-                .map_or(AssessmentStatus::Undetermined, |state| state.status(index)),
-            StatusSource::Pattern => self.structure.pattern.status(),
             StatusSource::Numeric => self.structure.numeric.status(),
             StatusSource::Consistency(index) => self.structure.consistency[index].status(),
             StatusSource::Requirements => self
@@ -1626,10 +1623,7 @@ impl Report<'_> {
             .is_some_and(|profile| profile.registry_requested())
         {
             use std::fmt::Write;
-            output.muted_line(&format!(
-                "Recorded registry policy: {}",
-                self.registry.policy.as_str()
-            ));
+            output.muted_line(&format!("Recorded registry policy: {}", "use_recorded"));
             if let Some(state) = &self.units {
                 let partial = state.spelling_unknown || state.guidance_unknown;
                 output.label("Unit guidance:");
@@ -1654,7 +1648,7 @@ impl Report<'_> {
                 }
             } else if self
                 .assessment_profile()
-                .is_some_and(|profile| profile.enabled.units)
+                .is_some_and(|profile| profile.enabled.full)
             {
                 output.label("Unit guidance:");
                 output.push(' ');
@@ -1673,7 +1667,7 @@ impl Report<'_> {
             }
             if self
                 .assessment_profile()
-                .is_some_and(|profile| profile.enabled.content_format)
+                .is_some_and(|profile| profile.enabled.full)
             {
                 for (area, id) in crate::content_format::AREAS.iter().enumerate() {
                     let status = self
@@ -1837,17 +1831,6 @@ impl Report<'_> {
             human_location(&result["sample_location"], &mut output);
             output.push('\n');
         }
-        if let Some(profile) = self.assessment_profile() {
-            for area in profile
-                .areas()
-                .filter(|area| matches!(area.status, StatusSource::Modified))
-            {
-                output.label("Assessment area");
-                output.push_str(&format!(" {}: ", area.id));
-                output.assessment(self.area_status(area));
-                output.push('\n');
-            }
-        }
         // Each recorded draft keeps one line naming its support and one naming its limits.
         for row in value["baseline"]["extensions"]
             .as_array()
@@ -1912,7 +1895,7 @@ impl Report<'_> {
             for area in profile.areas().filter(|area| {
                 matches!(
                     area.status,
-                    StatusSource::Pattern | StatusSource::Numeric | StatusSource::Consistency(_)
+                    StatusSource::Numeric | StatusSource::Consistency(_)
                 )
             }) {
                 output.label("Assessment area");
@@ -2753,7 +2736,7 @@ impl Report<'_> {
         let temporal_use = self.structure.temporal_use
             | self.sample.as_ref().map_or(0, |state| state.temporal_use);
         if temporal_use & crate::civil::KNOWLEDGE_USED != 0
-            || (profile.is_some_and(|profile| profile.enabled.modified)
+            || (profile.is_some_and(|profile| profile.enabled.full)
                 && self.structure.modified.knowledge_used)
         {
             // The additional mandatory reserve covers this fixed DTO and its encoding/growth buffers.
@@ -2797,7 +2780,7 @@ impl Report<'_> {
         if profile.is_some_and(|profile| profile.registry_requested()) {
             base["policy"].as_object_mut().expect("policy map").insert(
                 "recorded_registry".to_owned(),
-                Value::String(self.registry.policy.as_str().to_owned()),
+                Value::String("use_recorded".to_owned()),
             );
             base["baseline"]["registry_knowledge"] = self.registry.wire(full);
             base["baseline"]["interpretations"] = self.registry.interpretation_wire();
@@ -2852,7 +2835,7 @@ impl Report<'_> {
                 .expect("interpretation array")
                 .push(json!("undeclared-extensions-ignorable/1"));
         }
-        if profile.is_some_and(|profile| profile.enabled.units) {
+        if profile.is_some_and(|profile| profile.enabled.full) {
             result.as_object_mut().expect("result map").insert(
                 "unit_guidance".to_owned(),
                 self.units
@@ -4208,7 +4191,6 @@ pub(crate) fn author_envelope(catalogue: &Catalogue, generated: SourceId, strict
         effective_limit: None,
         dependencies: Vec::new(),
         unavailable_dependencies: Vec::new(),
-        modified_sources: 0,
         required: None,
         units: None,
         content: None,

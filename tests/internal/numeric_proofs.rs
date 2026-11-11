@@ -917,14 +917,7 @@ fn step_guards_do_not_use_default_and_other_profiles_keep_the_initial_inventory(
     }
     let bytes = br#"{"info":{},"sdfData":{"value":{"type":"integer","nullable":false,"minimum":0.1,"maximum":0.9}}}"#;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
-    for assessment in [
-        Assessment::Initial,
-        Assessment::ExpandedModified,
-        Assessment::ExpandedUnits,
-        Assessment::ExpandedContentFormat,
-        Assessment::ExpandedPatternSyntax,
-        Assessment::FullBaseline,
-    ] {
+    for assessment in [Assessment::Initial, Assessment::FullBaseline] {
         let report = catalogue
             .check(CheckRequest::new().assessment(assessment))
             .unwrap();

@@ -73,7 +73,7 @@ fn inherited_model_condition_is_located_effectively_and_relates_its_authored_sou
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("m", source)]).unwrap();
     let model = catalogue.source_id("m").unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let diagnostics = report.diagnostics();
     location_support::assert_all_agree(&diagnostics, &report.to_json());

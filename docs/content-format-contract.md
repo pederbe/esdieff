@@ -1,6 +1,6 @@
 # Content-format declaration contract
 
-`Assessment::ExpandedContentFormat`, selected by CLI `--assessment expanded-content-format-v1`, requests the fixed inventory `esdieff.expanded.content-format/1`. It adds `content-format-syntax/1` and `content-format-registry/1` to the unchanged eight initial areas, following [ADR 0029: Content-format declarations and recorded registry guidance](adr/0029-content-format-declarations-and-recorded-registry-guidance.md). The initial, modified, unit and sample inventories keep their existing membership. FullBaseline additionally assesses the bounded declaration meanings below within M024 of its immutable model inventory, following [ADR 0033: Content-format model meaning](adr/0033-content-format-model-meaning.md).
+`Assessment::FullBaseline`, selected by CLI `--assessment full-baseline`, checks content-format spelling, identifier range, recorded registration and bounded declaration meaning within M024 and `full.pattern-format/1` of its 13-area model inventory. This uses the retained validation work from [ADR 0029: Content-format declarations and recorded registry guidance](adr/0029-content-format-declarations-and-recorded-registry-guidance.md) and [ADR 0033: Content-format model meaning](adr/0033-content-format-model-meaning.md).
 
 The population is final effective Full data descriptions at distinct consuming coordinates, including properties, reusable data, Action input/output, Event output, map properties and established alternatives. Reference overrides and deletions determine the surviving value. A selected check excludes unused donor declarations; a catalogue check independently includes reusable definitions. Each inherited consumer remains a distinct observation with an effective primary location and its nearest source contribution as related evidence. Raw bytes, authored case and coding order remain unchanged. Ordinary scalar getters and initial string-shape checks retain their meanings.
 
@@ -16,7 +16,7 @@ Parameters follow optional ASCII SP, semicolon, optional SP, a nonempty `tchar` 
 
 Each content coding is `@` followed by a nonempty `tchar` token. There may be zero or more ordered tokens, including duplicate tokens. Comma lists, empty tokens, quoted tokens, whitespace and coding parameters fail spelling. An absent coding adds no implicit lookup. The explicit token `identity` passes spelling but has reserved meaning outside this inventory.
 
-ExpandedContentFormat excludes parameter meaning, including duplicate-parameter meaning, and discloses this with a Notice. This permits completion of its advertised declaration inventory when syntax and dated queries finish. FullBaseline has the additional bounded meaning rules below. Neither operation establishes payload decoding, sample validity or a protocol binding.
+These declaration checks do not establish payload decoding, sample validity or a protocol binding.
 
 ## Bounded Full model meaning
 
@@ -31,8 +31,7 @@ An available numeric Content-Format identifier designates its complete recorded
 CoAP tuple: content type including registered parameters, and its optional
 coding. All 119 captured positive tuples are retained exactly and independently
 checked against the canonical source records. No separate media or coding
-registry query is inferred for a numeric declaration. Withheld CoAP evidence
-cannot be recovered through another table.
+registry query is inferred for a numeric declaration.
 
 Explicit media names use these supported rules:
 
@@ -61,13 +60,12 @@ source origins remain intact.
 Actual admitted consultation of these Full rules is recorded as
 `content-format-model-meaning/1`, independently of successful establishment or
 optional diagnostics. A numeric tuple consultation needs its available recorded
-evidence. A normative media-rule consultation may occur while a separate
-registration query is withheld. Neither fact hides unfinished registration or
+evidence. A normative media-rule consultation and a registry lookup are recorded independently. Neither fact hides unfinished registration or
 meaning.
 
 ## Evidence and statuses
 
-`RecordedRegistryPolicy::UseRecorded` is the default evidence policy for relevant checks. `WithholdRecorded` deliberately withholds recorded evidence according to an embedding's trust decision. The CLI uses `--registry-knowledge recorded|withheld`; both explicit values require the content, unit or full-baseline assessment. Initial, modified, inspect and sample requests refuse that option. Reports emit one `policy.recorded_registry=use_recorded|withhold_recorded` value, without a competing request field.
+Checks use the bundled recorded registry evidence. Reports retain the fixed `policy.recorded_registry:"use_recorded"` field and name each registry actually consulted.
 
 | Established observation | Syntax area | Registry area | Condition |
 | --- | --- | --- | --- |
@@ -75,14 +73,13 @@ meaning.
 | Decimal spelling outside the identifier range | Assessed | NotApplicable, if no other query | `content_format.number_range`, Error, interpretation `I-CF-RANGE-1` |
 | Dated positive registration | Assessed | Assessed | `content_format.registry_known`, Notice with dated flags |
 | Completed positive-table miss | Assessed | Undetermined | `content_format.registration_unknown`, Incomplete; current registration unknown |
-| Needed evidence withheld | Assessed | Undetermined | `content_format.registry_knowledge_withheld`, Incomplete |
 | Explicit reserved identity coding | Assessed | Undetermined | `content_format.interpretation_unavailable`, Incomplete |
-| Parameters with otherwise finished queries | Assessed | Assessed | `content_format.parameter_semantics_unassessed`, Notice for excluded meaning |
+| Media or parameters outside supported meaning | Assessed | Assessed when registration finishes | `content_format.model_meaning_unassessed`, Incomplete |
 | Unknown relevant text, role or effective context | Undetermined | Undetermined | Existing scoped capability or meaning condition |
 
-Statuses aggregate the entire requested effective population. An unfinished required pass remains Undetermined; a condition's omission cannot make it Assessed. An unknown query cannot be relabeled an unavailable table. Current registration, available evidence and completed lookup are separate facts. The existing requested coverage counts remain authoritative even when every optional area row and located condition is omitted. Other unfinished Initial work can keep an expanded outcome incomplete. Full joins spelling, range, registration and bounded declaration meaning into M024 and `full.pattern-format/1` once, preserving their producing IDs. One unsupported or unknown sibling keeps that obligation unfinished.
+Statuses aggregate the entire requested effective population. An unfinished required pass remains Undetermined; a condition's omission cannot make it Assessed. An unknown query cannot be relabeled an unavailable table. Current registration, available evidence and completed lookup are separate facts. The existing requested coverage counts remain authoritative even when every optional area row and located condition is omitted. Full joins spelling, range, registration and bounded declaration meaning into M024 and `full.pattern-format/1` once, preserving their producing IDs. One unsupported or unknown sibling keeps that obligation unfinished.
 
-`Report::registry_knowledge(id)` borrows actual-use facts for `coap-content-formats`, `media-types` and `http-content-codings`. Before the first admitted key comparison, unavailable operation work fabricates no table consultation or entry. After a comparison, that table remains available even if lookup later stops. An unneeded table is Absent. Needed withholding produces registry, state unavailable, snapshot null and reason caller_withheld, without digest, dates or entry counts. Failure to admit the semantic metadata owner returns Unavailable for requested registry IDs. Existing wire states remain available and unavailable.
+`Report::registry_knowledge(id)` borrows actual-use facts for `coap-content-formats`, `media-types` and `http-content-codings`. Before the first admitted key comparison, unavailable operation work fabricates no table consultation or entry. After a comparison, that table remains available even if lookup later stops. An unneeded table is Absent. Failure to admit the semantic metadata owner returns Unavailable for requested registry IDs.
 
 ## Recorded primary editions
 
@@ -100,12 +97,12 @@ For media identity, a template file's explicit name attribute takes precedence; 
 
 ## Finite ownership and work
 
-After Catalogue acquisition, check admission requires the existing source/scope reserve C plus E before new scanning. Econtent is19116, Eunits21448 and combined Full31448. C depends on actual caller metadata: one supplied key `authored` has eight bytes, C20528 and exact content admission39644;39643 refuses. Seven-byte `fixture` has C20522 and39638;39637 refuses. Applicable existing role and selector reserves remain independent.
+After Catalogue acquisition, FullBaseline admission requires the existing source/scope reserve C, the combined registry reserve 31448 and the pattern reserve 171 before scanning. C depends on caller metadata. A supplied key `authored` gives C=20528 and exact admission 52147. A seven-byte key `fixture` gives C=20522 and admission 52141. Applicable role and selector reserves remain independent.
 
 Two complete extension DTO generations and fixed owners receive4E; independent encoding and old/new growth receive another4E. With the recorded extension record, the Full extension bound D62792 and owners208 give 2D+208=125792=4E. Its six registry records use array capacity8. The complete report may have eleven interpretations: four registry interpretations, civil representation, Byte and Unix conventions, both UUID interpretations, copied reference relocation and undeclared extension vocabulary. This grows the interpretation Vec from8 to16; an old8 backing may coexist with new16 and the registry8 backing. Qualification charges all32 Value slots plus eleven40-byte text caps against the existing combined array share1536. On the compiled32-byte Value backend this is1464. It also exercises both complete actual DTO generations, retained-result fallback and wholly omitted optional details at the original admission cap. The actual maximum extension graph bound is36634 bytes; two generations, growth and owners use73732 of125792 available bytes. The private content owner, its maximum alignment padding and borrowed view still fit64 bytes. These are source-specific ownership bounds, without a portable ABI, allocator-overhead or resident-memory claim. No existing allowance grows automatically.
 
 Every visited source, effective node, member/key, ancestry, alternative and examined text byte is precharged on the original operation allowance, including excluded Sample rows. Whole borrowed classification pays a finite32-times-byte coefficient plus one; lookup separately precharges each compared row and both byte lengths, conservatively paying the complete static key maximum before reading a name row. No per-declaration refill, allocated lowercase copy or mandatory per-name graph is used. Four checked u32 counts remain bounded by the100000000 maximum work allowance. Optional finding capacity and retained unit replacement strings keep their already consumed diagnostic storage; beginning the content module cannot renew that credit. Presentation omission preserves errors, requested aggregate counts and actual-use evidence.
 
-One shared borrowed walker first completes the eligible grammar/range population and then replays the already derived effective coordinates for registry queries. Candidate/classified observations, spelling/range findings and parameter-exclusion Notices occur once in the first pass; query/unresolved observations occur only for actual second-pass attempts. An interrupted first pass never starts registry replay. Operationally finished traversal is distinct from monotonic unknown meaning: a completed traversal with an unknown donor or critical premise may still query a different reliable coordinate. Every second-pass stop preserves the first pass's syntax status, including any previous Undetermined state.
+One shared borrowed walker first completes the eligible grammar/range population and then replays the already derived effective coordinates for registry queries. Candidate/classified observations and spelling/range findings occur once in the first pass; query/unresolved observations occur only for actual second-pass attempts. An interrupted first pass never starts registry replay. Operationally finished traversal is distinct from monotonic unknown meaning: a completed traversal with an unknown donor or critical premise may still query a different reliable coordinate. Every second-pass stop preserves the first pass's syntax status, including any previous Undetermined state.
 
-A finished first pass with no reliable query-needed bits omits replay, preserving earlier unknowns and fabricating no consulted or withheld facts. Otherwise replay pays traversal and full borrowed classification again from the same remainder, without re-composition, new arenas or a replenished allowance. This permits later independent grammar/range findings to survive lookup exhaustion. The ordinary cost is additional finite work and later first consultation: a tight request can stop before a table formerly reached. Work thresholds are source-specific capability observations, not public constants or a runtime-doubling claim. Under Full, the unit module still runs before content on the same allowance; this scheduling separates content grammar from content lookup.
+A finished first pass with no reliable query-needed bits omits replay, preserving earlier unknowns and fabricating no registry consultation. Otherwise replay pays traversal and full borrowed classification again from the same remainder, without re-composition, new arenas or a replenished allowance. This permits later independent grammar/range findings to survive lookup exhaustion. The ordinary cost is additional finite work and later first consultation: a tight request can stop before a table formerly reached. Work thresholds are source-specific capability observations, not public constants or a runtime-doubling claim. Under Full, the unit module still runs before content on the same allowance; this scheduling separates content grammar from content lookup.

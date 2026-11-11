@@ -4,8 +4,6 @@ use crate::Field;
 use serde_json::{Map, Value};
 use std::ops::Range;
 
-pub(crate) const UNIT_RESERVE: usize = 21448;
-pub(crate) const CONTENT_RESERVE: usize = 19116;
 pub(crate) const FULL_RESERVE: usize = 31448;
 // Four registry interpretations can coexist with civil, byte, Unix, both UUID,
 // copied reference relocation and undeclared extension interpretations appended
@@ -25,21 +23,6 @@ const INTERPRETATIONS: [(u8, &str); 4] = [
     (CONTENT_FORMAT_MEANING, "content-format-model-meaning/1"),
 ];
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[non_exhaustive]
-pub enum RecordedRegistryPolicy {
-    #[default]
-    UseRecorded,
-    WithholdRecorded,
-}
-impl RecordedRegistryPolicy {
-    pub(crate) fn as_str(self) -> &'static str {
-        match self {
-            Self::UseRecorded => "use_recorded",
-            Self::WithholdRecorded => "withhold_recorded",
-        }
-    }
-}
 #[derive(Clone, Copy)]
 pub(crate) struct Facts {
     pub(crate) registry: &'static str,
@@ -60,7 +43,7 @@ pub(crate) const CONTENT_RECORDS: Range<usize> =
 pub(crate) const RECORDED_EXTENSION_RECORDS: Range<usize> =
     CONTENT_RECORDS.end..CONTENT_RECORDS.end + crate::recorded_extension::FACTS.len();
 pub(crate) const RECORDS: usize = RECORDED_EXTENSION_RECORDS.end;
-/// The `requested`, `consulted` and `withheld` bits of one owner's records.
+/// The `requested` and `consulted` bits of one owner's records.
 pub(crate) const fn bits(records: Range<usize>) -> u8 {
     ((1u16 << records.end) - (1u16 << records.start)) as u8
 }
@@ -76,11 +59,9 @@ pub(crate) fn facts(index: usize) -> Option<&'static Facts> {
 #[derive(Clone, Copy, Default)]
 pub(crate) struct State {
     pub(crate) consulted: u8,
-    pub(crate) withheld: u8,
     pub(crate) interpretations: u8,
     pub(crate) owner_failed: bool,
     pub(crate) requested: u8,
-    pub(crate) policy: RecordedRegistryPolicy,
 }
 impl State {
     pub(crate) fn view(&self, id: &str) -> Field<RegistryKnowledgeView> {
@@ -98,15 +79,7 @@ impl State {
             };
         }
         if self.consulted & (1 << index) != 0 {
-            Field::Present(RegistryKnowledgeView {
-                facts,
-                available: true,
-            })
-        } else if self.withheld & (1 << index) != 0 {
-            Field::Present(RegistryKnowledgeView {
-                facts,
-                available: false,
-            })
+            Field::Present(RegistryKnowledgeView { facts })
         } else {
             Field::Absent
         }
@@ -138,28 +111,21 @@ impl State {
         let mut line = |text: String| output.muted_line(&text);
         for index in 0..RECORDS {
             let Some(facts) = facts(index) else { continue };
-            let Field::Present(view) = self.view(facts.registry) else {
+            let Field::Present(_) = self.view(facts.registry) else {
                 continue;
             };
-            if view.available {
-                line(format!(
-                    "Registry {}: available; snapshot {}; scope {}; entries_count {}",
-                    facts.registry, facts.snapshot, facts.scope, facts.entries_count
-                ));
-                line(format!(
-                    "Registry extraction_policy {}; digest {}; raw_digest {}; source_updated {}; retrieved_at {}",
-                    facts.extraction_policy,
-                    facts.digest,
-                    facts.raw_digest,
-                    facts.source_updated,
-                    facts.retrieved_at
-                ));
-            } else {
-                line(format!(
-                    "Registry {}: unavailable; snapshot null; reason caller_withheld",
-                    facts.registry
-                ));
-            }
+            line(format!(
+                "Registry {}: available; snapshot {}; scope {}; entries_count {}",
+                facts.registry, facts.snapshot, facts.scope, facts.entries_count
+            ));
+            line(format!(
+                "Registry extraction_policy {}; digest {}; raw_digest {}; source_updated {}; retrieved_at {}",
+                facts.extraction_policy,
+                facts.digest,
+                facts.raw_digest,
+                facts.source_updated,
+                facts.retrieved_at
+            ));
         }
         for id in self.interpretation_ids() {
             line(format!("Interpretation: {id}"));
@@ -171,45 +137,37 @@ impl State {
 #[derive(Clone, Copy)]
 pub struct RegistryKnowledgeView {
     facts: &'static Facts,
-    available: bool,
 }
 impl RegistryKnowledgeView {
     pub fn registry(&self) -> &'static str {
         self.facts.registry
     }
     pub fn state(&self) -> &'static str {
-        if self.available {
-            "available"
-        } else {
-            "unavailable"
-        }
+        "available"
     }
     pub fn snapshot(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.snapshot)
-    }
-    pub fn reason(&self) -> Option<&'static str> {
-        (!self.available).then_some("caller_withheld")
+        Some(self.facts.snapshot)
     }
     pub fn scope(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.scope)
+        Some(self.facts.scope)
     }
     pub fn extraction_policy(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.extraction_policy)
+        Some(self.facts.extraction_policy)
     }
     pub fn digest(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.digest)
+        Some(self.facts.digest)
     }
     pub fn raw_digest(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.raw_digest)
+        Some(self.facts.raw_digest)
     }
     pub fn source_updated(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.source_updated)
+        Some(self.facts.source_updated)
     }
     pub fn retrieved_at(&self) -> Option<&'static str> {
-        self.available.then_some(self.facts.retrieved_at)
+        Some(self.facts.retrieved_at)
     }
     pub fn entries_count(&self) -> Option<u32> {
-        self.available.then_some(self.facts.entries_count)
+        Some(self.facts.entries_count)
     }
     fn wire(self) -> Value {
         let mut map = Map::new();
@@ -221,27 +179,20 @@ impl RegistryKnowledgeView {
             self.snapshot()
                 .map_or(Value::Null, |s| Value::String(s.to_owned())),
         );
-        if self.available {
-            for (key, value) in [
-                ("scope", self.facts.scope),
-                ("extraction_policy", self.facts.extraction_policy),
-                ("digest", self.facts.digest),
-                ("raw_digest", self.facts.raw_digest),
-                ("source_updated", self.facts.source_updated),
-                ("retrieved_at", self.facts.retrieved_at),
-            ] {
-                map.insert(key.to_owned(), Value::String(value.to_owned()));
-            }
-            map.insert(
-                "entries_count".to_owned(),
-                Value::from(self.facts.entries_count),
-            );
-        } else {
-            map.insert(
-                "reason".to_owned(),
-                Value::String("caller_withheld".to_owned()),
-            );
+        for (key, value) in [
+            ("scope", self.facts.scope),
+            ("extraction_policy", self.facts.extraction_policy),
+            ("digest", self.facts.digest),
+            ("raw_digest", self.facts.raw_digest),
+            ("source_updated", self.facts.source_updated),
+            ("retrieved_at", self.facts.retrieved_at),
+        ] {
+            map.insert(key.to_owned(), Value::String(value.to_owned()));
         }
+        map.insert(
+            "entries_count".to_owned(),
+            Value::from(self.facts.entries_count),
+        );
         Value::Object(map)
     }
 }
@@ -250,7 +201,6 @@ impl RegistryKnowledgeView {
 /// bound includes old/new dense and hash storage, controls, descriptor and staged
 /// bucket, following the fixed serde_json/IndexMap/hashbrown source inventory.
 pub(crate) fn qualify() -> Result<(), &'static str> {
-    debug_assert_eq!(CONTENT_RESERVE, 19116);
     use std::mem::{align_of, size_of};
     let word = size_of::<usize>();
     let string = size_of::<String>();
@@ -339,8 +289,6 @@ mod tests {
             (shared, unit, content, recorded),
             (23344, 19480, 14848, 4608)
         );
-        assert_eq!(2 * (shared + unit) + 144, 4 * UNIT_RESERVE);
-        assert_eq!(2 * (shared + content) + 80, 4 * CONTENT_RESERVE);
         assert_eq!(
             2 * (shared + 512 + unit + content + recorded) + 208,
             4 * FULL_RESERVE
@@ -384,13 +332,7 @@ mod tests {
             .chain(crate::recorded_extension::FACTS.iter())
         {
             qualify_facts(facts).unwrap();
-            actual.push(
-                RegistryKnowledgeView {
-                    facts,
-                    available: true,
-                }
-                .wire(),
-            );
+            actual.push(RegistryKnowledgeView { facts }.wire());
         }
         let actual = Value::Array(actual);
         assert_eq!(actual.as_array().unwrap().capacity(), 8);

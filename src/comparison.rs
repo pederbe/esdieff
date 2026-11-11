@@ -316,8 +316,6 @@ pub enum UnitReason {
     UnrecordedSpelling,
     /// A legacy name, which can be one of several names for one unit.
     LegacyName,
-    /// The request withholds the recorded evidence that the change needs.
-    EvidenceWithheld,
 }
 impl UnitReason {
     pub fn code(self) -> &'static str {
@@ -327,7 +325,6 @@ impl UnitReason {
             Self::UriName => "comparison.unit_uri_name",
             Self::UnrecordedSpelling => "comparison.unit_unrecorded",
             Self::LegacyName => "comparison.unit_legacy",
-            Self::EvidenceWithheld => "registry.caller_withheld",
         }
     }
     pub fn message(self) -> &'static str {
@@ -339,7 +336,6 @@ impl UnitReason {
             Self::LegacyName => {
                 "a legacy unit name is involved, and legacy names can give one unit several names"
             }
-            Self::EvidenceWithheld => "the request withholds recorded unit evidence",
         }
     }
 }
@@ -357,8 +353,6 @@ pub enum ContentFormatReason {
     /// A declaration has no established meaning, such as a media type outside the supported
     /// rules or an unrecorded identifier or coding.
     Unestablished,
-    /// The request withholds the recorded evidence that the change needs.
-    EvidenceWithheld,
 }
 impl ContentFormatReason {
     pub fn code(self) -> &'static str {
@@ -366,7 +360,6 @@ impl ContentFormatReason {
             Self::Added => "comparison.content_format_added",
             Self::Removed => "comparison.content_format_removed",
             Self::Unestablished => "comparison.content_format_unestablished",
-            Self::EvidenceWithheld => "registry.caller_withheld",
         }
     }
     pub fn message(self) -> &'static str {
@@ -376,7 +369,6 @@ impl ContentFormatReason {
                 "content format is removed, which changes the stated meaning of values"
             }
             Self::Unestablished => "a content format has no established meaning",
-            Self::EvidenceWithheld => "the request withholds recorded content-format evidence",
         }
     }
 }
@@ -444,7 +436,6 @@ use crate::budgeted::failure;
 pub struct ComparisonRequest<'a> {
     perspective: Perspective,
     catalogues: [&'a Catalogue; 2],
-    registry_policy: crate::RecordedRegistryPolicy,
     acknowledgements: Option<&'a DifferenceAcknowledgements>,
 }
 impl<'a> ComparisonRequest<'a> {
@@ -452,19 +443,12 @@ impl<'a> ComparisonRequest<'a> {
         Self {
             perspective: Perspective::default(),
             catalogues: [earlier, later],
-            registry_policy: crate::RecordedRegistryPolicy::default(),
             acknowledgements: None,
         }
     }
     /// Select whose existing behavior the later model must continue to accommodate.
     pub fn perspective(mut self, value: Perspective) -> Self {
         self.perspective = value;
-        self
-    }
-    /// Control whether unit and content-format comparison may use the bundled dated registry
-    /// evidence. As for `check`, the default uses it.
-    pub fn recorded_registry_policy(mut self, value: crate::RecordedRegistryPolicy) -> Self {
-        self.registry_policy = value;
         self
     }
     /// Supply Difference acknowledgements. Acknowledged differences keep their
@@ -514,7 +498,7 @@ impl<'a> ComparisonRequest<'a> {
         // already made stand when a later document exhausts the allowance.
         let mut models = Vec::new();
         let mut required = Vec::new();
-        let mut outcome = walk::Outcome::new(self.registry_policy, self.perspective);
+        let mut outcome = walk::Outcome::new(self.perspective);
         let mut warnings = Vec::new();
         for &(earlier_id, later_id) in &compared {
             let budget = &mut allowance.budget;
@@ -705,7 +689,7 @@ pub struct RevisionComparison<'a> {
     relocation: bool,
     /// A classification relied on `undeclared-extensions-ignorable/1`.
     undeclared: bool,
-    /// The recorded evidence policy, the registry sections unit and content-format comparison
+    /// The bundled recorded evidence and registry sections unit and content-format comparison
     /// consulted, and the content-format meaning interpretation.
     registry: crate::registry::State,
     /// The value interpretations that Breaking witnesses relied on.
@@ -798,8 +782,8 @@ impl<'a> RevisionComparison<'a> {
     pub fn added_documents(&self) -> &[SourceId] {
         &self.added
     }
-    /// The recorded registry evidence that unit and content-format comparison consulted or
-    /// found withheld, Absent when no change needed it.
+    /// The recorded registry evidence that unit and content-format comparison
+    /// consulted, Absent when no change needed it.
     pub fn registry_knowledge(&self, id: &str) -> Field<crate::RegistryKnowledgeView> {
         self.registry.view(id)
     }

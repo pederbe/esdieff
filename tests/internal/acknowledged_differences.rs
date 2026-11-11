@@ -689,25 +689,15 @@ fn an_undetermined_difference_whose_content_was_examined_can_be_acknowledged() {
 
 #[test]
 fn a_difference_that_becomes_breaking_comes_back_for_review() {
-    // Without the recorded SenML evidence, a change from Cel to K stays undetermined, as under
-    // rules that cannot settle it. With the evidence, the same change is breaking.
+    // An earlier undetermined acknowledgement must not accept a now-established break.
     let earlier = catalogue(&[("monitor", &monitor(&[("temperature", Some("Cel"))]))]);
     let later = catalogue(&[("monitor", &monitor(&[("temperature", Some("K"))]))]);
     let acknowledgements =
         DifferenceAcknowledgements::new(vec![unit_change("temperature")]).unwrap();
-    let compare = |policy| {
-        ComparisonRequest::new(&earlier, &later)
-            .recorded_registry_policy(policy)
-            .acknowledgements(&acknowledgements)
-            .compare()
-            .unwrap()
-    };
-    let reviewed = compare(esdieff::RecordedRegistryPolicy::WithholdRecorded);
-    assert_eq!(reviewed.outcome(), Classification::Undetermined);
-    assert_eq!(reviewed.disposition(), Disposition::Passed);
-    assert!(reviewed.differences().next().unwrap().acknowledged());
-
-    let reclassified = compare(esdieff::RecordedRegistryPolicy::UseRecorded);
+    let reclassified = ComparisonRequest::new(&earlier, &later)
+        .acknowledgements(&acknowledgements)
+        .compare()
+        .unwrap();
     let difference = reclassified.differences().next().unwrap();
     assert_eq!(difference.classification(), Classification::Breaking);
     assert!(!difference.acknowledged());
