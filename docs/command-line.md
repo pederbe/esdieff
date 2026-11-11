@@ -9,8 +9,13 @@ $ esdieff check thermostat.sdf.json
 $ esdieff generate --document thermostat.sdf.json thermostat.sdf.json
 ```
 
-Run `esdieff --help` for the same synopses in your terminal, and
-`esdieff --version` for the installed version.
+Run `esdieff --help` for a task overview and starting examples. Each command has
+its own help, such as `esdieff sample --help`, with examples, options and defaults.
+Run `esdieff --version` for the installed version.
+
+For commands with `--document`, that option selects one of the supplied model
+files. The trailing paths supply the selected model and any dependencies. Use
+the same path spelling in both places.
 
 ## Commands
 
@@ -54,11 +59,11 @@ selection rules and limits.
 ## inspect
 
 ```text
-esdieff inspect --view source|effective --document INPUT --pointer POINTER [--required-declarations] [--format human|json] INPUT...
+esdieff inspect [--view source|effective] --document INPUT --pointer POINTER [--required-declarations] [--strict-warnings] [--format human|json] INPUT...
 ```
 
-Shows the definition at a JSON Pointer in one document. The `source` view is
-the JSON as written. The `effective` view is the definition after `sdfRef`
+Shows the definition at a JSON Pointer in one document. The default `source`
+view is the JSON as written. The optional `effective` view is the definition after `sdfRef`
 composition, with the origin of each quality. `--required-declarations` adds
 the declaration relationships selected by `sdfRequired`.
 
@@ -137,7 +142,7 @@ writes only the standalone schema.
 ## author
 
 ```text
-esdieff author --plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH...
+esdieff author --plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH [--source KEY PATH ...]
 ```
 
 Composes a new `sdfThing` from the definitions in the supplied sources, as the
@@ -150,7 +155,7 @@ An existing destination is replaced only with `--replace-document` or
 ## edit
 
 ```text
-esdieff edit --plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH...
+esdieff edit --plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH [--source KEY PATH ...]
 ```
 
 Replaces or removes the qualities a plan names in one existing document and
@@ -162,10 +167,11 @@ writes the result to `--document-output`. The options match `author`.
 | Option | Meaning |
 | --- | --- |
 | `--color auto\|always\|never`, `--color=MODE` | Choose terminal styling. The default is `auto`. |
-| `-h`, `--help` | Show the help. |
+| `-h`, `--help` | Show examples and options for the selected command, or the task overview when used alone. |
 
-`esdieff --version`, on its own, prints the installed version. Put `--` before
-a path that begins with `-`.
+`esdieff --version`, on its own, prints the installed version. For `check`,
+`inspect`, `sample`, `generate`, `schema`, `reference` and `trace`, put `--`
+before a positional input path that begins with `-`.
 
 Use `-` for standard input once across the model, sample and trace inputs of a
 command. `diff` never reads standard input.

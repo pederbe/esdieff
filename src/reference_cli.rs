@@ -59,7 +59,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         }
     }
     if help {
-        return crate::emit_help(*color);
+        return crate::emit_help(*color, Some("reference"));
     }
     let document = document.ok_or_else(|| usage("reference requires --document MODEL"))?;
     let pointer = pointer.ok_or_else(|| usage("reference requires --pointer POINTER"))?;

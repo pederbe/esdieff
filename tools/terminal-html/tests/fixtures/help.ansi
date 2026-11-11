@@ -1,3 +1,7 @@
-[1;38;2;189;147;249mUsage:[0m
-[38;2;92;184;255mesdieff[0m [38;2;92;184;255m--version[0m
-Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.
+Esdieff checks connected-device models written in Semantic Definition Format (SDF).
+
+[1;38;2;189;147;249mExamples:[0m
+  Check a model file:
+    [1mesdieff[0m [1mcheck[0m model.sdf.json
+  Generate test values from a model:
+    [1mesdieff[0m [1mgenerate[0m [1m--document[0m model.sdf.json model.sdf.json

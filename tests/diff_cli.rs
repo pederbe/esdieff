@@ -736,17 +736,28 @@ fn a_relative_path_that_is_not_utf8_is_an_invocation_error() {
 #[test]
 fn help_lists_the_diff_command() {
     let global = run(&[OsStr::new("--help")]);
+    let detailed = run(&[OsStr::new("diff"), OsStr::new("--help")]);
     for args in [&["diff", "--help"][..], &["diff", "-h", "--old", "missing"]] {
         let args: Vec<_> = args.iter().map(OsStr::new).collect();
         let output = run(&args);
         assert_eq!(output.status.code(), Some(0));
         assert!(output.stderr.is_empty());
-        assert_eq!(output.stdout, global.stdout);
+        assert_eq!(output.stdout, detailed.stdout);
+        assert_ne!(output.stdout, global.stdout);
     }
-    let help = String::from_utf8(global.stdout).unwrap();
-    assert!(help.contains(
-            "esdieff diff --old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--perspective client|implementer] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]\n"
-    ));
+    let help = String::from_utf8(detailed.stdout).unwrap();
+    assert!(help.contains("esdieff diff --old PATH --new PATH [OPTIONS]"));
+    for option in [
+        "--recursive",
+        "--exclude RELATIVE_PATH",
+        "--perspective",
+        "--acknowledged",
+        "--acknowledgements-output",
+        "--replace-acknowledgements",
+        "--format human|json|sarif|markdown",
+    ] {
+        assert!(help.contains(option));
+    }
 }
 
 fn invocation_error(output: &Output) -> String {

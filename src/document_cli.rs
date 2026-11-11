@@ -40,7 +40,7 @@ pub(super) trait OperationResult {
 }
 pub(super) fn run<O: Operation>(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error> {
     let Some(options) = parse(args, color, O::NAME)? else {
-        return crate::emit_help(*color);
+        return crate::emit_help(*color, Some(O::NAME));
     };
     let mut delivery = Delivery::prepare(&options)?;
     if O::UNCHANGED_INPUTS {

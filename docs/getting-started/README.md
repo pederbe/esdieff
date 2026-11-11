@@ -72,16 +72,20 @@ to remove it.
 ## Check that it works
 
 <pre class="terminal"><code><span class="p">$</span> esdieff --help
-<b><span class="h">Usage:</span></b>
-<b>esdieff</b> <b>--version</b>
-Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.
-<b>esdieff</b> <b>check</b> <b>--plan</b> <span class="m">PLAN</span> [<b>--format</b> human|json]
+Esdieff checks connected-device models written in Semantic Definition Format (SDF).
+
+<b><span class="h">Examples:</span></b>
+  Check a model file:
+    <b>esdieff</b> <b>check</b> model.sdf.json
+  Generate test values from a model:
+    <b>esdieff</b> <b>generate</b> <b>--document</b> model.sdf.json model.sdf.json
 </code></pre>
 
-The help continues with one line per command, and the
-[command line reference](../command-line.md) explains each one. If the command
-is not found, check that its installation folder is on your `PATH` and open a
-new terminal. Cargo installations normally use `~/.cargo/bin`.
+The overview continues with the available commands. Run `esdieff check --help`
+for that command's examples, options and defaults. The
+[command line reference](../command-line.md) explains every command. If the
+command is not found, check that its installation folder is on your `PATH` and
+open a new terminal. Cargo installations normally use `~/.cargo/bin`.
 
 ## Try the thermostat example
 

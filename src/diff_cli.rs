@@ -34,7 +34,7 @@ struct Options<'a> {
 
 pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error> {
     let Some(options) = parse(args, color)? else {
-        return crate::emit_help(*color);
+        return crate::emit_help(*color, Some("diff"));
     };
     // The acknowledgements are decoded, and both revisions finish preparation, before either
     // revision's content is read.
