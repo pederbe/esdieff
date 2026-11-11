@@ -36,10 +36,13 @@ Selected property in model 1 at "/sdfObject/Thermostat/sdfProperty/targetTempera
 <span class="m">Scope:</span> selected
 <span class="m">Broader RFC coverage:</span> partial
 
-<b><span class="r">✗ sample.bound</span></b>: Sample violates an exact numerical bound
+<b><span class="r">✗ error</span></b> sample.bound: Sample violates an exact numerical bound
+<span class="m">Input:</span> "too-hot.json" (source 2)
 source 2 "" bytes 0..2
   related effective 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum"
   related source 1 "/sdfObject/Thermostat/sdfProperty/targetTemperature/maximum" bytes 604..606
+
+<span class="m">Diagnostic details omitted:</span> 0
 ...
 </code></pre>
 
@@ -51,6 +54,8 @@ The reports are trimmed to the lines about the sample. Findings appear before th
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json --kind property --pointer /sdfObject/Thermostat/sdfProperty/targetTemperature thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">passed</span></b>
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
+Selection: property at "/sdfObject/Thermostat/sdfProperty/targetTemperature"
 <span class="m">Values:</span> <b><span class="g">2 admitted</span></b> · <b><span class="r">8 rejected</span></b> · 0 undetermined
 <span class="m">Descriptions:</span> 1
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
@@ -94,6 +99,37 @@ which writes one JSON object per line and omits undetermined candidates:
 </code></pre>
 
 Each line carries the selector, the value and its settled result as `expected`. Feed the values to the device or app under test and assert that it accepts the admitted ones and refuses the rejected ones. `--format json` gives the same values inside the full report. The [generation contract](../generation-contract.md) lists every target.
+
+A generation exit status of 3 means the JSON Lines file can be partial or empty.
+Run the same request without `--format jsonl` to read the retained reason. For
+example, the device from [Supply the files a model needs](inspect-and-check.md#supply-the-files-a-model-needs)
+cannot generate its reading without the shared types file:
+
+<pre class="terminal"><code><span class="p">$</span> esdieff generate --document device.sdf.json --kind property --pointer /sdfObject/Sensor/sdfProperty/reading device.sdf.json
+<b><span class="y">⚠ </span></b><b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="y">undetermined</span></b>
+<span class="m">Model:</span> "device.sdf.json" (source 1)
+Selection: property at "/sdfObject/Sensor/sdfProperty/reading"
+<span class="m">Values:</span> 0 admitted · 0 rejected · 0 undetermined
+<span class="m">Descriptions:</span> 1
+Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
+
+<b><span class="y">⚠ </span></b><b><span class="h">property /sdfObject/Sensor/sdfProperty/reading</span></b>: <b><span class="y">unavailable</span></b>
+  Reason: supplied global target unavailable
+  <span class="m">Corpus evidence:</span> 0 other admitted examples, 0 admitted boundary candidates, 0 rejected outside candidates, 0 other rejected candidates, 0 undetermined
+  No admitted example was retained. This does not prove the description admits no value.
+...
+</code></pre>
+
+Supply `types.sdf.json` as another input and regenerate the vectors. In a Bash
+script, replay only after generation passes:
+
+```bash
+esdieff generate --document thermostat.sdf.json --format jsonl thermostat.sdf.json > model-vectors.jsonl &&
+esdieff trace --document thermostat.sdf.json --trace model-vectors.jsonl thermostat.sdf.json
+```
+
+The combined command retains generation's failing exit status and skips replay
+if generation does not complete.
 
 ## Check a log of recorded values
 

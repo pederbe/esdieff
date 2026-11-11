@@ -155,19 +155,82 @@ fn within(result: &GenerationResult<'_>, limit: usize) -> String {
         kept += 1;
         ends.push(details.len());
     }
-    // Values and every baseline description take priority over optional evidence.
+    // Ordinary values take priority over optional causes and Choice evidence.
+    let mut extra_room = room.saturating_sub(details.len());
+    let selection_reason = result.selection_reason.filter(|reason| {
+        let cost = ",\"selection_reason\":".len() + json!(reason).to_string().len();
+        if cost > extra_room {
+            return false;
+        }
+        extra_room -= cost;
+        true
+    });
     let mut offset = 0;
     for (description, end) in result.descriptions.iter().zip(ends) {
-        if let Some(extra) = choice_json(
-            &description.choice_evidence,
-            room.saturating_sub(details.len()),
-        ) {
+        if let Some(extra) = reasons_json(description, extra_room) {
+            extra_room -= extra.len();
+            details.insert_str(end + offset - 1, &extra);
+            offset += extra.len();
+        }
+        if let Some(extra) = choice_json(&description.choice_evidence, extra_room) {
+            extra_room -= extra.len();
             details.insert_str(end + offset - 1, &extra);
             offset += extra.len();
         }
     }
     let dropped = result.descriptions.len() - kept;
-    selected::splice(envelope(result, dropped), "descriptions", &details)
+    let mut envelope = envelope(result, dropped);
+    if let Some(reason) = selection_reason {
+        envelope["result"]["selection_reason"] = json!(reason);
+    }
+    selected::splice(envelope, "descriptions", &details)
+}
+
+fn reasons(description: &Description) -> impl Iterator<Item = (Option<usize>, &'static str)> + '_ {
+    description
+        .reason
+        .map(|reason| (None, reason))
+        .into_iter()
+        .chain(
+            description
+                .values
+                .iter()
+                .enumerate()
+                .filter_map(|(index, value)| value.reason.map(|reason| (Some(index), reason))),
+        )
+}
+
+/// Optional explanatory rows are fitted after every ordinary value is retained.
+fn reasons_json(description: &Description, room: usize) -> Option<String> {
+    let total = reasons(description).count();
+    if total == 0 {
+        return None;
+    }
+    let render = |rows: &str, kept: usize| {
+        format!(
+            ",\"reasons\":{{\"items\":[{rows}],\"omitted\":{}}}",
+            total - kept
+        )
+    };
+    let mut output = render("", 0);
+    if output.len() > room {
+        return None;
+    }
+    let mut rows = String::new();
+    for (kept, (index, message)) in reasons(description).enumerate() {
+        let start = rows.len();
+        if kept > 0 {
+            rows.push(',');
+        }
+        rows.push_str(&json!({"value_index":index, "message":message}).to_string());
+        let candidate = render(&rows, kept + 1);
+        if candidate.len() > room {
+            rows.truncate(start);
+            break;
+        }
+        output = candidate;
+    }
+    Some(output)
 }
 
 /// Everything but the description details, with `dropped` descriptions whose details did not
@@ -381,6 +444,35 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
     let disposition = result.disposition();
     text.status(Role::disposition(disposition), disposition.as_str());
     text.push('\n');
+    text.source(
+        "Model:",
+        result
+            .catalogue
+            .source(result.document())
+            .expect("generation document"),
+    );
+    if let Some((kind, pointer)) = result.selector() {
+        text.push_str(&format!(
+            "Selection: {} at {}\n",
+            kind.as_str(),
+            json!(pointer)
+        ));
+    } else {
+        text.push_str("Selection: properties, Action input/output and Event output. Context needs --kind context and --pointer.\n");
+    }
+    if result.descriptions.is_empty()
+        && result.unselected == 0
+        && result.unpresented == 0
+        && result.selection_complete
+    {
+        text.push_str("No eligible value descriptions were found.\n");
+    }
+    if let Some(reason) = result.selection_reason {
+        text.push_str(&format!(
+            "Selection reason: {}\n",
+            crate::human::escaped(reason)
+        ));
+    }
     text.label("Values:");
     for (index, admission) in [
         Admission::Admitted,
@@ -422,12 +514,14 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
     }
     text.push('\n');
     text.push_str("Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.\n");
+    let mut reason_room = result.room;
+    let mut reasons_omitted = 0usize;
     for description in &result.descriptions {
         text.push('\n');
         text.heading(&format!(
             "{} {}",
             description.kind.as_str(),
-            description.pointer
+            crate::human::escaped(&description.pointer)
         ));
         text.push_str(": ");
         let role = match description.state {
@@ -436,6 +530,22 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
         };
         text.status(role, description.state.as_str());
         text.push('\n');
+        for (index, reason) in reasons(description) {
+            let line = match index {
+                Some(index) => format!(
+                    "  Reason for {}: {}\n",
+                    crate::human::escaped(&description.values[index].target),
+                    crate::human::escaped(reason)
+                ),
+                None => format!("  Reason: {}\n", crate::human::escaped(reason)),
+            };
+            if line.len() <= reason_room {
+                reason_room -= line.len();
+                text.push_str(&line);
+            } else {
+                reasons_omitted += 1;
+            }
+        }
         let counts = evidence_counts(description);
         text.push_str("  ");
         text.label(EVIDENCE_LABEL);
@@ -458,12 +568,17 @@ fn human_within(result: &GenerationResult<'_>, style: crate::HumanStyle, limit: 
             return within(result, limit);
         }
     }
+    if reasons_omitted > 0 {
+        text.push_str(&format!(
+            "Reason details omitted for the report size: {reasons_omitted}\n"
+        ));
+    }
     // Optional sections use only space left after all ordinary generation output.
     for description in &result.descriptions {
         let prefix = format!(
             "\nChoice admission evidence for {} {}:\n",
             description.kind.as_str(),
-            description.pointer
+            crate::human::escaped(&description.pointer)
         );
         if let Some(extra) = choice_human(
             &description.choice_evidence,
@@ -582,7 +697,12 @@ fn choice_human(evidence: &super::ChoiceEvidence, prefix: &str, room: usize) -> 
 
 /// A description's human heading, which begins with an empty line.
 fn human_heading(kind: SampleKind, pointer: &str, state: GenerationState) -> String {
-    format!("\n{} {pointer}: {}\n", kind.as_str(), state.as_str())
+    format!(
+        "\n{} {}: {}\n",
+        kind.as_str(),
+        crate::human::escaped(pointer),
+        state.as_str()
+    )
 }
 
 /// A description's human lines for values omitted beyond the ceiling and for the report size.
@@ -610,6 +730,7 @@ fn human_value(
     width: usize,
     evidence: GenerationEvidence,
 ) -> String {
+    let target = crate::human::escaped(target);
     let mut line = format!(
         "{INDENT}{:<ADMISSION_WIDTH$} {target:<width$} {value}",
         admission.as_str()
@@ -701,5 +822,42 @@ mod tests {
             let wire: Value = serde_json::from_str(&fallback).unwrap();
             assert_eq!(wire["operation"], "generate");
         });
+    }
+
+    #[test]
+    fn optional_reasons_do_not_displace_ordinary_results() {
+        let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model",
+            br#"{"info":{},"namespace":{"t":"https://example.test/missing"},"sdfProperty":{"p":{"sdfRef":"t:#/sdfData/T"}}}"#)]).unwrap();
+        let result = catalogue
+            .generate(GenerationRequest::new(
+                catalogue.source_id("model").unwrap(),
+            ))
+            .unwrap();
+        assert_eq!(
+            result.descriptions().next().unwrap().reason(),
+            Some("supplied global target unavailable")
+        );
+        let full: Value = serde_json::from_str(&result.to_json()).unwrap();
+        let mut ordinary = full.clone();
+        let description = ordinary["result"]["descriptions"][0]
+            .as_object_mut()
+            .unwrap();
+        description.remove("reasons");
+        description.remove("choice_evidence");
+        let limit = serde_json::to_vec(&ordinary).unwrap().len() + OMISSION_SLACK;
+        let projected = within(&result, limit);
+        assert!(projected.len() <= limit);
+        let projected: Value = serde_json::from_str(&projected).unwrap();
+        assert_eq!(projected["outcome"], full["outcome"]);
+        assert_eq!(projected["result"]["summary"], full["result"]["summary"]);
+        assert_eq!(
+            projected["result"]["descriptions"][0]["values"],
+            full["result"]["descriptions"][0]["values"]
+        );
+        assert!(
+            projected["result"]["descriptions"][0]
+                .get("reasons")
+                .is_none()
+        );
     }
 }

@@ -103,6 +103,8 @@ Download [rich.sdf.json](https://github.com/pederbe/esdieff/blob/main/examples/t
 
 <pre class="terminal"><code><span class="p">$</span> esdieff generate --document thermostat.sdf.json thermostat.sdf.json
 <b><span class="g">✔ </span></b><b><span class="h">Generated values</span></b> esdieff.generation/3: <b><span class="g">passed</span></b>
+<span class="m">Model:</span> "thermostat.sdf.json" (source 1)
+Selection: properties, Action input/output and Event output. Context needs --kind context and --pointer.
 <span class="m">Values:</span> <b><span class="g">15 admitted</span></b> · <b><span class="r">60 rejected</span></b> · 0 undetermined
 <span class="m">Descriptions:</span> 4
 Corpus evidence counts kept values, not constraints or individual Choice alternatives. Complete generation does not imply complete constraint coverage.
@@ -148,6 +150,10 @@ Next, check the model itself. `--assessment full-baseline` requests every model 
 <span class="m">Errors:</span> 0 · <span class="m">warnings:</span> 0 · <span class="m">notices:</span> 0 · <span class="m">incomplete checks:</span> 0
 <span class="m">Scope:</span> catalogue
 <span class="m">Broader RFC coverage:</span> complete
+<span class="m">Input:</span> "thermostat.sdf.json" (source 1)
+<span class="m">Diagnostic details omitted:</span> 0
+
+<b><span class="h">Details:</span></b>
 
 <span class="m">Recorded registry policy: use_recorded</span>
 <span class="m">Unit guidance:</span> complete
@@ -166,8 +172,7 @@ Next, check the model itself. `--assessment full-baseline` requests every model 
 <span class="m">Requested coverage (assessment_area):</span> total 13 · assessed 10 · not applicable 3 · unassessed 0 · undetermined 0
 <span class="m">Requirement inventory: rfc9880.model/1</span>
 <span class="m">Requirement coverage:</span> total 54 · assessed 28 · not applicable 26 · unassessed 0 · undetermined 0
-<span class="m">Source 1 ["input1"]: acquired / usable (1932 retained bytes, content complete: true)</span>
-<span class="m">Diagnostic details omitted:</span> 0
+<span class="m">Source 1 ["input1"] "thermostat.sdf.json": acquired / usable (1932 retained bytes, content complete: true)</span>
 </code></pre>
 
 The first line is the verdict. `Complete: true` means the requested work

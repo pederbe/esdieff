@@ -29,6 +29,7 @@ pub(super) struct Settled {
     pub(super) value: CheckedValue,
     pub(super) admission: Admission,
     pub(super) codes: Vec<&'static str>,
+    pub(super) reason: Option<&'static str>,
     pub(super) aim: Aim,
     /// The target's precedence, which decides which of two targets with the same value
     /// keeps it.
@@ -48,6 +49,7 @@ pub(super) struct Generated {
     pub(super) oversized: u32,
     /// Generation or a check ran out of the allowance.
     pub(super) exhausted: bool,
+    pub(super) reason: Option<&'static str>,
     pub(super) interpretations: ValueInterpretations,
     /// The extension vocabulary the checks set aside.
     pub(super) set_aside: SetAside,
@@ -87,6 +89,7 @@ pub(super) fn generate(
         omitted: 0,
         oversized: 0,
         exhausted: false,
+        reason: None,
         interpretations: ValueInterpretations::default(),
         set_aside: SetAside::default(),
     };
@@ -110,8 +113,9 @@ pub(super) fn generate(
         run.label = label;
         run.targets(description)
     });
-    if found.is_err() {
+    if let Err(error) = found {
         run.generated.exhausted = true;
+        run.generated.reason = Some(super::limit_reason(error));
     }
     generated
 }
@@ -766,6 +770,21 @@ impl<'m> Run<'_, 'm, '_> {
         let checked = checked.map_err(|_| Exhausted::Work)?;
         self.generated.interpretations |= checked.interpretations;
         self.generated.set_aside |= lent.budget.set_aside;
+        let reason = (checked.admission == Admission::Undetermined).then(|| {
+            checked
+                .findings
+                .iter()
+                .take(CODES)
+                .find(|finding| finding.basis.incomplete())
+                .map_or(
+                    if checked.exhausted {
+                        "Value checking reached its processing allowance."
+                    } else {
+                        "The value's admission could not be established."
+                    },
+                    |finding| finding.message,
+                )
+        });
         let mut codes = Vec::new();
         if checked.admission == Admission::Rejected {
             for finding in &checked.findings {
@@ -791,6 +810,7 @@ impl<'m> Run<'_, 'm, '_> {
             value,
             admission: checked.admission,
             codes,
+            reason,
             precedence,
             key,
             size,

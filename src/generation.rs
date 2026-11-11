@@ -93,6 +93,7 @@ pub struct GenerationResult<'a> {
     room: usize,
     /// Whether every grouping and affordance of the document could be enumerated.
     selection_complete: bool,
+    selection_reason: Option<&'static str>,
     /// The document, the sources its composition used, and what composition, generation and
     /// the checks relied on.
     scope: SelectedScope,
@@ -103,6 +104,7 @@ struct Description {
     kind: SampleKind,
     pointer: String,
     state: GenerationState,
+    reason: Option<&'static str>,
     values: Vec<targets::Settled>,
     /// Distinct values beyond the per-description ceiling.
     omitted: u32,
@@ -127,6 +129,11 @@ impl<'a> GeneratedDescription<'a> {
     }
     pub fn state(self) -> GenerationState {
         self.0.state
+    }
+    /// The first retained reason this description was unavailable or generation stopped.
+    /// Other incomplete causes can belong to individual values.
+    pub fn reason(self) -> Option<&'static str> {
+        self.0.reason
     }
     /// The kept values, in target order.
     pub fn values(self) -> impl ExactSizeIterator<Item = GeneratedValue<'a>> {
@@ -167,6 +174,10 @@ impl<'a> GeneratedValue<'a> {
     pub fn evidence(self) -> GenerationEvidence {
         self.0.aim.evidence(self.0.admission)
     }
+    /// The first retained explanation for an undetermined value, separate from rejection codes.
+    pub fn reason(self) -> Option<&'static str> {
+        self.0.reason
+    }
     /// The condition codes behind a rejection, at most eight.
     pub fn codes(self) -> impl ExactSizeIterator<Item = &'static str> + 'a {
         self.0.codes.iter().copied()
@@ -177,6 +188,10 @@ impl<'a> GenerationResult<'a> {
     /// The selected model document.
     pub fn document(&self) -> SourceId {
         self.scope.document()
+    }
+    /// The first retained reason description selection could not finish.
+    pub fn selection_reason(&self) -> Option<&'static str> {
+        self.selection_reason
     }
     /// The Sample selector of an explicitly selected description.
     pub fn selector(&self) -> Option<(SampleKind, &str)> {
@@ -280,6 +295,7 @@ impl Catalogue {
             unpresented: 0,
             room: limits.report_bytes - reserve,
             selection_complete: true,
+            selection_reason: None,
             scope: SelectedScope::new(request.document),
         };
         let model = match request.selector {
@@ -306,14 +322,31 @@ impl Catalogue {
                     return Err("selected definition has the wrong sample kind");
                 }
                 result.selector = Some((kind, pointer.to_owned()));
-                selected.push((kind, pointer.to_owned(), json));
+                selected.push((kind, pointer.to_owned(), model.json()));
             }
             None => {
                 result.selection_complete = match model.json().present() {
                     Some(root) => {
-                        affordances(root, &mut allowance.budget, &mut selected).unwrap_or(false)
+                        match affordances(
+                            root,
+                            &mut allowance.budget,
+                            &mut selected,
+                            &mut result.selection_reason,
+                        ) {
+                            Ok(complete) => complete,
+                            Err(error) => {
+                                result.selection_reason = Some(limit_reason(error));
+                                false
+                            }
+                        }
                     }
-                    None => false,
+                    None => {
+                        result.selection_reason = Some(match model.json() {
+                            crate::Field::Unavailable(reason) => reason,
+                            _ => "The model content could not be established.",
+                        });
+                        false
+                    }
                 };
             }
         }
@@ -333,7 +366,7 @@ impl Catalogue {
 
 /// A description a whole-document request selects: its kind, its selector pointer and its
 /// effective content, or `None` when that is unavailable.
-type Selected<'m> = (SampleKind, String, Option<EffectiveJson<'m>>);
+type Selected<'m> = (SampleKind, String, crate::Field<EffectiveJson<'m>>);
 
 enum Task<'m> {
     /// A grouping, or the document itself, and its pointer.
@@ -350,6 +383,7 @@ fn affordances<'m>(
     root: EffectiveJson<'m>,
     budget: &mut OperationBudget,
     found: &mut Vec<Selected<'m>>,
+    reason: &mut Option<&'static str>,
 ) -> Result<bool, Exhausted> {
     let mut complete = true;
     let mut stack = vec![Task::Grouping(root, String::new())];
@@ -366,8 +400,26 @@ fn affordances<'m>(
                     // A Property is its own description, while an unreadable Action or
                     // Event hides whether it has any.
                     if keyword == "sdfProperty" {
-                        kept(found, (SampleKind::Property, pointer, None), budget)?;
+                        let why = failure(definition)
+                            .map_or("The selected description is not a JSON map.", |failure| {
+                                failure.reason
+                            });
+                        kept(
+                            found,
+                            (
+                                SampleKind::Property,
+                                pointer,
+                                crate::Field::Unavailable(why),
+                            ),
+                            budget,
+                        )?;
                     } else {
+                        reason.get_or_insert(
+                            failure(definition)
+                                .map_or("An affordance is not a JSON map.", |failure| {
+                                    failure.reason
+                                }),
+                        );
                         complete = false;
                     }
                     continue;
@@ -383,14 +435,27 @@ fn affordances<'m>(
                     let Some(description) = description else {
                         continue;
                     };
-                    let usable = failure(description).is_none()
-                        && description_root(description).is_ok_and(|(root, _)| root == kind);
-                    let selected = (kind, pointer.clone(), usable.then_some(description));
+                    let selected_description = if let Some(failure) = failure(description) {
+                        crate::Field::Unavailable(failure.reason)
+                    } else {
+                        match description_root(description) {
+                            Ok((root, _)) if root == kind => crate::Field::Present(description),
+                            Ok(_) => crate::Field::Unavailable(
+                                "The selected description has the wrong kind.",
+                            ),
+                            Err(reason) => crate::Field::Unavailable(reason),
+                        }
+                    };
+                    let selected = (kind, pointer.clone(), selected_description);
                     kept(found, selected, budget)?;
                 }
             }
             Task::Grouping(grouping, prefix) => {
                 if failure(grouping).is_some() || grouping.kind() != JsonKind::Map {
+                    reason.get_or_insert(
+                        failure(grouping)
+                            .map_or("A grouping is not a JSON map.", |failure| failure.reason),
+                    );
                     complete = false;
                     continue;
                 }
@@ -404,6 +469,12 @@ fn affordances<'m>(
                         continue;
                     };
                     if failure(collection).is_some() || collection.kind() != JsonKind::Map {
+                        reason.get_or_insert(
+                            failure(collection)
+                                .map_or("A definition collection is not a JSON map.", |failure| {
+                                    failure.reason
+                                }),
+                        );
                         complete = false;
                         continue;
                     }
@@ -447,7 +518,7 @@ fn pointer(prefix: &str, keyword: &str, name: &str) -> String {
 fn settle(
     kind: SampleKind,
     pointer: String,
-    json: Option<EffectiveJson<'_>>,
+    selected: crate::Field<EffectiveJson<'_>>,
     result: &mut GenerationResult<'_>,
 ) -> Option<Description> {
     let overhead = report::description_bytes(result.scope.document(), kind, &pointer);
@@ -456,12 +527,20 @@ fn settle(
         return None;
     }
     result.room -= overhead;
+    let json = selected.present();
     let Some(json) = json.filter(|json| failure(*json).is_none() && json.kind() == JsonKind::Map)
     else {
         return Some(Description {
             kind,
             pointer,
             state: GenerationState::Unavailable,
+            reason: Some(match selected {
+                crate::Field::Unavailable(reason) => reason,
+                _ => json.and_then(failure).map_or(
+                    "The selected description is not an available JSON map.",
+                    |failure| failure.reason,
+                ),
+            }),
             choice_evidence: choice::Collection::new(None, &result.catalogue.limits).finish(),
             values: Vec::new(),
             omitted: 0,
@@ -498,11 +577,27 @@ fn settle(
         } else {
             GenerationState::Partial
         },
+        reason: generated.reason.or({
+            if generated.omitted > 0 {
+                Some("The request reached its ceiling of 64 distinct values for this description.")
+            } else if generated.oversized > 0 {
+                Some("Some values did not fit the report or recorded-trace line limit.")
+            } else {
+                None
+            }
+        }),
         choice_evidence: choices.finish(),
         values: generated.values,
         omitted: generated.omitted,
         oversized: generated.oversized,
     })
+}
+
+fn limit_reason(error: Exhausted) -> &'static str {
+    match error {
+        Exhausted::Work => "Generation reached its work allowance.",
+        Exhausted::Allocation => "Generation reached its allocation allowance.",
+    }
 }
 
 /// Reference examples reuse settlement without recomposing each selected description.
@@ -526,6 +621,7 @@ impl<'a> ReferenceExamples<'a> {
                 unpresented: 0,
                 room: catalogue.limits.report_bytes,
                 selection_complete: true,
+                selection_reason: None,
                 scope: SelectedScope::new(document),
             },
             searched: 0,
@@ -547,7 +643,7 @@ impl<'a> ReferenceExamples<'a> {
         // Candidate retention is transient for one description. Presentation of the selected
         // example is charged independently by the reference renderer.
         self.result.room = self.result.catalogue.limits.report_bytes;
-        let description = settle(kind, pointer, Some(json), &mut self.result);
+        let description = settle(kind, pointer, crate::Field::Present(json), &mut self.result);
         let value = description.as_ref().and_then(|description| {
             description
                 .values

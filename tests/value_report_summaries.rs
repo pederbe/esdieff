@@ -25,7 +25,7 @@ impl Files {
     fn write(&self, name: &str, text: &str) {
         fs::write(self.0.join(name), text).unwrap();
     }
-    fn run(&self, args: &[&str], json: bool) -> Output {
+    fn invoke(&self, args: &[&str], json: bool) -> Output {
         let mut command = Command::new(env!("CARGO_BIN_EXE_esdieff"));
         command
             .current_dir(&self.0)
@@ -34,7 +34,10 @@ impl Files {
         if json {
             command.args(["--format", "json"]);
         }
-        let output = command.output().unwrap();
+        command.output().unwrap()
+    }
+    fn run(&self, args: &[&str], json: bool) -> Output {
+        let output = self.invoke(args, json);
         assert!(
             output.stderr.is_empty(),
             "{}",
@@ -233,4 +236,308 @@ fn summary_labels_escape_controls_and_fall_back_to_source_keys() {
     assert!(text.contains("Model: \"model-key\" (source 1)"));
     assert!(text.contains("Sample input: \"value\\n\\u001b[31m.json\" (source 2)"));
     assert!(!text.contains('\u{1b}'));
+}
+
+#[test]
+fn check_and_inspect_lead_with_findings_or_requested_content() {
+    let files = Files::new();
+    files.write(
+        "warning.json",
+        r#"{"sdfProperty":{"p":{"type":"integer"}}}"#,
+    );
+    let output = files.run(&["check", "--strict-warnings", "warning.json"], false);
+    assert_eq!(output.status.code(), Some(1));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        text.contains("Warnings caused this run to fail because --strict-warnings is enabled.")
+    );
+    assert!(text.find("warning metadata.info_absent:").unwrap() < text.find("Details:\n").unwrap());
+    assert!(text.contains("Input: \"warning.json\""));
+    let output = files.run(
+        &[
+            "inspect",
+            "--document",
+            "model.sdf.json",
+            "--pointer",
+            "/sdfProperty/p",
+            "model.sdf.json",
+        ],
+        false,
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(
+        text.find("Inspection source at").unwrap() < text.find("Requested assessment:").unwrap()
+    );
+    assert!(text.contains("\"maximum\":10"));
+}
+
+#[test]
+fn plans_put_outcomes_before_details_and_keep_request_errors_readable() {
+    let files = Files::new();
+    files.write("value.json", "11");
+    let plan = serde_json::json!({
+        "schema":"esdieff.check-plan", "version":"1",
+        "sources":[{"key":"m","path":"model.sdf.json","role":"model"},{"key":"v","path":"value.json","role":"sample"}],
+        "cases":[
+            {"name":"bad selection","operation":"sample","document":"m","kind":"property","pointer":"/sdfProperty/missing","sample":"v"},
+            {"name":"late rejection","operation":"sample","document":"m","kind":"property","pointer":"/sdfProperty/p","sample":"v"}
+        ]
+    });
+    files.write("plan.json", &plan.to_string());
+    let output = files.run(&["check", "--plan", "plan.json"], false);
+    assert_eq!(output.status.code(), Some(2));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.starts_with("Esdieff check run: invalid\n"));
+    assert!(text.contains("Cases: 0 passed, 1 failed, 0 undetermined, 1 invalid requests"));
+    assert!(
+        text.find("\"late rejection\" [sample]: failed").unwrap()
+            < text.find("Details:\n").unwrap()
+    );
+    assert!(text.contains("Plan location: /cases/0"));
+    assert!(text.contains("Selection: property"));
+    assert!(!text.contains("Scope/profile/selector: {"));
+    assert!(!text.contains("Case request error: {"));
+    let wire: Value =
+        serde_json::from_slice(&files.run(&["check", "--plan", "plan.json"], true).stdout).unwrap();
+    assert_eq!(wire["summary"]["failed"], 1);
+    assert_eq!(wire["summary"]["request_errors"], 1);
+}
+
+#[test]
+fn delivery_reports_distinguish_written_and_withheld_documents() {
+    let files = Files::new();
+    files.write("edit.json", r#"{"key":"test","source":"model","generated_key":"changed","edits":[{"owner":"/sdfProperty/p","quality":"maximum","operation":"replace","value":"bad"}]}"#);
+    files.write("result.json", "previous document");
+    let args = [
+        "edit",
+        "--plan",
+        "edit.json",
+        "--source",
+        "model",
+        "model.sdf.json",
+        "--document-output",
+        "result.json",
+        "--replace-document",
+        "--check",
+        "full-baseline",
+    ];
+    let output = files.run(&args, false);
+    assert_eq!(output.status.code(), Some(1));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.starts_with("Document not written: \"result.json\"\n"));
+    assert!(text.contains("Reason: The requested checks did not pass."));
+    assert!(text.contains("Fidelity: established"));
+    assert!(text.contains("error data.number:"));
+    assert!(text.contains("edit request \"test\" at \"/edits/0/value\""));
+    assert_eq!(
+        fs::read_to_string(files.0.join("result.json")).unwrap(),
+        "previous document"
+    );
+    let output = files.run(&args[..args.len() - 2], false);
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.starts_with("Document written: \"result.json\"\n"));
+    assert!(text.contains("Checking: not requested"));
+    assert!(
+        serde_json::from_slice::<Value>(&fs::read(files.0.join("result.json")).unwrap()).is_ok()
+    );
+}
+
+#[test]
+fn author_findings_keep_original_and_generated_locations() {
+    let files = Files::new();
+    files.write("base.json", r#"{"info":{},"namespace":{"b":"https://example.test/b"},"defaultNamespace":"b","sdfObject":{"Sensor":{"sdfProperty":{"p":{"type":"integer","maxLength":18446744073709551616}}}}}"#);
+    files.write("recipe.json", r#"{"key":"r","generated_key":"product","thing_name":"Product","namespace":{"b":"https://example.test/b","p":"https://example.test/p"},"default_namespace":"p","objects":[{"name":"sensor","source":"base","pointer":"/sdfObject/Sensor","prefix":"b","required":false,"refinement":{}}]}"#);
+    let args = [
+        "author",
+        "--plan",
+        "recipe.json",
+        "--source",
+        "base",
+        "base.json",
+        "--document-output",
+        "product.json",
+        "--check",
+        "full-baseline",
+    ];
+    let output = files.run(&args, false);
+    assert_eq!(output.status.code(), Some(1));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.starts_with("Document not written: \"product.json\""));
+    assert!(text.contains("Input: \"base.json\" (source 1)"));
+    assert!(
+        text.contains("effective 2 \"/sdfThing/Product/sdfObject/sensor/sdfProperty/p/maxLength\"")
+    );
+    assert!(text.contains("source 1 \"/sdfObject/Sensor/sdfProperty/p/maxLength\" bytes "));
+    assert!(text.find("error formal.uint:").unwrap() < text.find("Details:\n").unwrap());
+    assert!(!files.0.join("product.json").exists());
+}
+
+#[test]
+fn generation_and_trace_explain_retained_incomplete_reasons() {
+    let files = Files::new();
+    files.write("model.sdf.json", r#"{"info":{},"namespace":{"t":"https://example.test/missing"},"sdfProperty":{"p":{"sdfRef":"t:#/sdfData/T"}}}"#);
+    let args = ["generate", "--document", "model.sdf.json", "model.sdf.json"];
+    let output = files.run(&args, false);
+    assert_eq!(output.status.code(), Some(3));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("Reason: supplied global target unavailable"));
+    let wire: Value = serde_json::from_slice(&files.run(&args, true).stdout).unwrap();
+    assert_eq!(
+        wire["result"]["descriptions"][0]["reasons"]["items"][0]["message"],
+        "supplied global target unavailable"
+    );
+    assert_eq!(wire["result"]["descriptions"][0]["reasons"]["omitted"], 0);
+    let output = files.trace(
+        "{\"kind\":\"property\",\"pointer\":\"/sdfProperty/p\",\"value\":1}\n",
+        false,
+        &[],
+    );
+    assert_eq!(output.status.code(), Some(3));
+    assert!(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .contains("Reason: supplied global target unavailable")
+    );
+
+    files.write(
+        "model.sdf.json",
+        r#"{"info":{},"sdfProperty":{"p":{"type":"string","nullable":false,"pattern":"["}}}"#,
+    );
+    let wire: Value = serde_json::from_slice(&files.run(&args, true).stdout).unwrap();
+    let description = &wire["result"]["descriptions"][0];
+    assert!(
+        description["reasons"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["value_index"].is_number())
+    );
+    for value in description["values"].as_array().unwrap() {
+        if value["admission"] == "undetermined" {
+            assert!(value["codes"].as_array().unwrap().is_empty());
+        }
+    }
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied(
+        "m",
+        br#"{"info":{},"sdfProperty":{"p":{"type":"string","pattern":"["}}}"#,
+    )])
+    .unwrap();
+    let result = catalogue
+        .generate(esdieff::GenerationRequest::new(
+            catalogue.source_id("m").unwrap(),
+        ))
+        .unwrap();
+    assert!(
+        result
+            .descriptions()
+            .flat_map(|description| description.values())
+            .any(|value| value.reason().is_some())
+    );
+}
+
+#[test]
+fn empty_selection_and_comparison_scope_are_explicit() {
+    let files = Files::new();
+    files.write("context.json", r#"{"info":{},"sdfObject":{"S":{"sdfContext":{"site":{"type":"string","nullable":false}}}}}"#);
+    let output = files.run(
+        &["generate", "--document", "context.json", "context.json"],
+        false,
+    );
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("No eligible value descriptions were found."));
+    assert!(text.contains("Context needs --kind context and --pointer."));
+    let output = files.run(
+        &["diff", "--old", "model.sdf.json", "--new", "model.sdf.json"],
+        false,
+    );
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("Earlier input: \"model.sdf.json\""));
+    assert!(text.contains("Later input: \"model.sdf.json\""));
+    assert!(text.contains("Standalone top-level affordances and data are excluded."));
+}
+
+#[test]
+fn selection_errors_and_schema_refusals_identify_the_requested_input() {
+    let files = Files::new();
+    for command in ["inspect", "reference", "schema"] {
+        let mut args = vec![
+            command,
+            "--document",
+            "model.sdf.json",
+            "--pointer",
+            "/sdfProperty/missing",
+            "model.sdf.json",
+        ];
+        if command == "schema" {
+            args.extend(["--kind", "property"]);
+        }
+        let output = files.invoke(&args, false);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        let text = String::from_utf8(output.stderr).unwrap();
+        assert!(text.contains("selection in \"model.sdf.json\" at \"/sdfProperty/missing\""));
+    }
+    let output = files.run(
+        &[
+            "schema",
+            "--document",
+            "missing.json",
+            "--kind",
+            "property",
+            "--pointer",
+            "/sdfProperty/p",
+            "missing.json",
+        ],
+        false,
+    );
+    assert_eq!(output.status.code(), Some(3));
+    let wire: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(wire["reason"], "selected input could not be read");
+    assert!(wire["schema"].is_null());
+}
+
+#[test]
+fn comparison_pointers_and_generated_nested_targets_escape_controls() {
+    let files = Files::new();
+    let name = "p\n\u{1b}[31m";
+    for (file, maximum) in [("old.json", 10), ("new.json", 2)] {
+        let model = serde_json::json!({"info":{},"sdfObject":{"S":{"sdfProperty":{name:{"type":"integer","nullable":false,"maximum":maximum}}}}});
+        files.write(file, &model.to_string());
+    }
+    let output = files.run(&["diff", "--old", "old.json", "--new", "new.json"], false);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(!output.stdout.contains(&0x1b));
+    assert!(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .contains(r"\n\u001b[31m")
+    );
+    let model = serde_json::json!({"info":{},"sdfProperty":{"p":{"type":"object","properties":{name:{"type":"integer","minimum":1,"maximum":10}},"required":[name]}}});
+    files.write("model.sdf.json", &model.to_string());
+    let output = files.run(
+        &["generate", "--document", "model.sdf.json", "model.sdf.json"],
+        false,
+    );
+    assert!(!output.stdout.contains(&0x1b));
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains(r"\n\u001b[31m.minimum"));
+    let output = files.run(
+        &[
+            "reference",
+            "--uses",
+            "--document",
+            "model.sdf.json",
+            "--pointer",
+            "/sdfProperty/p",
+            "model.sdf.json",
+        ],
+        false,
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("[location 1](#source-1)"));
+    assert!(text.contains("<a id=\"source-1\"></a>"));
+    assert!(text.contains("Selected model: model\\.sdf\\.json"));
 }
