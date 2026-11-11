@@ -4,7 +4,7 @@
 use super::coverage_support;
 use esdieff::{
     Admission, Assessment, AssessmentStatus, Catalogue, CheckRequest, Field, InspectRequest,
-    Limits, RecordedRegistryPolicy, SampleKind, SampleRequest, SourceInput, View,
+    Limits, SampleKind, SampleRequest, SourceInput, View,
 };
 use serde_json::Value;
 
@@ -13,63 +13,47 @@ const MODEL: &[u8] = br#"{"info":{},"sdfObject":{"O":{"sdfRequired":["p"],"sdfPr
 #[test]
 fn all_four_advisory_classes_and_units_keep_their_own_basis_and_coverage() {
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", MODEL)]).unwrap();
-    for policy in [
-        RecordedRegistryPolicy::UseRecorded,
-        RecordedRegistryPolicy::WithholdRecorded,
+
+    let report = catalogue
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+        .unwrap();
+    assert_eq!(report.outcome().errors(), 1);
+    assert_eq!(report.outcome().warnings(), 4);
+    assert_eq!(
+        report.producer_status("advisory-four/1").require().unwrap(),
+        AssessmentStatus::Assessed
+    );
+    assert_eq!(report.requested_coverage().total(), Some(13));
+    assert_eq!(report.requested_coverage().unassessed(), 0);
+    let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+    for code in [
+        "proof.empty_numeric_interval",
+        "proof.inverted_text_lengths",
+        "proof.inverted_array_counts",
+        "proof.primitive_const_type",
     ] {
-        let report = catalogue
-            .check(
-                CheckRequest::new()
-                    .assessment(Assessment::ExpandedUnits)
-                    .recorded_registry_policy(policy),
-            )
-            .unwrap();
-        assert_eq!(report.outcome().errors(), 1);
-        assert_eq!(report.outcome().warnings(), 4);
-        assert_eq!(
-            report
-                .assessment_area_status("advisory-four/1")
-                .require()
-                .unwrap(),
-            AssessmentStatus::Assessed
-        );
-        assert_eq!(report.requested_coverage().total(), Some(10));
-        assert_eq!(report.requested_coverage().unassessed(), 0);
-        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        for code in [
-            "proof.empty_numeric_interval",
-            "proof.inverted_text_lengths",
-            "proof.inverted_array_counts",
-            "proof.primitive_const_type",
-        ] {
-            let condition = wire["diagnostics"]["items"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .find(|item| item["code"] == code)
-                .unwrap();
-            assert_eq!(condition["basis"]["kind"], "advice");
-            assert!(condition["basis"]["citation"].is_string());
-            assert_eq!(condition["assessment_unit"], "advisory-four/1");
-        }
-        let forbidden = wire["diagnostics"]["items"]
+        let condition = wire["diagnostics"]["items"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|item| item["code"] == "unit.urn_forbidden")
+            .find(|item| item["code"] == code)
             .unwrap();
-        assert_eq!(forbidden["basis"]["kind"], "rfc");
-        assert_eq!(forbidden["arguments"]["replacement"], "Cel");
-        assert!(report.to_human().contains("proof.empty_numeric_interval"));
-        let guidance = report.unit_guidance().require().unwrap();
-        if policy == RecordedRegistryPolicy::UseRecorded {
-            assert_eq!(guidance.known_primary(), 2);
-            coverage_support::assert_requested_counts(&report);
-        } else {
-            assert_eq!(guidance.unavailable(), 2);
-            coverage_support::assert_requested_counts(&report);
-        }
+        assert_eq!(condition["basis"]["kind"], "advice");
+        assert!(condition["basis"]["citation"].is_string());
+        assert_eq!(condition["assessment_unit"], "advisory-four/1");
     }
+    let forbidden = wire["diagnostics"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["code"] == "unit.urn_forbidden")
+        .unwrap();
+    assert_eq!(forbidden["basis"]["kind"], "rfc");
+    assert_eq!(forbidden["arguments"]["replacement"], "Cel");
+    assert!(report.to_human().contains("proof.empty_numeric_interval"));
+    let guidance = report.unit_guidance().require().unwrap();
+    assert_eq!(guidance.known_primary(), 2);
+    coverage_support::assert_requested_counts(&report);
 }
 
 #[test]
@@ -81,16 +65,13 @@ fn numeric_residual_exhaustion_keeps_unit_errors_and_omits_optional_citation() {
     )
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert_eq!(report.outcome().warnings(), 0);
     assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 1);
     assert_eq!(
-        report
-            .assessment_area_status("advisory-four/1")
-            .require()
-            .unwrap(),
+        report.producer_status("advisory-four/1").require().unwrap(),
         AssessmentStatus::Undetermined
     );
     let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -122,7 +103,7 @@ fn required_inspection_and_exact_sample_admission_stay_separate_from_unit_checki
     let checked = catalogue
         .check(
             CheckRequest::new()
-                .assessment(Assessment::ExpandedUnits)
+                .assessment(Assessment::FullBaseline)
                 .root(model),
         )
         .unwrap();
@@ -171,7 +152,7 @@ fn optional_detail_omission_preserves_joint_aggregates_and_registry_observation(
     )
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(
         (report.outcome().errors(), report.outcome().warnings()),
@@ -199,7 +180,7 @@ fn unit_basis_omits_absent_citations_and_keeps_present_citations_as_strings() {
     let bytes = br#"{"info":{},"sdfData":{"marker":{"unit":"urn:ietf:Params:unit:kg"},"empty":{"unit":"urn:ietf:params:unit:"},"unknown":{"unit":"not-recorded-here"},"forbidden":{"unit":"urn:ietf:params:unit:kg"}}}"#;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
     for (code, citation) in [
@@ -231,7 +212,7 @@ fn unit_basis_omits_absent_citations_and_keeps_present_citations_as_strings() {
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
         if let Some(condition) = wire["diagnostics"]["items"]

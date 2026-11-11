@@ -365,7 +365,6 @@ fn numeric_limit_witnesses_identify_pairs_without_multiplying_incomplete_units()
     .unwrap();
     for assessment in [
         esdieff::Assessment::Initial,
-        esdieff::Assessment::ExpandedModified,
         esdieff::Assessment::FullBaseline,
     ] {
         let report = catalogue

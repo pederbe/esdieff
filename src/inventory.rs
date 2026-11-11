@@ -298,7 +298,7 @@ pub(crate) static DESCRIPTORS: [Descriptor; 54] = [
         id: "rfc9880.model.M023/1",
         citations: "RFC 9880 4.7 note1;7.3-7.4",
         area: "full.special-type-unit/1",
-        plan: "Check unit spelling and recorded registry guidance under the selected knowledge policy.",
+        plan: "Check unit spelling and recorded registry guidance using bundled evidence.",
     },
     Descriptor {
         id: "rfc9880.model.M024/1",

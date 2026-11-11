@@ -128,9 +128,9 @@ fn scalar_parameter_check_reports_the_same_error_paths_totals_and_coverage_in_bo
 }
 
 #[test]
-fn expanded_date_and_scalar_check_keeps_matching_cli_errors_and_native_coverage() {
+fn full_date_and_scalar_check_keeps_matching_cli_errors_and_native_coverage() {
     let text = br#"{"info":{"modified":"1900-02-29"},"sdfProperty":{"value":{"multipleOf":0}}}"#;
-    let args = ["check", "--assessment", "expanded-modified-v1", "--format"];
+    let args = ["check", "--assessment", "full-baseline", "--format"];
     let json = run(&[args[0], args[1], args[2], args[3], "json", "-"], text);
     assert_eq!(json.status.code(), Some(1));
     assert!(json.stderr.is_empty());
@@ -139,9 +139,9 @@ fn expanded_date_and_scalar_check_keeps_matching_cli_errors_and_native_coverage(
     assert_eq!(wire["outcome"]["complete"], true);
     assert_eq!(
         wire["coverage"]["requested"]["inventory"],
-        "esdieff.expanded.modified/1"
+        "esdieff.full-model/1"
     );
-    assert_eq!(wire["coverage"]["requested"]["total"], 9);
+    assert_eq!(wire["coverage"]["requested"]["total"], 13);
     coverage_support::assert_wire_counts(&wire);
     assert_eq!(wire["coverage"]["requested"]["unassessed"], 0);
     for (code, pointer) in [
@@ -166,6 +166,6 @@ fn expanded_date_and_scalar_check_keeps_matching_cli_errors_and_native_coverage(
     assert!(
         human.contains("metadata.modified_calendar") && human.contains("parameter.positive_step")
     );
-    assert!(human.contains("esdieff.expanded.modified/1"));
-    assert!(human.contains("Assessment area modified-date-time/1: assessed"));
+    assert!(human.contains("rfc9880/base-1"));
+    assert!(human.contains("Requested inventory: esdieff.full-model/1"));
 }

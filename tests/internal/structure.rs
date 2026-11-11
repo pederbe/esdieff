@@ -796,7 +796,7 @@ fn bounded_structure_work_retains_independent_findings_and_complete_source_inspe
     for report in [
         report,
         catalogue
-            .check(CheckRequest::new().assessment(esdieff::Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(esdieff::Assessment::FullBaseline))
             .unwrap(),
     ] {
         let diagnostics = report.diagnostics();

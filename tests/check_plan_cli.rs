@@ -808,10 +808,6 @@ fn every_profile_strict_policy_and_case_order_agree_with_direct_checks() {
     let model = files.write("device.json", b"{}");
     let profiles = [
         "initial-v1",
-        "expanded-modified-v1",
-        "expanded-units-v1",
-        "expanded-content-format-v1",
-        "expanded-pattern-syntax-v1",
         "expanded-numeric-v1",
         "expanded-consistency-v1",
         "full-baseline",
@@ -832,10 +828,10 @@ fn every_profile_strict_policy_and_case_order_agree_with_direct_checks() {
         assert_native_report(&result["cases"][index]["report"], &native, profile);
         assert_eq!(result["cases"][index]["outcome"], native["outcome"]);
     }
-    assert_eq!(result["cases"][8]["outcome"]["disposition"], "failed");
-    assert_eq!(result["cases"][8]["outcome"]["complete"], true);
-    assert_eq!(result["cases"][9]["outcome"]["disposition"], "passed");
-    assert_eq!(result["summary"]["total"], 10);
+    assert_eq!(result["cases"][4]["outcome"]["disposition"], "failed");
+    assert_eq!(result["cases"][4]["outcome"]["complete"], true);
+    assert_eq!(result["cases"][5]["outcome"]["disposition"], "passed");
+    assert_eq!(result["summary"]["total"], 6);
     assert_eq!(result["summary"]["failed"], 1);
     assert_eq!(result["summary"]["request_errors"], 0);
     assert_eq!(result["summary"]["admitted"], 0);
@@ -1035,7 +1031,6 @@ fn plan_mode_rejects_direct_inputs_and_overrides_in_either_order() {
         vec!["device.json"],
         vec!["--strict-warnings"],
         vec!["--assessment", "initial-v1"],
-        vec!["--registry-knowledge", "recorded"],
         vec!["--root", "device.json"],
     ] {
         let output = run(&plan, &flags);

@@ -909,7 +909,7 @@ impl<'a> Structure<'a> {
                 scope.unknown = true;
             }
         }
-        let expanded = enabled.modified;
+        let expanded = enabled.full;
         for id in scope {
             let source = catalogue.source(*id).expect("validated source");
             let envelope = if source.complete

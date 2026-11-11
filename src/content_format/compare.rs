@@ -5,11 +5,11 @@
 //! A declaration's meaning is its media type and subtype without ASCII case, its parameter
 //! meaning under the supported media rules, and its codings in order. A numeric identifier
 //! means its complete recorded CoAP tuple, read through the same media rules where they
-//! apply. Only numeric identifiers and codings consult recorded evidence, under the request's
-//! recorded registry policy. Classification, media rules and compared rows cost what they
+//! apply. Numeric identifiers and codings consult the bundled recorded evidence.
+//! Classification, media rules and compared rows cost what they
 //! cost in model checking, and the final comparison is charged too, all on the operation
 //! allowance.
-use super::lookup::{self, CODINGS, DEPRECATED, NUMERIC, Names};
+use super::lookup::{self, DEPRECATED, Names};
 use super::{grammar, meaning, table};
 use crate::allowance::charge;
 use crate::registry::{CONTENT_FORMAT_MEANING, State};
@@ -19,8 +19,6 @@ use crate::registry::{CONTENT_FORMAT_MEANING, State};
 pub(crate) enum Unsettled {
     /// A declaration has no established meaning.
     Unestablished,
-    /// The request withholds the recorded evidence a declaration needs.
-    Withheld,
     /// The operation allowance ran out.
     Limited,
 }
@@ -198,10 +196,6 @@ fn numeric(
     registry: &mut State,
     work: &mut usize,
 ) -> Result<Option<table::Numeric>, Unsettled> {
-    if registry.policy == crate::RecordedRegistryPolicy::WithholdRecorded {
-        registry.withheld |= NUMERIC;
-        return Err(Unsettled::Withheld);
-    }
     lookup::numeric(number, bytes, registry, work).map_err(|()| Unsettled::Limited)
 }
 
@@ -212,9 +206,5 @@ fn coding_flags(
     registry: &mut State,
     work: &mut usize,
 ) -> Result<Option<u8>, Unsettled> {
-    if registry.policy == crate::RecordedRegistryPolicy::WithholdRecorded {
-        registry.withheld |= CODINGS;
-        return Err(Unsettled::Withheld);
-    }
     lookup::named(coding, Names::Codings, registry, work).map_err(|()| Unsettled::Limited)
 }

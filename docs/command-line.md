@@ -30,7 +30,7 @@ Run `esdieff --help` for the same synopses in your terminal, and
 ## check
 
 ```text
-esdieff check [--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--registry-knowledge recorded|withheld] [--strict-warnings] [--format human|json|sarif] [INPUT...]
+esdieff check [--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--strict-warnings] [--format human|json|sarif] [INPUT...]
 esdieff check --plan PLAN [--format human|json]
 ```
 
@@ -45,7 +45,6 @@ required. `INPUT` is a file path, or `-` for one document on standard input.
 | `--directory DIR` | Select the regular files directly in `DIR` whose names end in `.sdf.json`. Repeat it for several directories. |
 | `--recursive` | Descend into the subdirectories of every supplied directory, including hidden entries. |
 | `--exclude RELATIVE_PATH` | Leave out a literal file or subtree, relative to each directory. Repeat it for several paths. |
-| `--registry-knowledge recorded\|withheld` | Use or withhold the recorded registry snapshots. An explicit value needs an expanded unit or content-format assessment, or `full-baseline`. |
 | `--format human\|json\|sarif` | Choose the report format. |
 | `--plan PLAN` | Run the cases of a [check plan](check-plans.md) instead of a direct check. |
 

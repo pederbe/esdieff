@@ -1,8 +1,8 @@
 //! Public component attribution, bounded work and independent query evidence.
 //! Follows ADR 0027: Unit names and recorded registry guidance.
 use esdieff::{
-    Assessment, AssessmentStatus, BasisKind, Catalogue, CheckRequest, Field, Limits,
-    RecordedRegistryPolicy, Severity, SourceInput,
+    Assessment, AssessmentStatus, BasisKind, Catalogue, CheckRequest, Field, Limits, Severity,
+    SourceInput,
 };
 use serde_json::Value;
 
@@ -122,140 +122,118 @@ fn component_attribution_preserves_index_rule_and_qualified_delimiter_advice() {
             true,
         ),
     ] {
-        for policy in [
-            RecordedRegistryPolicy::UseRecorded,
-            RecordedRegistryPolicy::WithholdRecorded,
-        ] {
-            let source = serde_json::json!({"info":{},"sdfData":{"A":{"unit":unit}}}).to_string();
-            let catalogue =
-                Catalogue::from_inputs(&[SourceInput::supplied("fixture", source.as_bytes())])
-                    .unwrap();
-            let report = catalogue
-                .check(
-                    CheckRequest::new()
-                        .assessment(Assessment::ExpandedUnits)
-                        .recorded_registry_policy(policy),
-                )
-                .unwrap();
-            let withheld = policy == RecordedRegistryPolicy::WithholdRecorded;
-            assert_eq!(
-                report.outcome().errors(),
-                u32::from(severity == Severity::Error),
-                "{unit}"
-            );
-            assert_eq!(
-                report.outcome().notices(),
-                u32::from(severity == Severity::Notice),
-                "{unit}"
-            );
-            let units = report.unit_guidance().require().unwrap();
-            assert_eq!(
-                (
-                    units.known_primary(),
-                    units.known_secondary(),
-                    units.unknown(),
-                    units.unavailable(),
-                    units.legacy(),
-                    units.uri_names()
-                ),
-                (
-                    u32::from(queried && !withheld),
-                    0,
-                    0,
-                    u32::from(queried && withheld),
-                    0,
-                    1
-                ),
-                "{unit}"
-            );
-            assert_eq!(units.complete(), !queried || !withheld, "{unit}");
-            assert!(matches!(
-                report.assessment_area_status("unit-spelling/1"),
-                Field::Present(AssessmentStatus::Assessed)
-            ));
+        let source = serde_json::json!({"info":{},"sdfData":{"A":{"unit":unit}}}).to_string();
+        let catalogue =
+            Catalogue::from_inputs(&[SourceInput::supplied("fixture", source.as_bytes())]).unwrap();
+        let report = catalogue
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+            .unwrap();
+        assert_eq!(
+            report.outcome().errors(),
+            u32::from(severity == Severity::Error),
+            "{unit}"
+        );
+        assert_eq!(
+            report.outcome().notices(),
+            u32::from(severity == Severity::Notice),
+            "{unit}"
+        );
+        let units = report.unit_guidance().require().unwrap();
+        assert_eq!(
+            (
+                units.known_primary(),
+                units.known_secondary(),
+                units.unknown(),
+                units.unavailable(),
+                units.legacy(),
+                units.uri_names()
+            ),
+            (u32::from(queried), 0, 0, 0, 0, 1),
+            "{unit}"
+        );
+        assert!(units.complete(), "{unit}");
+        assert!(matches!(
+            report.producer_status("unit-spelling/1"),
+            Field::Present(AssessmentStatus::Assessed)
+        ));
+        assert_eq!(
+            report
+                .producer_status("unit-registry-guidance/1")
+                .require()
+                .unwrap(),
+            AssessmentStatus::Assessed
+        );
+        let diagnostics = report.diagnostics();
+        let condition = diagnostics
+            .conditions()
+            .find(|row| row.code() == code)
+            .unwrap_or_else(|| panic!("missing {code} for {unit}"));
+        assert_eq!(condition.severity(), severity);
+        assert_eq!(condition.assessment_unit(), Some("unit-spelling/1"));
+        assert_eq!(condition.basis().citation(), Some(citation));
+        assert_eq!(
+            condition.basis().kind(),
+            if severity == Severity::Notice {
+                BasisKind::Advice
+            } else {
+                BasisKind::Rfc
+            }
+        );
+        assert_eq!(
+            condition.basis().id(),
+            (severity == Severity::Notice).then_some(code)
+        );
+        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+        let row = wire["diagnostics"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["code"] == code)
+            .unwrap();
+        assert_eq!(row["primary"]["kind"], "effective");
+        assert_eq!(row["primary"]["root"], 1);
+        assert_eq!(row["primary"]["pointer"], "/sdfData/A/unit");
+        assert_eq!(row["related"][0]["kind"], "source");
+        assert_eq!(row["related"][0]["source_id"], 1);
+        assert_eq!(row["related"][0]["pointer"], "/sdfData/A/unit");
+        let token = serde_json::to_string(unit).unwrap();
+        let start = source.find(&token).unwrap();
+        assert_eq!(
+            row["related"][0]["span"],
+            serde_json::json!([start, start + token.len()])
+        );
+        assert_eq!(
+            catalogue.sources().next().unwrap().raw_bytes(),
+            source.as_bytes()
+        );
+        assert!(report.to_human().contains(code));
+        assert!(matches!(
+            report.registry_knowledge("iana.secondary-units"),
+            Field::Absent
+        ));
+        if queried {
+            assert_eq!(row["arguments"]["replacement"], "kg");
             assert_eq!(
                 report
-                    .assessment_area_status("unit-registry-guidance/1")
+                    .registry_knowledge("iana.senml-units")
                     .require()
-                    .unwrap(),
-                if queried && withheld {
-                    AssessmentStatus::Undetermined
-                } else {
-                    AssessmentStatus::Assessed
-                }
+                    .unwrap()
+                    .state(),
+                "available"
             );
-            let diagnostics = report.diagnostics();
-            let condition = diagnostics
-                .conditions()
-                .find(|row| row.code() == code)
-                .unwrap_or_else(|| panic!("missing {code} for {unit}"));
-            assert_eq!(condition.severity(), severity);
-            assert_eq!(condition.assessment_unit(), Some("unit-spelling/1"));
-            assert_eq!(condition.basis().citation(), Some(citation));
-            assert_eq!(
-                condition.basis().kind(),
-                if severity == Severity::Notice {
-                    BasisKind::Advice
-                } else {
-                    BasisKind::Rfc
-                }
-            );
-            assert_eq!(
-                condition.basis().id(),
-                (severity == Severity::Notice).then_some(code)
-            );
-            let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-            let row = wire["diagnostics"]["items"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .find(|row| row["code"] == code)
-                .unwrap();
-            assert_eq!(row["primary"]["kind"], "effective");
-            assert_eq!(row["primary"]["root"], 1);
-            assert_eq!(row["primary"]["pointer"], "/sdfData/A/unit");
-            assert_eq!(row["related"][0]["kind"], "source");
-            assert_eq!(row["related"][0]["source_id"], 1);
-            assert_eq!(row["related"][0]["pointer"], "/sdfData/A/unit");
-            let token = serde_json::to_string(unit).unwrap();
-            let start = source.find(&token).unwrap();
-            assert_eq!(
-                row["related"][0]["span"],
-                serde_json::json!([start, start + token.len()])
-            );
-            assert_eq!(
-                catalogue.sources().next().unwrap().raw_bytes(),
-                source.as_bytes()
-            );
-            assert!(report.to_human().contains(code));
+        } else {
+            assert!(row["arguments"].get("replacement").is_none());
             assert!(matches!(
-                report.registry_knowledge("iana.secondary-units"),
+                report.registry_knowledge("iana.senml-units"),
                 Field::Absent
             ));
-            if queried {
-                assert_eq!(row["arguments"]["replacement"], "kg");
-                assert_eq!(
-                    report
-                        .registry_knowledge("iana.senml-units")
-                        .require()
-                        .unwrap()
-                        .state(),
-                    if withheld { "unavailable" } else { "available" }
-                );
-            } else {
-                assert!(row["arguments"].get("replacement").is_none());
-                assert!(matches!(
-                    report.registry_knowledge("iana.senml-units"),
-                    Field::Absent
-                ));
-                assert!(matches!(units.source_edition(), Field::Absent));
-                assert!(
-                    wire["baseline"]["registry_knowledge"]
-                        .as_array()
-                        .unwrap()
-                        .is_empty()
-                );
-            }
+            assert!(matches!(units.source_edition(), Field::Absent));
+            assert!(
+                wire["baseline"]["registry_knowledge"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty()
+            );
         }
     }
 }
@@ -277,7 +255,7 @@ fn valid_question_data_fragments_and_percent_controls_keep_generic_uri_precedenc
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("fixture", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1, "{unit}");
         let units = report.unit_guidance().require().unwrap();
@@ -311,7 +289,7 @@ fn valid_question_data_fragments_and_percent_controls_keep_generic_uri_precedenc
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("fixture", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         let units = report.unit_guidance().require().unwrap();
         assert_eq!(
@@ -338,7 +316,7 @@ fn valid_question_data_fragments_and_percent_controls_keep_generic_uri_precedenc
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("fixture", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         let units = report.unit_guidance().require().unwrap();
@@ -371,64 +349,54 @@ fn mixed_components_preserve_other_queries_with_omitted_optional_details() {
     for limits in [
         Limits::default(),
         Limits::default().conditions(1),
-        Limits::default().report_bytes(41970),
+        Limits::default().report_bytes(52141),
     ] {
-        for policy in [
-            RecordedRegistryPolicy::UseRecorded,
-            RecordedRegistryPolicy::WithholdRecorded,
-        ] {
-            let catalogue =
-                Catalogue::with_limits(&[SourceInput::supplied("fixture", bytes)], limits.clone())
-                    .unwrap();
-            let report = catalogue
-                .check(
-                    CheckRequest::new()
-                        .assessment(Assessment::ExpandedUnits)
-                        .recorded_registry_policy(policy),
-                )
+        let catalogue =
+            Catalogue::with_limits(&[SourceInput::supplied("fixture", bytes)], limits.clone())
                 .unwrap();
-            let withheld = policy == RecordedRegistryPolicy::WithholdRecorded;
-            assert_eq!(
-                (report.outcome().errors(), report.outcome().notices()),
-                (2, 1)
-            );
-            let units = report.unit_guidance().require().unwrap();
-            assert_eq!(
-                (
-                    units.known_primary(),
-                    units.known_secondary(),
-                    units.unknown(),
-                    units.unavailable(),
-                    units.uri_names()
-                ),
-                (u32::from(!withheld), 0, 0, u32::from(withheld), 2)
-            );
-            assert_eq!(units.complete(), !withheld);
-            assert_eq!(
-                report
-                    .registry_knowledge("iana.senml-units")
-                    .require()
-                    .unwrap()
-                    .state(),
-                if withheld { "unavailable" } else { "available" }
-            );
-            assert!(matches!(
-                report.registry_knowledge("iana.secondary-units"),
-                Field::Absent
-            ));
-            let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-            assert_eq!(
-                wire["baseline"]["registry_knowledge"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
-                1
-            );
-            assert_eq!(wire["outcome"]["errors"], 2);
-            assert_eq!(wire["outcome"]["notices"], 1);
-            assert!(report.to_human().contains("Errors: 2;"));
-            assert_eq!(catalogue.sources().next().unwrap().raw_bytes(), bytes);
-        }
+        let report = catalogue
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+            .unwrap();
+        assert_eq!(
+            (report.outcome().errors(), report.outcome().notices()),
+            (2, 1)
+        );
+        let units = report.unit_guidance().require().unwrap();
+        assert_eq!(
+            (
+                units.known_primary(),
+                units.known_secondary(),
+                units.unknown(),
+                units.unavailable(),
+                units.uri_names()
+            ),
+            (1, 0, 0, 0, 2)
+        );
+        assert!(units.complete());
+        assert_eq!(
+            report
+                .registry_knowledge("iana.senml-units")
+                .require()
+                .unwrap()
+                .state(),
+            "available"
+        );
+        assert!(matches!(
+            report.registry_knowledge("iana.secondary-units"),
+            Field::Absent
+        ));
+        let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+        assert_eq!(
+            wire["baseline"]["registry_knowledge"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(wire["outcome"]["errors"], 2);
+        assert_eq!(wire["outcome"]["notices"], 1);
+        assert!(report.to_human().contains("Errors: 2;"));
+        assert_eq!(catalogue.sources().next().unwrap().raw_bytes(), bytes);
     }
 }
 
@@ -457,7 +425,7 @@ fn original_budget_stop_retains_earlier_components_without_inventing_queries() {
                 .capability_complete()
         );
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(
             (report.outcome().errors(), report.outcome().notices()),

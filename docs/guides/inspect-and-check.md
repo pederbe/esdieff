@@ -74,7 +74,7 @@ The missing target leaves reference resolution unfinished, producing an `undeter
 
 ## Choose how much to check
 
-`--assessment` selects an **assessment profile**. The default `initial-v1` covers the document envelope, names and roles, namespaces, composition, parameters and the other fundamentals in eight assessment areas. `full-baseline` requests all 13 areas and accounts for all 54 model requirements Esdieff records from RFC 9880, including unit names against a recorded registry snapshot and the initial contradiction advice. The `expanded-*` profiles add one concern to the initial set, such as `expanded-pattern-syntax-v1` for regular expressions. Two of them offer additional advice that `full-baseline` does not include. `expanded-numeric-v1` finds number ranges that no integer or step value can satisfy, and `expanded-consistency-v1` finds a `const` or `default` value that its own description excludes.
+`--assessment` selects an **assessment profile**. The default `initial-v1` checks the fundamentals in eight areas, including names, namespaces, composition and parameters. `full-baseline` checks all 13 areas and accounts for all 54 model requirements Esdieff records from RFC 9880, using bundled registry snapshots. Two additional profiles provide focused advice beyond those requirements. `expanded-numeric-v1` finds ranges with no allowed integer or step value. `expanded-consistency-v1` finds a `const` or `default` value that its own description excludes.
 
 ```sh
 esdieff check --assessment full-baseline --root device.sdf.json device.sdf.json types.sdf.json

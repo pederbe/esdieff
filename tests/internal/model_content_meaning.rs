@@ -1,7 +1,4 @@
-use esdieff::{
-    Assessment, AssessmentStatus, Catalogue, CheckRequest, Limits, RecordedRegistryPolicy,
-    SourceInput,
-};
+use esdieff::{Assessment, AssessmentStatus, Catalogue, CheckRequest, Limits, SourceInput};
 use serde_json::{Value, json};
 
 fn source(format: &str) -> String {
@@ -56,32 +53,13 @@ fn numeric_formats_establish_the_complete_recorded_tuple() {
     }
 }
 #[test]
-fn unknown_withheld_and_reserved_meaning_remains_undetermined() {
+fn unknown_and_reserved_meaning_remains_undetermined() {
     for text in [
         "application/json@identity",
         "application/json@unfamiliar",
         "application/x-unfamiliar-example",
     ] {
         assert_eq!(status(text), AssessmentStatus::Undetermined, "{text}");
-    }
-    for text in ["0", "text/plain;charset=utf-8@gzip"] {
-        let source = source(text);
-        let cat =
-            Catalogue::from_inputs(&[SourceInput::supplied("model", source.as_bytes())]).unwrap();
-        let report = cat
-            .check(
-                CheckRequest::new()
-                    .assessment(Assessment::FullBaseline)
-                    .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded),
-            )
-            .unwrap();
-        assert_eq!(
-            report
-                .requirement_status("rfc9880.model.M024/1")
-                .require()
-                .unwrap(),
-            AssessmentStatus::Undetermined
-        );
     }
 }
 #[test]
@@ -116,32 +94,9 @@ fn actual_meaning_consultation_survives_whole_optional_omission() {
             !report
                 .diagnostics()
                 .conditions()
-                .any(|c| c.code() == "content_format.parameter_semantics_unassessed")
+                .any(|c| c.code() == "content_format.model_meaning_unassessed")
         );
     }
-}
-#[test]
-fn expanded_content_format_retains_its_parameter_notice_and_scope() {
-    let text = source("text/plain;charset=utf-8@gzip");
-    let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", text.as_bytes())]).unwrap();
-    let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedContentFormat))
-        .unwrap();
-    assert!(report.outcome().complete());
-    assert!(
-        report
-            .diagnostics()
-            .conditions()
-            .any(|c| c.code() == "content_format.parameter_semantics_unassessed")
-    );
-    let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-    assert!(
-        !wire["baseline"]["interpretations"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|id| id == "content-format-model-meaning/1")
-    );
 }
 
 #[test]

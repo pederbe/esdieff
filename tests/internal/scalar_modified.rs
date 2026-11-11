@@ -32,34 +32,27 @@ fn scalar_errors_and_native_date_status_survive_source_order_and_detail_omission
                 limits,
             )
             .unwrap();
-            for assessment in [
-                Assessment::Initial,
-                Assessment::FullBaseline,
-                Assessment::ExpandedModified,
-            ] {
+            for assessment in [Assessment::Initial, Assessment::FullBaseline] {
                 let report = catalogue
                     .check(CheckRequest::new().assessment(assessment))
                     .unwrap();
-                let expanded = matches!(
-                    assessment,
-                    Assessment::ExpandedModified | Assessment::FullBaseline
-                );
+                let expanded = matches!(assessment, Assessment::FullBaseline);
                 assert_eq!(report.outcome().errors(), if expanded { 3 } else { 2 });
                 coverage_support::assert_requested_counts(&report);
-                if assessment == Assessment::ExpandedModified {
+                if assessment == Assessment::FullBaseline {
                     assert!(matches!(
-                        report.assessment_area_status(AREA),
+                        report.producer_status(AREA),
                         Field::Present(AssessmentStatus::Assessed)
                     ));
-                    assert_eq!(report.requested_coverage().total(), Some(9));
+                    assert_eq!(report.requested_coverage().total(), Some(13));
                     coverage_support::assert_requested_counts(&report);
                     assert_eq!(report.requested_coverage().unassessed(), 0);
                 } else if assessment == Assessment::Initial {
-                    assert!(matches!(report.assessment_area_status(AREA), Field::Absent));
+                    assert!(matches!(report.producer_status(AREA), Field::Absent));
                     assert_eq!(report.requested_coverage().total(), Some(8));
                     assert_eq!(report.requested_coverage().unassessed(), 0);
                 } else {
-                    assert!(matches!(report.assessment_area_status(AREA), Field::Absent));
+                    assert!(matches!(report.producer_status(AREA), Field::Absent));
                     assert_eq!(report.requested_coverage().total(), Some(13));
                 }
                 let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -68,14 +61,7 @@ fn scalar_errors_and_native_date_status_survive_source_order_and_detail_omission
                 if omitted {
                     assert!(rows.is_empty());
                     if expanded {
-                        assert_eq!(
-                            wire["coverage"]["rows_omitted"],
-                            if assessment == Assessment::ExpandedModified {
-                                9
-                            } else {
-                                13
-                            }
-                        );
+                        assert_eq!(wire["coverage"]["rows_omitted"], 13);
                     }
                 } else {
                     for (code, pointer) in [
@@ -112,11 +98,11 @@ fn scalar_findings_do_not_erase_omitted_native_uncertainty_or_knowledge_identity
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 2);
         assert!(matches!(
-            report.assessment_area_status(AREA),
+            report.producer_status(AREA),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         coverage_support::assert_requested_counts(&report);
@@ -126,7 +112,7 @@ fn scalar_findings_do_not_erase_omitted_native_uncertainty_or_knowledge_identity
             wire["baseline"]["temporal_knowledge"]["id"],
             "iers-bulletin-c72/2026-07-06"
         );
-        assert_eq!(wire["coverage"]["rows_omitted"], 9);
+        assert_eq!(wire["coverage"]["rows_omitted"], 13);
         assert_eq!(report.diagnostics().conditions().len(), 0);
         assert_eq!(
             catalogue.sources().next().unwrap().raw_bytes(),
@@ -148,11 +134,11 @@ fn critical_context_gates_date_and_scalar_meanings_but_keeps_independent_finding
         .unwrap();
         let critical_id = catalogue.source_id("critical").unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert!(matches!(
-            report.assessment_area_status(AREA),
+            report.producer_status(AREA),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         assert_eq!(

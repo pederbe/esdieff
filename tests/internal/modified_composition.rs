@@ -28,11 +28,11 @@ fn date_and_inherited_metadata_findings_keep_source_then_effective_locations() {
             Catalogue::from_inputs(&[SourceInput::supplied("combined", text.as_bytes())]).unwrap();
         let id = catalogue.source_id("combined").unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 2);
         assert!(matches!(
-            report.assessment_area_status(AREA),
+            report.producer_status(AREA),
             Field::Present(AssessmentStatus::Assessed)
         ));
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -79,11 +79,11 @@ fn early_information_and_completed_named_findings_do_not_replay_or_depend_on_det
             )
             .unwrap();
             let report = catalogue
-                .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+                .check(CheckRequest::new().assessment(Assessment::FullBaseline))
                 .unwrap();
             assert_eq!(report.outcome().errors(), 3);
             assert!(matches!(
-                report.assessment_area_status(AREA),
+                report.producer_status(AREA),
                 Field::Present(AssessmentStatus::Assessed)
             ));
             let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -92,7 +92,7 @@ fn early_information_and_completed_named_findings_do_not_replay_or_depend_on_det
             let items = wire["diagnostics"]["items"].as_array().unwrap();
             if omitted {
                 assert!(items.is_empty());
-                assert_eq!(wire["coverage"]["rows_omitted"], 9);
+                assert_eq!(wire["coverage"]["rows_omitted"], 13);
                 assert_eq!(report.diagnostics().conditions().len(), 0);
             } else {
                 let information: Vec<_> = items
@@ -136,17 +136,17 @@ fn composition_and_omission_do_not_erase_outside_interval_consultation() {
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert!(matches!(
-            report.assessment_area_status(AREA),
+            report.producer_status(AREA),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         coverage_support::assert_requested_counts(&report);
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
         assert_eq!(wire["baseline"]["temporal_knowledge"]["id"], KNOWLEDGE);
-        assert_eq!(wire["coverage"]["rows_omitted"], 9);
+        assert_eq!(wire["coverage"]["rows_omitted"], 13);
         assert_eq!(report.diagnostics().conditions().len(), 0);
         assert_eq!(
             catalogue.sources().next().unwrap().raw_bytes(),
@@ -189,7 +189,7 @@ fn standalone_effective_and_inspection_do_not_acquire_modified_assessment() {
         assert!(report.outcome().complete());
         assert_eq!(report.outcome().errors(), 0);
         assert_eq!(report.outcome().warnings(), 0);
-        assert!(matches!(report.assessment_area_status(AREA), Field::Absent));
+        assert!(matches!(report.producer_status(AREA), Field::Absent));
         assert_eq!(report.requested_coverage().count_unit(), "inspection");
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
         assert!(wire["baseline"].get("temporal_knowledge").is_none());
@@ -214,42 +214,20 @@ fn composed_checks_keep_initial_and_unknown_full_membership_unchanged() {
         .unwrap();
     let catalogue =
         Catalogue::from_inputs(&[SourceInput::supplied("combined", text.as_bytes())]).unwrap();
-    for assessment in [
-        Assessment::Initial,
-        Assessment::FullBaseline,
-        Assessment::ExpandedModified,
-    ] {
+    for assessment in [Assessment::Initial, Assessment::FullBaseline] {
         let report = catalogue
             .check(CheckRequest::new().assessment(assessment))
             .unwrap();
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        if matches!(
-            assessment,
-            Assessment::ExpandedModified | Assessment::FullBaseline
-        ) {
+        if matches!(assessment, Assessment::FullBaseline) {
             assert_eq!(report.outcome().errors(), 2);
-            assert_eq!(
-                report.requested_coverage().total(),
-                Some(if assessment == Assessment::ExpandedModified {
-                    9
-                } else {
-                    13
-                })
-            );
+            assert_eq!(report.requested_coverage().total(), Some(13));
             assert_eq!(
                 report.requested_coverage().inventory(),
-                Some(if assessment == Assessment::ExpandedModified {
-                    "esdieff.expanded.modified/1"
-                } else {
-                    "esdieff.full-model/1"
-                })
+                Some("esdieff.full-model/1")
             );
             assert!(matches!(
-                report.assessment_area_status(if assessment == Assessment::ExpandedModified {
-                    AREA
-                } else {
-                    "full.metadata/1"
-                }),
+                report.producer_status(AREA),
                 Field::Present(AssessmentStatus::Assessed)
             ));
         } else {
@@ -266,14 +244,14 @@ fn composed_checks_keep_initial_and_unknown_full_membership_unchanged() {
                     report.requested_coverage().inventory(),
                     Some("esdieff.initial/1")
                 );
-                assert!(matches!(report.assessment_area_status(AREA), Field::Absent));
+                assert!(matches!(report.producer_status(AREA), Field::Absent));
             } else {
                 assert_eq!(report.requested_coverage().total(), Some(13));
                 assert_eq!(
                     report.requested_coverage().inventory(),
                     Some("esdieff.full-model/1")
                 );
-                assert!(matches!(report.assessment_area_status(AREA), Field::Absent));
+                assert!(matches!(report.producer_status(AREA), Field::Absent));
             }
         }
         assert!(wire["baseline"].get("temporal_knowledge").is_none());
@@ -300,16 +278,16 @@ fn multiple_composed_sources_share_modified_work_and_preserve_limit_attribution(
             .check(
                 CheckRequest::new()
                     .root(id)
-                    .assessment(Assessment::ExpandedModified),
+                    .assessment(Assessment::FullBaseline),
             )
             .unwrap();
         assert!(matches!(
-            checked.assessment_area_status(AREA),
+            checked.producer_status(AREA),
             Field::Present(AssessmentStatus::Assessed)
         ));
     }
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let diagnostics = report.diagnostics();
     let limit = diagnostics.conditions().find(|c| {
@@ -317,7 +295,7 @@ fn multiple_composed_sources_share_modified_work_and_preserve_limit_attribution(
             && matches!(c.primary(), Field::Present(ReportLocation::Source(location)) if location.source_id() == second)
     }).expect("combined work ceiling reached the second modified value");
     assert!(matches!(
-        report.assessment_area_status(AREA),
+        report.producer_status(AREA),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
@@ -352,12 +330,12 @@ fn critical_feature_deferral_still_gates_metadata_and_composition_together() {
             .check(
                 CheckRequest::new()
                     .root(id)
-                    .assessment(Assessment::ExpandedModified),
+                    .assessment(Assessment::FullBaseline),
             )
             .unwrap();
         assert_eq!(selected.outcome().errors(), 0);
         assert!(matches!(
-            selected.assessment_area_status(AREA),
+            selected.producer_status(AREA),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         assert!(
@@ -382,11 +360,11 @@ fn critical_feature_deferral_still_gates_metadata_and_composition_together() {
             Field::Unavailable(_)
         ));
         let combined = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(combined.outcome().errors(), 1);
         assert!(matches!(
-            combined.assessment_area_status(AREA),
+            combined.producer_status(AREA),
             Field::Present(AssessmentStatus::Undetermined)
         ));
         coverage_support::assert_requested_counts(&combined);
@@ -400,11 +378,11 @@ fn missing_same_document_reference_does_not_defer_established_modified_semantics
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("missing", text.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert!(matches!(
-            report.assessment_area_status(AREA),
+            report.producer_status(AREA),
             Field::Present(AssessmentStatus::Assessed)
         ));
         coverage_support::assert_requested_counts(&report);

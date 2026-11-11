@@ -4,11 +4,8 @@ use crate::registry::Facts;
 use crate::{AssessmentStatus, Field};
 use serde_json::{Map, Value};
 pub(crate) const AREAS: [&str; 2] = ["unit-spelling/1", "unit-registry-guidance/1"];
-const UNAVAILABLE_REASONS: [(u8, &str); 3] = [
-    (1, "caller_withheld"),
-    (2, "operation_limited"),
-    (4, "index_meaning_unavailable"),
-];
+const UNAVAILABLE_REASONS: [(u8, &str); 2] =
+    [(2, "operation_limited"), (4, "index_meaning_unavailable")];
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub(crate) enum Counter {
     KnownPrimary,
@@ -164,8 +161,6 @@ impl UnitGuidance<'_> {
     pub fn source_edition(&self) -> Field<UnitRegistrySourceEditionView> {
         if self.registry.consulted & 3 != 0 {
             Field::Present(UnitRegistrySourceEditionView)
-        } else if self.registry.withheld & 3 != 0 {
-            Field::Unavailable("caller withheld recorded evidence")
         } else {
             Field::Absent
         }
@@ -708,24 +703,19 @@ pub(crate) fn scan<'a>(
 /// Why a needed lookup is unfinished, as its `unavailable_reasons` bit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Unfinished {
-    Withheld = 1,
     Limited = 2,
 }
 
 /// Look up an exact unit name in the recorded SenML section, then in the Secondary Units
 /// section, returning the section's counter and the entry's legacy flag. A miss in both is
-/// `Counter::Unknown`. Each row is charged before it counts as consulted, and withholding
-/// policy refuses the lookup. Model checking and revision comparison share this lookup.
+/// `Counter::Unknown`. Each row is charged before it counts as consulted.
+/// Model checking and revision comparison share this lookup.
 pub(crate) fn lookup(
     text: &str,
     encoded: bool,
     registry: &mut crate::registry::State,
     work: &mut usize,
 ) -> Result<(Counter, bool), Unfinished> {
-    if registry.policy == crate::RecordedRegistryPolicy::WithholdRecorded {
-        registry.withheld |= 1;
-        return Err(Unfinished::Withheld);
-    }
     for (index, (counter, table)) in [
         (Counter::KnownPrimary, table::PRIMARY),
         (Counter::KnownSecondary, table::SECONDARY),
@@ -899,7 +889,7 @@ mod tests {
                 )])
                 .unwrap();
                 let report = cat
-                    .check(crate::CheckRequest::new().assessment(crate::Assessment::ExpandedUnits))
+                    .check(crate::CheckRequest::new().assessment(crate::Assessment::FullBaseline))
                     .unwrap();
                 let units = report.unit_guidance().require().unwrap();
                 assert_eq!(units.state.counts[index], 1, "{symbol}");

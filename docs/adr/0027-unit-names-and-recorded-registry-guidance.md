@@ -1,5 +1,9 @@
 # 0027: Unit names and recorded registry guidance
 
+The public assessment choices and registry-withholding behavior described here
+are superseded by [ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md).
+The validation rules and recorded facts below remain in use where not superseded.
+
 An explicit `esdieff.expanded.units/1` assessment adds `unit-spelling/1` and `unit-registry-guidance/1` to the immutable eight initial areas. It examines final effective Full data descriptions, including distinct consuming coordinates after inheritance and refinement. Source preflight and retained diagnostics do not define the observation population. Independent findings survive unresolved composition, critical features and operational limits, following ADR 0020: Owned effective views and nearest origins and ADR 0023: Supplied global composition and dependency scope. Direct items do not acquire Full unit meaning through an opaque donor; independently explicit Full alternatives retain their established meaning.
 
 [RFC 9880 Section 4.7](https://www.rfc-editor.org/rfc/rfc9880.html#section-4.7) distinguishes ordinary SenML names from URI names by a colon, and prohibits the unit-subnamespace URN except for a unit name containing a colon. Esdieff inverts [Section 7.3](https://www.rfc-editor.org/rfc/rfc9880.html#section-7.3)'s index encoding once to establish the represented-symbol guard. This interpretation is `unit-index-mapping/1`, not URN equivalence or assignment. Valid optional RFC 8141 r/q/f components remain separate from that guard. A literal slash violates the Section 7.3 pchar mapping; an encoded pchar has no invented overencoding error. Unestablished nonempty UTF-8 meaning leaves the unit-specific conclusion unfinished. Located replacement advice preserves exact case and scale and is conditional on the intended unit; it never rewrites the declaration or discards suffix meaning.

@@ -12,11 +12,11 @@ fn expanded_metadata_reports_the_gregorian_century_error_at_its_source() {
     let source = br#"{"info":{"modified":"1900-02-29"}}"#;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("revision", source)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     let diagnostics = report.diagnostics();
@@ -55,18 +55,18 @@ fn early_nonstring_metadata_survives_later_work_exhaustion_and_all_detail_omissi
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert!(matches!(
-            report.assessment_area_status("modified-date-time/1"),
+            report.producer_status("modified-date-time/1"),
             Field::Present(AssessmentStatus::Assessed)
         ));
         coverage_support::assert_requested_counts(&report);
         assert_eq!(report.requested_coverage().unassessed(), 0);
         assert_eq!(report.diagnostics().conditions().len(), 0);
         let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
-        assert_eq!(wire["coverage"]["rows_omitted"], 9);
+        assert_eq!(wire["coverage"]["rows_omitted"], 13);
         assert_eq!(wire["outcome"]["errors"], 1);
     }
 }
@@ -79,7 +79,7 @@ fn numeric_offsets_are_outside_the_modified_utc_production() {
     )])
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(
@@ -89,7 +89,7 @@ fn numeric_offsets_are_outside_the_modified_utc_production() {
             .any(|condition| condition.code() == "metadata.modified_syntax")
     );
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
 }
@@ -104,11 +104,11 @@ fn gregorian_date_controls_and_existing_metadata_shapes_keep_their_exact_meaning
             Catalogue::from_inputs(&[SourceInput::supplied("revision", source.as_bytes())])
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 0, "{date}");
         assert!(matches!(
-            report.assessment_area_status("modified-date-time/1"),
+            report.producer_status("modified-date-time/1"),
             Field::Present(AssessmentStatus::Assessed)
         ));
     }
@@ -118,7 +118,7 @@ fn gregorian_date_controls_and_existing_metadata_shapes_keep_their_exact_meaning
             Catalogue::from_inputs(&[SourceInput::supplied("revision", source.as_bytes())])
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert_eq!(
@@ -146,11 +146,11 @@ fn impossible_future_insertion_slots_are_definite_without_leap_knowledge() {
     )])
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert!(
@@ -196,7 +196,7 @@ fn utc_case_exact_fractions_and_invalid_production_controls_use_metadata_rules()
             Catalogue::from_inputs(&[SourceInput::supplied("revision", source.as_bytes())])
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(
             report.outcome().errors(),
@@ -205,7 +205,7 @@ fn utc_case_exact_fractions_and_invalid_production_controls_use_metadata_rules()
         );
         assert!(
             matches!(
-                report.assessment_area_status("modified-date-time/1"),
+                report.producer_status("modified-date-time/1"),
                 Field::Present(AssessmentStatus::Assessed)
             ),
             "{date}"
@@ -234,7 +234,7 @@ fn recorded_noninsertion_is_an_rfc_finding_with_its_knowledge_identity() {
     )])
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     let diagnostics = report.diagnostics();
@@ -258,11 +258,11 @@ fn actual_leap_knowledge_and_semantic_status_survive_every_detail_omission() {
     )
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 0);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -284,13 +284,9 @@ fn actual_leap_knowledge_and_semantic_status_survive_every_detail_omission() {
         "310e172eadacacca3adf92cb9bd646fcc0d6320e35e996a106d2644ede3b52f0"
     );
     coverage_support::assert_wire_counts(&wire);
-    assert_eq!(wire["coverage"]["rows_omitted"], 9);
+    assert_eq!(wire["coverage"]["rows_omitted"], 13);
     coverage_support::assert_requested_counts(&report);
-    assert!(
-        report
-            .to_human()
-            .contains("Assessment area modified-date-time/1: undetermined")
-    );
+    assert!(report.to_human().contains("Complete: false"));
     assert!(
         report
             .to_human()
@@ -299,80 +295,41 @@ fn actual_leap_knowledge_and_semantic_status_survive_every_detail_omission() {
 }
 
 #[test]
-fn immutable_requested_inventories_distinguish_absence_from_unrequested_or_unknown_work() {
-    let catalogue = Catalogue::with_limits(
-        &[SourceInput::supplied("revision", br#"{"info":{}}"#)],
-        Limits::default().diagnostic_bytes(1),
-    )
-    .unwrap();
-    let request = CheckRequest::new().assessment(Assessment::ExpandedModified);
-    let expanded = catalogue.check(request).unwrap();
-    assert!(matches!(
-        expanded.assessment_area_status("modified-date-time/1"),
-        Field::Present(AssessmentStatus::NotApplicable)
-    ));
-    assert!(matches!(
-        expanded.assessment_area_status("document-envelope/1"),
-        Field::Present(AssessmentStatus::Assessed)
-    ));
-    assert!(matches!(
-        expanded.assessment_area_status("future-area/1"),
-        Field::Absent
-    ));
-    let coverage = expanded.requested_coverage();
-    assert_eq!(coverage.inventory(), Some("esdieff.expanded.modified/1"));
-    assert_eq!(coverage.count_unit(), "assessment_area");
-    assert_eq!(coverage.total(), Some(9));
-    assert_eq!(coverage.assessed(), 5);
-    assert_eq!(coverage.not_applicable(), 4);
-    assert_eq!(coverage.unassessed(), 0);
-    assert_eq!(coverage.undetermined(), 0);
-    assert_eq!(expanded.diagnostics().conditions().len(), 0);
-    assert!(
-        expanded
-            .to_human()
-            .contains("Assessment area modified-date-time/1: not_applicable")
-    );
-    let wire: serde_json::Value = serde_json::from_str(&expanded.to_json()).unwrap();
-    assert_eq!(wire["coverage"]["rows_omitted"], 9);
-    coverage_support::assert_wire_counts(&wire);
-
-    let initial = catalogue.check(CheckRequest::new()).unwrap();
-    assert_eq!(
-        initial.requested_coverage().inventory(),
-        Some("esdieff.initial/1")
-    );
-    assert_eq!(initial.requested_coverage().total(), Some(8));
-    assert!(matches!(
-        initial.assessment_area_status("modified-date-time/1"),
-        Field::Absent
-    ));
-    let full = catalogue
-        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
-        .unwrap();
-    assert_eq!(
-        full.requested_coverage().inventory(),
-        Some("esdieff.full-model/1")
-    );
-    assert_eq!(full.requested_coverage().total(), Some(13));
-    for area in [
-        "modified-date-time/1",
-        "document-envelope/1",
-        "future-area/1",
+fn supported_assessments_keep_their_public_inventories() {
+    let catalogue =
+        Catalogue::from_inputs(&[SourceInput::supplied("revision", br#"{"info":{}}"#)]).unwrap();
+    for (assessment, inventory, total) in [
+        (Assessment::Initial, "esdieff.initial/1", 8),
+        (Assessment::ExpandedNumeric, "esdieff.expanded.numeric/1", 9),
+        (
+            Assessment::ExpandedConsistency,
+            "esdieff.expanded.consistency/1",
+            10,
+        ),
+        (Assessment::FullBaseline, "esdieff.full-model/1", 13),
     ] {
-        assert!(matches!(full.assessment_area_status(area), Field::Absent));
+        let report = catalogue
+            .check(CheckRequest::new().assessment(assessment))
+            .unwrap();
+        assert_eq!(report.requested_coverage().inventory(), Some(inventory));
+        assert_eq!(report.requested_coverage().total(), Some(total));
+        coverage_support::assert_requested_counts(&report);
+        assert!(matches!(
+            report.assessment_area_status("future-area/1"),
+            Field::Absent
+        ));
+        if assessment == Assessment::FullBaseline {
+            assert_eq!(
+                report.requirement_status("rfc9880.model.M012/1").present(),
+                Some(AssessmentStatus::NotApplicable)
+            );
+        } else {
+            assert!(matches!(
+                report.assessment_area_status("modified-date-time/1"),
+                Field::Absent
+            ));
+        }
     }
-    let id = catalogue.source_id("revision").unwrap();
-    let inspection = catalogue
-        .inspect(esdieff::InspectRequest::new(id, ""))
-        .unwrap();
-    assert!(matches!(
-        inspection.assessment_area_status("modified-date-time/1"),
-        Field::Absent
-    ));
-    assert_eq!(inspection.requested_coverage().count_unit(), "inspection");
-    assert_eq!(inspection.requested_coverage().total(), Some(1));
-    coverage_support::assert_requested_counts(&inspection);
 }
 
 #[test]
@@ -411,23 +368,23 @@ fn required_unknown_metadata_context_keeps_one_aggregate_unknown_and_independent
             .check(
                 CheckRequest::new()
                     .root(catalogue.source_id("unknown").unwrap())
-                    .assessment(Assessment::ExpandedModified),
+                    .assessment(Assessment::FullBaseline),
             )
             .unwrap();
         assert!(
             matches!(
-                unknown.assessment_area_status("modified-date-time/1"),
+                unknown.producer_status("modified-date-time/1"),
                 Field::Present(AssessmentStatus::Undetermined)
             ),
             "{source:?}"
         );
         coverage_support::assert_requested_counts(&unknown);
         let combined = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert!(
             matches!(
-                combined.assessment_area_status("modified-date-time/1"),
+                combined.producer_status("modified-date-time/1"),
                 Field::Present(AssessmentStatus::Undetermined)
             ),
             "{source:?}"
@@ -447,7 +404,7 @@ fn required_unknown_metadata_context_keeps_one_aggregate_unknown_and_independent
     )])
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 0);
     assert!(
@@ -463,11 +420,11 @@ fn ordinary_information_metadata_is_independent_of_reference_and_opaque_content(
     let source = br##"{"info":{"modified":"1900-02-29","sdfRef":"missing"},"sdfData":{"Ref":{"sdfRef":"#/sdfData/Absent"}},"x:extension":{"modified":"1900-02-29"}}"##;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("revision", source)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert_eq!(
@@ -490,17 +447,17 @@ fn ordinary_information_metadata_is_independent_of_reference_and_opaque_content(
         .check(
             CheckRequest::new()
                 .root(catalogue.source_id("ordinary").unwrap())
-                .assessment(Assessment::ExpandedModified),
+                .assessment(Assessment::FullBaseline),
         )
         .unwrap();
     assert_eq!(selected.outcome().errors(), 0);
     assert!(matches!(
-        selected.assessment_area_status("modified-date-time/1"),
+        selected.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::NotApplicable)
     ));
     assert_eq!(
         catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap()
             .outcome()
             .errors(),
@@ -546,12 +503,12 @@ fn finite_leap_interval_establishes_recorded_events_without_guessing_other_dates
             Catalogue::from_inputs(&[SourceInput::supplied("revision", source.as_bytes())])
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 0, "{date}");
         assert!(
             matches!(
-                report.assessment_area_status("modified-date-time/1"),
+                report.producer_status("modified-date-time/1"),
                 Field::Present(AssessmentStatus::Assessed)
             ),
             "{date}"
@@ -599,11 +556,11 @@ fn finite_leap_interval_establishes_recorded_events_without_guessing_other_dates
             Catalogue::from_inputs(&[SourceInput::supplied("revision", source.as_bytes())])
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), errors, "{label}");
         assert!(
-            matches!(report.assessment_area_status("modified-date-time/1"), Field::Present(actual) if actual == status),
+            matches!(report.producer_status("modified-date-time/1"), Field::Present(actual) if actual == status),
             "{label}"
         );
         let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
@@ -620,11 +577,11 @@ fn exact_escaped_tokens_and_unrelated_extreme_numbers_remain_source_values() {
     let source = br#"{"info":{"modified":"2016-12-31\u0054\u0032\u0033:59:60.000000000000000000001\u007a"},"x:opaque":{"number":10e1000000}}"#;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("revision", source)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 0);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     let owned = catalogue.sources().next().unwrap();
@@ -706,11 +663,11 @@ fn bounded_fraction_work_preserves_a_definite_companion_and_cannot_invent_a_date
         "source decoding must be available for this semantic work control"
     );
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     coverage_support::assert_requested_counts(&report);
@@ -761,7 +718,7 @@ fn smallest_accepted_report_keeps_actual_temporal_metadata_and_native_status() {
         )
         .and_then(|catalogue| {
             catalogue
-                .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+                .check(CheckRequest::new().assessment(Assessment::FullBaseline))
                 .map(|_| ())
         })
         .is_ok()
@@ -784,7 +741,7 @@ fn smallest_accepted_report_keeps_actual_temporal_metadata_and_native_status() {
     )
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let json = report.to_json();
     let human = report.to_human();
@@ -795,14 +752,14 @@ fn smallest_accepted_report_keeps_actual_temporal_metadata_and_native_status() {
         wire["baseline"]["temporal_knowledge"]["id"],
         "iers-bulletin-c72/2026-07-06"
     );
-    assert_eq!(wire["coverage"]["rows_omitted"], 9);
+    assert_eq!(wire["coverage"]["rows_omitted"], 13);
     assert_eq!(wire["diagnostics"]["retained"], 0);
     coverage_support::assert_wire_counts(&wire);
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
-    assert!(human.contains("Assessment area modified-date-time/1: assessed"));
+    assert!(human.contains("esdieff.full-model/1"));
     assert!(human.contains("Temporal knowledge: iers-bulletin-c72/2026-07-06"));
     println!(
         "minimum_report_bytes={minimum}; actual_json_bytes={}; actual_human_bytes={}; temporal_knowledge_present=true; rows_omitted=9; retained_conditions=0",
@@ -820,7 +777,7 @@ fn retained_rows_and_omitted_pointers_agree_with_native_semantic_status() {
     )
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let diagnostics = report.diagnostics();
     assert_eq!(diagnostics.conditions().len(), 1);
@@ -838,12 +795,12 @@ fn retained_rows_and_omitted_pointers_agree_with_native_semantic_status() {
         .as_array()
         .unwrap()
         .iter()
-        .find(|row| row["id"] == "modified-date-time/1")
+        .find(|row| row["id"] == "full.metadata/1")
         .unwrap();
     assert_eq!(row["status"], "assessed");
     assert_eq!(row["count_unit"], "assessment_area");
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert_eq!(report.outcome().errors(), 1);
@@ -862,10 +819,10 @@ fn reliable_absence_across_requested_sources_is_not_applicable() {
     ])
     .unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert!(matches!(
-        report.assessment_area_status("modified-date-time/1"),
+        report.producer_status("modified-date-time/1"),
         Field::Present(AssessmentStatus::NotApplicable)
     ));
     coverage_support::assert_requested_counts(&report);

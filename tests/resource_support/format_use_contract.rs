@@ -252,13 +252,7 @@ pub fn assert_initial_unavailable(report: &Report<'_>, wire: &Value) {
 #[test]
 fn other_operations_omit_the_sample_field_and_return_absent() {
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("m", br#"{"info":{}}"#)]).unwrap();
-    for assessment in [
-        Assessment::Initial,
-        Assessment::ExpandedModified,
-        Assessment::ExpandedUnits,
-        Assessment::ExpandedContentFormat,
-        Assessment::FullBaseline,
-    ] {
+    for assessment in [Assessment::Initial, Assessment::FullBaseline] {
         let report = cat
             .check(CheckRequest::new().assessment(assessment))
             .unwrap();

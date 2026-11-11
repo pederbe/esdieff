@@ -420,7 +420,7 @@ fn actual_use_survives_failed_branch_and_metadata_grammar_remains_separate() {
         Admission::Admitted
     );
     let check = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert!(
         wire(&check)["diagnostics"]["items"]

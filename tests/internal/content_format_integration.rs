@@ -27,7 +27,7 @@ fn declaration(text: &str) -> Vec<u8> {
 }
 
 fn expanded() -> CheckRequest {
-    CheckRequest::new().assessment(Assessment::ExpandedContentFormat)
+    CheckRequest::new().assessment(Assessment::FullBaseline)
 }
 
 #[test]
@@ -125,10 +125,7 @@ fn scalar_samples_required_targets_and_registry_checks_keep_their_own_meaning() 
             assert_eq!(report.sample_result().unwrap().admission(), admission);
             assert_eq!(report.outcome().errors(), count);
             assert_eq!(report.requested_coverage().total(), Some(9));
-            assert!(matches!(
-                report.assessment_area_status(SYNTAX),
-                Field::Absent
-            ));
+            assert!(matches!(report.producer_status(SYNTAX), Field::Absent));
             assert!(matches!(
                 report.registry_knowledge("media-types"),
                 Field::Absent
@@ -151,31 +148,17 @@ fn a_malformed_declaration_is_added_only_to_the_new_immutable_request() {
     let initial = catalogue.check(CheckRequest::new()).unwrap();
     assert_eq!(initial.outcome().errors(), 0);
     assert_eq!(initial.requested_coverage().total(), Some(8));
-    assert!(matches!(
-        initial.assessment_area_status(SYNTAX),
-        Field::Absent
-    ));
-    assert!(matches!(
-        initial.assessment_area_status(REGISTRY),
-        Field::Absent
-    ));
-    let modified = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedModified))
-        .unwrap();
-    assert_eq!(modified.requested_coverage().total(), Some(9));
-    assert!(matches!(
-        modified.assessment_area_status(SYNTAX),
-        Field::Absent
-    ));
+    assert!(matches!(initial.producer_status(SYNTAX), Field::Absent));
+    assert!(matches!(initial.producer_status(REGISTRY), Field::Absent));
     let report = catalogue.check(expanded()).unwrap();
-    assert_eq!(report.requested_coverage().total(), Some(10));
+    assert_eq!(report.requested_coverage().total(), Some(13));
     assert_eq!(
         report.requested_coverage().inventory(),
-        Some("esdieff.expanded.content-format/1")
+        Some("esdieff.full-model/1")
     );
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert!(
@@ -231,7 +214,7 @@ fn every_reviewed_lexical_branch_keeps_range_separate_from_abnf() {
         );
         assert!(
             matches!(
-                report.assessment_area_status(SYNTAX),
+                report.producer_status(SYNTAX),
                 Field::Present(AssessmentStatus::Assessed)
             ),
             "{}",
@@ -276,7 +259,7 @@ fn registry_positive_unknown_and_unsupported_parameter_meaning_have_different_ou
             "application/unknown-model-format",
             AssessmentStatus::Undetermined,
             Some("content_format.registration_unknown"),
-            false,
+            true,
         ),
         (
             "65535",
@@ -297,11 +280,11 @@ fn registry_positive_unknown_and_unsupported_parameter_meaning_have_different_ou
         let report = catalogue.check(expanded()).unwrap();
         assert_eq!(report.outcome().errors(), 0);
         assert!(matches!(
-            report.assessment_area_status(SYNTAX),
+            report.producer_status(SYNTAX),
             Field::Present(AssessmentStatus::Assessed)
         ));
         assert!(
-            matches!(report.assessment_area_status(REGISTRY), Field::Present(actual) if actual == status)
+            matches!(report.producer_status(REGISTRY), Field::Present(actual) if actual == status)
         );
         let diagnostics = report.diagnostics();
         if let Some(code) = incomplete_code {
@@ -317,7 +300,7 @@ fn registry_positive_unknown_and_unsupported_parameter_meaning_have_different_ou
         assert_eq!(
             diagnostics
                 .conditions()
-                .any(|c| c.code() == "content_format.parameter_semantics_unassessed"),
+                .any(|c| c.code() == "content_format.model_meaning_unassessed"),
             parameter_notice
         );
         // Never infer that absence of a warning establishes parameter or payload validity.
@@ -381,7 +364,7 @@ fn selected_override_and_deletion_do_not_assess_removed_contributor_values() {
         assert!(whole.outcome().errors() >= 2);
         if expected.is_none() {
             assert!(matches!(
-                selected.assessment_area_status(SYNTAX),
+                selected.producer_status(SYNTAX),
                 Field::Present(AssessmentStatus::NotApplicable)
             ));
         }
@@ -444,11 +427,11 @@ fn unknown_critical_meaning_does_not_erase_a_clear_sources_independent_error() {
     assert_eq!(report.outcome().errors(), 1);
     assert!(!report.outcome().complete());
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
-        report.assessment_area_status(REGISTRY),
+        report.producer_status(REGISTRY),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     let selected = catalogue
@@ -483,7 +466,7 @@ fn effective_unavailability_and_restricted_donor_meaning_are_not_raw_text_fallba
             .any(|c| c.code() == "content_format.syntax")
     );
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
 
@@ -521,7 +504,7 @@ fn effective_unavailability_and_restricted_donor_meaning_are_not_raw_text_fallba
     let report = catalogue.check(expanded()).unwrap();
     assert_eq!(report.outcome().errors(), 0);
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
 }
@@ -533,7 +516,7 @@ fn unsupported_decoded_text_and_known_nonstring_shape_keep_independent_meanings(
     let report = catalogue.check(expanded()).unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(
@@ -567,7 +550,7 @@ fn unsupported_decoded_text_and_known_nonstring_shape_keep_independent_meanings(
                 .any(|c| c.code() == "content_format.syntax")
         );
         assert!(matches!(
-            report.assessment_area_status(SYNTAX),
+            report.producer_status(SYNTAX),
             Field::Present(AssessmentStatus::Assessed)
         ));
     }
@@ -591,11 +574,11 @@ fn presentation_omission_preserves_semantic_findings_and_actual_use_knowledge() 
     let report = catalogue.check(expanded()).unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert!(matches!(
-        report.assessment_area_status(REGISTRY),
+        report.producer_status(REGISTRY),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert_eq!(report.diagnostics().conditions().len(), 0);
@@ -605,7 +588,7 @@ fn presentation_omission_preserves_semantic_findings_and_actual_use_knowledge() 
     ));
     let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
     assert_eq!(wire["outcome"]["errors"], 1);
-    assert_eq!(wire["coverage"]["requested"]["total"], 10);
+    assert_eq!(wire["coverage"]["requested"]["total"], 13);
     assert!(
         wire["baseline"]["registry_knowledge"]
             .as_array()
@@ -641,7 +624,7 @@ fn long_numeric_text_is_exact_and_finite_capability_is_not_a_range_verdict() {
     let report = limited.check(expanded()).unwrap();
     assert!(!report.outcome().complete());
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(
@@ -653,7 +636,7 @@ fn long_numeric_text_is_exact_and_finite_capability_is_not_a_range_verdict() {
 }
 
 #[test]
-fn structural_wire_consumer_keeps_absence_withholding_and_future_details_distinct() {
+fn structural_wire_consumer_keeps_absence_and_future_details_distinct() {
     fn knowledge<'a>(wire: &'a Value, id: &str) -> Option<(&'a str, Option<&'a str>)> {
         assert_eq!(wire["schema"], "esdieff.report");
         assert_eq!(wire["version"], "1.0");
@@ -666,100 +649,68 @@ fn structural_wire_consumer_keeps_absence_withholding_and_future_details_distinc
     }
     let bytes = declaration("application/json@gzip");
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("authored", &bytes)]).unwrap();
-    for policy in [
-        esdieff::RecordedRegistryPolicy::UseRecorded,
-        esdieff::RecordedRegistryPolicy::WithholdRecorded,
-    ] {
-        let report = catalogue
-            .check(expanded().recorded_registry_policy(policy))
-            .unwrap();
-        let mut wire: Value = serde_json::from_str(&report.to_json()).unwrap();
-        let requested = &wire["coverage"]["requested"];
-        assert_eq!(requested["inventory"], "esdieff.expanded.content-format/1");
-        assert_eq!(requested["count_unit"], "assessment_area");
-        let sum: u64 = ["assessed", "not_applicable", "unassessed", "undetermined"]
-            .iter()
-            .map(|key| requested[key].as_u64().unwrap())
-            .sum();
-        assert_eq!(sum, 10);
-        assert_eq!(knowledge(&wire, "coap-content-formats"), None);
-        let before = knowledge(&wire, "media-types").unwrap();
-        assert_eq!(
-            before.0,
-            if policy == esdieff::RecordedRegistryPolicy::UseRecorded {
-                "available"
-            } else {
-                "unavailable"
-            }
-        );
-        assert_eq!(
-            before.1.is_some(),
-            policy == esdieff::RecordedRegistryPolicy::UseRecorded
-        );
-        let owned = (before.0.to_owned(), before.1.map(str::to_owned));
-        wire["future_optional"] = json!({"field":true});
-        wire["diagnostics"]["items"]
-            .as_array_mut()
-            .unwrap()
-            .push(json!({"code":"future.unknown_condition","severity":"notice"}));
-        let after = knowledge(&wire, "media-types").unwrap();
-        assert_eq!((after.0.to_owned(), after.1.map(str::to_owned)), owned);
-        assert_eq!(wire["outcome"]["errors"], 0);
-        assert_eq!(
-            wire["outcome"]["complete"],
-            policy == esdieff::RecordedRegistryPolicy::UseRecorded
-        );
-    }
+
+    let report = catalogue.check(expanded()).unwrap();
+    let mut wire: Value = serde_json::from_str(&report.to_json()).unwrap();
+    let requested = &wire["coverage"]["requested"];
+    assert_eq!(requested["inventory"], "esdieff.full-model/1");
+    assert_eq!(requested["count_unit"], "assessment_area");
+    let sum: u64 = ["assessed", "not_applicable", "unassessed", "undetermined"]
+        .iter()
+        .map(|key| requested[key].as_u64().unwrap())
+        .sum();
+    assert_eq!(sum, 13);
+    assert_eq!(knowledge(&wire, "coap-content-formats"), None);
+    let before = knowledge(&wire, "media-types").unwrap();
+    assert_eq!(before.0, "available");
+    assert!(before.1.is_some());
+    let owned = (before.0.to_owned(), before.1.map(str::to_owned));
+    wire["future_optional"] = json!({"field":true});
+    wire["diagnostics"]["items"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"code":"future.unknown_condition","severity":"notice"}));
+    let after = knowledge(&wire, "media-types").unwrap();
+    assert_eq!((after.0.to_owned(), after.1.map(str::to_owned)), owned);
+    assert_eq!(wire["outcome"]["errors"], 0);
+    assert_eq!(wire["outcome"]["complete"], true);
 }
 
 #[test]
 fn finished_unknown_context_does_not_suppress_a_clear_independent_query() {
     let critical = include_bytes!("../fixtures/content-format/critical.sdf.json");
     let clear = declaration("60");
-    for policy in [
-        esdieff::RecordedRegistryPolicy::UseRecorded,
-        esdieff::RecordedRegistryPolicy::WithholdRecorded,
-    ] {
-        let catalogue = Catalogue::from_inputs(&[
-            SourceInput::supplied("critical", critical),
-            SourceInput::supplied("clear", &clear),
-        ])
+
+    let catalogue = Catalogue::from_inputs(&[
+        SourceInput::supplied("critical", critical),
+        SourceInput::supplied("clear", &clear),
+    ])
+    .unwrap();
+    let report = catalogue.check(expanded()).unwrap();
+    assert_eq!(report.outcome().errors(), 0);
+    assert!(matches!(
+        report.producer_status(SYNTAX),
+        Field::Present(AssessmentStatus::Undetermined)
+    ));
+    assert!(matches!(
+        report.producer_status(REGISTRY),
+        Field::Present(AssessmentStatus::Undetermined)
+    ));
+    let facts = report
+        .registry_knowledge("coap-content-formats")
+        .require()
         .unwrap();
-        let report = catalogue
-            .check(expanded().recorded_registry_policy(policy))
-            .unwrap();
-        assert_eq!(report.outcome().errors(), 0);
-        assert!(matches!(
-            report.assessment_area_status(SYNTAX),
-            Field::Present(AssessmentStatus::Undetermined)
-        ));
-        assert!(matches!(
-            report.assessment_area_status(REGISTRY),
-            Field::Present(AssessmentStatus::Undetermined)
-        ));
-        let facts = report
-            .registry_knowledge("coap-content-formats")
-            .require()
-            .unwrap();
-        assert_eq!(
-            facts.state(),
-            if policy == esdieff::RecordedRegistryPolicy::UseRecorded {
-                "available"
-            } else {
-                "unavailable"
-            }
-        );
-        assert!(report.diagnostics().conditions().any(|c| c.code()
-            == if policy == esdieff::RecordedRegistryPolicy::UseRecorded {
-                "content_format.registry_known"
-            } else {
-                "content_format.registry_knowledge_withheld"
-            }));
-        assert!(matches!(
-            report.registry_knowledge("media-types"),
-            Field::Absent
-        ));
-    }
+    assert_eq!(facts.state(), "available");
+    assert!(
+        report
+            .diagnostics()
+            .conditions()
+            .any(|c| c.code() == "content_format.registry_known")
+    );
+    assert!(matches!(
+        report.registry_knowledge("media-types"),
+        Field::Absent
+    ));
 }
 
 #[test]
@@ -775,56 +726,46 @@ fn complete_no_query_population_needs_no_replay_or_fabricated_evidence() {
                 .unwrap();
                 let report = catalogue.check(expanded()).unwrap();
                 matches!(
-                    report.assessment_area_status(SYNTAX),
+                    report.producer_status(SYNTAX),
                     Field::Present(AssessmentStatus::Assessed)
                 )
             })
             .unwrap();
-        for policy in [
-            esdieff::RecordedRegistryPolicy::UseRecorded,
-            esdieff::RecordedRegistryPolicy::WithholdRecorded,
-        ] {
-            let catalogue = Catalogue::with_limits(
-                &[SourceInput::supplied("authored", &bytes)],
-                Limits::default().decoding_work(first),
-            )
-            .unwrap();
-            let report = catalogue
-                .check(expanded().recorded_registry_policy(policy))
-                .unwrap();
-            assert_eq!(report.outcome().errors(), 1);
-            assert!(matches!(
-                report.assessment_area_status(SYNTAX),
-                Field::Present(AssessmentStatus::Assessed)
-            ));
-            assert!(matches!(
-                report.assessment_area_status(REGISTRY),
-                Field::Present(AssessmentStatus::NotApplicable)
-            ));
-            assert!(matches!(
-                report.registry_knowledge("coap-content-formats"),
-                Field::Absent
-            ));
-            assert!(matches!(
-                report.registry_knowledge("media-types"),
-                Field::Absent
-            ));
-            println!("no-query first complete text={text} work={first} policy={policy:?}");
-        }
+
+        let catalogue = Catalogue::with_limits(
+            &[SourceInput::supplied("authored", &bytes)],
+            Limits::default().decoding_work(first),
+        )
+        .unwrap();
+        let report = catalogue.check(expanded()).unwrap();
+        assert_eq!(report.outcome().errors(), 1);
+        assert!(matches!(
+            report.producer_status(SYNTAX),
+            Field::Present(AssessmentStatus::Assessed)
+        ));
+        assert!(matches!(
+            report.producer_status(REGISTRY),
+            Field::Present(AssessmentStatus::NotApplicable)
+        ));
+        assert!(matches!(
+            report.registry_knowledge("coap-content-formats"),
+            Field::Absent
+        ));
+        assert!(matches!(
+            report.registry_knowledge("media-types"),
+            Field::Absent
+        ));
+        println!("no-query first complete text={text} work={first}");
     }
     let critical = include_bytes!("../fixtures/content-format/critical.sdf.json");
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("critical", critical)]).unwrap();
-    let report = catalogue
-        .check(
-            expanded().recorded_registry_policy(esdieff::RecordedRegistryPolicy::WithholdRecorded),
-        )
-        .unwrap();
+    let report = catalogue.check(expanded()).unwrap();
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
-        report.assessment_area_status(REGISTRY),
+        report.producer_status(REGISTRY),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
@@ -865,7 +806,7 @@ fn full_roles_and_excluded_sample_direct_rows_keep_their_populations() {
         1
     );
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
 }
@@ -888,11 +829,11 @@ fn unavailable_member_identity_preserves_clear_source_evidence() {
             .any(|c| c.code() == "content_format.syntax")
     );
     assert!(matches!(
-        report.assessment_area_status(SYNTAX),
+        report.producer_status(SYNTAX),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
-        report.assessment_area_status(REGISTRY),
+        report.producer_status(REGISTRY),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert_eq!(

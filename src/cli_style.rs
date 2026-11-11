@@ -200,7 +200,7 @@ pub(crate) fn help(style: Style) -> String {
         ("check", "--plan PLAN [--format human|json]"),
         (
             "check",
-            "[--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-modified-v1|expanded-units-v1|expanded-content-format-v1|expanded-pattern-syntax-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--registry-knowledge recorded|withheld] [--strict-warnings] [--format human|json|sarif] [INPUT...]",
+            "[--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--strict-warnings] [--format human|json|sarif] [INPUT...]",
         ),
         (
             "inspect",

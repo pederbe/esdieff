@@ -3,8 +3,8 @@
 //! ADR0013: Shared workflow and report guarantees.
 
 use esdieff::{
-    Assessment, Catalogue, CheckRequest, DifferenceAcknowledgements, InspectRequest,
-    RecordedRegistryPolicy, SampleKind, SampleRequest, SourceInput, View,
+    Assessment, Catalogue, CheckRequest, DifferenceAcknowledgements, InspectRequest, SampleKind,
+    SampleRequest, SourceInput, View,
 };
 use std::{
     borrow::Cow,
@@ -60,7 +60,6 @@ struct Options<'a> {
     format: Format,
     strict: bool,
     required: bool,
-    registry_policy: Option<RecordedRegistryPolicy>,
 }
 fn usage(reason: &str) -> (u8, String) {
     (2, reason.to_owned())
@@ -100,7 +99,6 @@ fn parse<'a>(
         format: Format::Human,
         strict: false,
         required: false,
-        registry_policy: None,
     };
     let mut index = 1;
     let mut literal = false;
@@ -131,18 +129,8 @@ fn parse<'a>(
             Some("--recursive") if command == "check" => options.recursive = true,
             Some("--required-declarations") if options.inspect => options.required = true,
             Some(
-                flag @ ("--root"
-                | "--document"
-                | "--directory"
-                | "--exclude"
-                | "--pointer"
-                | "--view"
-                | "--assessment"
-                | "--format"
-                | "--kind"
-                | "--sample"
-                | "--plan"
-                | "--registry-knowledge"),
+                flag @ ("--root" | "--document" | "--directory" | "--exclude" | "--pointer"
+                | "--view" | "--assessment" | "--format" | "--kind" | "--sample" | "--plan"),
             ) => {
                 let value = args
                     .get(index)
@@ -204,17 +192,6 @@ fn parse<'a>(
                     "--assessment" if !options.inspect && !options.sample => {
                         options.assessment = assessment(value.to_str())?;
                     }
-                    "--registry-knowledge" if options.registry_policy.is_none() => {
-                        options.registry_policy = Some(match value.to_str() {
-                            Some("recorded") => RecordedRegistryPolicy::UseRecorded,
-                            Some("withheld") => RecordedRegistryPolicy::WithholdRecorded,
-                            _ => {
-                                return Err(usage(
-                                    "registry knowledge must be recorded or withheld",
-                                ));
-                            }
-                        });
-                    }
                     "--format" => format_value = Some(value.as_os_str()),
                     _ => return Err(usage("option does not apply to this operation")),
                 }
@@ -258,20 +235,6 @@ fn parse<'a>(
     if (options.recursive || !options.exclusions.is_empty()) && options.directories.is_empty() {
         return Err(usage(
             "recursive selection and exclusions require a directory input",
-        ));
-    }
-    if options.registry_policy.is_some()
-        && (options.inspect
-            || options.sample
-            || !matches!(
-                options.assessment,
-                Assessment::ExpandedUnits
-                    | Assessment::ExpandedContentFormat
-                    | Assessment::FullBaseline
-            ))
-    {
-        return Err(usage(
-            "registry knowledge policy requires a registry assessment",
         ));
     }
     if options
@@ -368,10 +331,6 @@ pub(crate) fn invocation_directory() -> std::path::PathBuf {
 fn assessment(value: Option<&str>) -> Result<Assessment, (u8, String)> {
     match value {
         Some("initial-v1") => Ok(Assessment::Initial),
-        Some("expanded-modified-v1") => Ok(Assessment::ExpandedModified),
-        Some("expanded-units-v1") => Ok(Assessment::ExpandedUnits),
-        Some("expanded-content-format-v1") => Ok(Assessment::ExpandedContentFormat),
-        Some("expanded-pattern-syntax-v1") => Ok(Assessment::ExpandedPatternSyntax),
         Some("expanded-numeric-v1") => Ok(Assessment::ExpandedNumeric),
         Some("expanded-consistency-v1") => Ok(Assessment::ExpandedConsistency),
         Some("full-baseline") => Ok(Assessment::FullBaseline),
@@ -541,9 +500,6 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
         let mut request = CheckRequest::new()
             .assessment(options.assessment)
             .strict_warnings(options.strict);
-        if let Some(policy) = options.registry_policy {
-            request = request.recorded_registry_policy(policy);
-        }
         for index in roots {
             request = request.root(ids[index]);
         }

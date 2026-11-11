@@ -3,41 +3,7 @@
 use esdieff::{Assessment, AssessmentStatus, Catalogue, CheckRequest, Field, SourceInput};
 
 fn assert_unit_inventory_aggregates(report: &esdieff::Report<'_>) {
-    let mut counts = [0u32; 4];
-    for id in [
-        "document-envelope/1",
-        "base-roles-names/1",
-        "metadata-namespaces/1",
-        "established-composition/1",
-        "basic-parameters/1",
-        "alternatives-requiredness/1",
-        "extensions-policies/1",
-        "advisory-four/1",
-        "unit-spelling/1",
-        "unit-registry-guidance/1",
-    ] {
-        let status = report.assessment_area_status(id).require().unwrap();
-        counts[match status {
-            AssessmentStatus::Assessed => 0,
-            AssessmentStatus::NotApplicable => 1,
-            AssessmentStatus::Unassessed => 2,
-            AssessmentStatus::Undetermined => 3,
-            _ => panic!("unexpected assessment status"),
-        }] += 1;
-    }
-    let coverage = report.requested_coverage();
-    assert_eq!(coverage.total(), Some(10));
-    assert_eq!(
-        [
-            coverage.assessed(),
-            coverage.not_applicable(),
-            coverage.unassessed(),
-            coverage.undetermined(),
-        ],
-        counts
-    );
-    assert_eq!(report.outcome().incomplete_checks(), counts[2] + counts[3]);
-    assert_eq!(report.outcome().complete(), counts[2] + counts[3] == 0);
+    super::coverage_support::assert_requested_counts(report);
 }
 #[test]
 fn forbidden_urn_has_independent_error_and_positive_represented_membership() {
@@ -45,17 +11,17 @@ fn forbidden_urn_has_independent_error_and_positive_represented_membership() {
         br#"{"sdfData":{"Temperature":{"type":"number","unit":"urn:ietf:params:unit:Cel"}}}"#;
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 1);
     assert_eq!(report.unit_guidance().require().unwrap().uri_names(), 1);
     assert!(matches!(
-        report.assessment_area_status("unit-spelling/1"),
+        report.producer_status("unit-spelling/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert!(matches!(
-        report.assessment_area_status("unit-registry-guidance/1"),
+        report.producer_status("unit-registry-guidance/1"),
         Field::Present(AssessmentStatus::Assessed)
     ));
     assert_unit_inventory_aggregates(&report);
@@ -65,7 +31,7 @@ fn check_unit(text: &str) -> (u32, [u32; 6], bool, serde_json::Value) {
     let source = serde_json::json!({"info":{},"sdfData":{"Value":{"unit":text}}}).to_string();
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", source.as_bytes())]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let units = report.unit_guidance().require().unwrap();
     (
@@ -180,7 +146,7 @@ fn all_full_roles_and_refined_alternatives_have_distinct_final_coordinates() {
     let bytes = include_bytes!("../fixtures/units/full-positions.sdf.json");
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("fixture", bytes)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     let units = report.unit_guidance().require().unwrap();
     assert_eq!(report.outcome().errors(), 2);
@@ -214,58 +180,11 @@ fn all_full_roles_and_refined_alternatives_have_distinct_final_coordinates() {
     );
 }
 #[test]
-fn withheld_request_retains_spelling_error_and_real_unavailable_needed_record() {
-    use esdieff::RecordedRegistryPolicy;
-    let bytes = include_bytes!("../fixtures/units/forbidden-one.sdf.json");
-    let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
-    let request = CheckRequest::new()
-        .assessment(Assessment::ExpandedUnits)
-        .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded);
-    let report = cat.check(request).unwrap();
-    assert_eq!(report.outcome().errors(), 1);
-    let summary = report.unit_guidance().require().unwrap();
-    assert_eq!(
-        (
-            summary.known_primary(),
-            summary.unknown(),
-            summary.unavailable(),
-            summary.uri_names()
-        ),
-        (0, 0, 1, 1)
-    );
-    assert!(!summary.complete());
-    assert!(matches!(summary.source_edition(), Field::Unavailable(_)));
-    let record = report
-        .registry_knowledge("iana.senml-units")
-        .require()
-        .unwrap();
-    assert_eq!(
-        (record.state(), record.reason(), record.snapshot()),
-        ("unavailable", Some("caller_withheld"), None)
-    );
-    assert!(matches!(
-        report.registry_knowledge("iana.secondary-units"),
-        Field::Absent
-    ));
-    let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
-    assert_eq!(wire["policy"]["recorded_registry"], "withhold_recorded");
-    assert!(wire["request"].get("registry_knowledge").is_none());
-    assert_eq!(
-        wire["baseline"]["registry_knowledge"][0]
-            .as_object()
-            .unwrap()
-            .len(),
-        4
-    );
-    assert_eq!(wire["result"]["unit_guidance"]["counts"]["unavailable"], 1);
-    assert_unit_inventory_aggregates(&report);
-}
-#[test]
 fn retained_sources_effective_overrides_deletions_and_copied_coordinates_count_once() {
     let bytes = include_bytes!("../fixtures/units/local-overrides.sdf.json");
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(cat.sources().next().unwrap().raw_bytes(), bytes);
     let units = report.unit_guidance().require().unwrap();
@@ -279,7 +198,11 @@ fn initial_modified_and_full_inventory_getter_meanings_are_preserved() {
         br#"{"sdfData":{"A":{"unit":"urn:ietf:params:unit:kg"}}}"#,
     )])
     .unwrap();
-    for assessment in [Assessment::Initial, Assessment::ExpandedModified] {
+    for assessment in [
+        Assessment::Initial,
+        Assessment::ExpandedNumeric,
+        Assessment::ExpandedConsistency,
+    ] {
         let report = cat
             .check(CheckRequest::new().assessment(assessment))
             .unwrap();
@@ -312,7 +235,7 @@ fn reliable_absence_shape_direct_and_critical_guards_are_distinct() {
     ] {
         let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
         let report = cat
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         let units = report.unit_guidance().require().unwrap();
         if bytes == b"{}" {
@@ -328,7 +251,7 @@ fn reliable_absence_shape_direct_and_critical_guards_are_distinct() {
     let bytes = include_bytes!("../fixtures/units/critical.sdf.json");
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert!(!report.unit_guidance().require().unwrap().complete());
     assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 0);
@@ -339,7 +262,7 @@ fn reliable_absence_shape_direct_and_critical_guards_are_distinct() {
     let bytes = br#"{"sdfData":{"A":{"unit":false}}}"#;
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("model", bytes)]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 1);
     let units = report.unit_guidance().require().unwrap();
@@ -351,7 +274,7 @@ fn reliable_absence_shape_direct_and_critical_guards_are_distinct() {
 fn exact_report_admission_preserves_mandatory_counts_with_all_optional_detail_omitted() {
     use esdieff::Limits;
     let bytes = br#"{"info":{},"sdfData":{"A":{"unit":"urn:ietf:params:unit:Cel"}}}"#;
-    for limit in [41969, 41970] {
+    for limit in [52140, 52141] {
         let cat = Catalogue::with_limits(
             &[SourceInput::supplied("fixture", bytes)],
             Limits::default()
@@ -360,8 +283,8 @@ fn exact_report_admission_preserves_mandatory_counts_with_all_optional_detail_om
                 .conditions(1),
         )
         .unwrap();
-        let result = cat.check(CheckRequest::new().assessment(Assessment::ExpandedUnits));
-        if limit == 41969 {
+        let result = cat.check(CheckRequest::new().assessment(Assessment::FullBaseline));
+        if limit == 52140 {
             assert!(result.is_err());
             continue;
         }
@@ -372,7 +295,7 @@ fn exact_report_admission_preserves_mandatory_counts_with_all_optional_detail_om
         let human = report.to_human();
         assert!(json.len() <= limit && human.len() <= limit);
         let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(wire["coverage"]["rows_omitted"], 10);
+        assert_eq!(wire["coverage"]["rows_omitted"], 13);
         assert_eq!(wire["diagnostics"]["retained"], 0);
         assert_eq!(
             wire["result"]["unit_guidance"]["counts"]["known_primary"],
@@ -403,12 +326,12 @@ fn owner_failure_is_null_and_not_a_completed_empty_summary() {
     )
     .unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert!(matches!(report.unit_guidance(), Field::Unavailable(_)));
     assert_eq!(report.outcome().errors(), 1);
     assert!(matches!(
-        report.assessment_area_status("unit-spelling/1"),
+        report.producer_status("unit-spelling/1"),
         Field::Present(AssessmentStatus::Undetermined)
     ));
     assert!(matches!(
@@ -450,7 +373,7 @@ fn lookup_work_before_and_after_first_comparison_has_truthful_consultation() {
             continue;
         }
         let report = cat
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         let summary = report.unit_guidance().require().unwrap();
         if summary.unavailable() == 1 {
@@ -527,7 +450,7 @@ fn selected_unused_providers_reverse_order_sample_exclusion_and_inherited_origin
             .check(
                 CheckRequest::new()
                     .root(root)
-                    .assessment(Assessment::ExpandedUnits),
+                    .assessment(Assessment::FullBaseline),
             )
             .unwrap();
         assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 1);
@@ -544,7 +467,7 @@ fn selected_unused_providers_reverse_order_sample_exclusion_and_inherited_origin
         assert_eq!(finding["related"][0]["kind"], "source");
         assert_eq!(finding["related"][0]["pointer"], "/sdfData/Mass/unit");
         let all = cat
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(all.unit_guidance().require().unwrap().known_primary(), 2);
     }
@@ -558,7 +481,7 @@ fn selected_unused_providers_reverse_order_sample_exclusion_and_inherited_origin
     ])
     .unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 0);
 }
@@ -569,7 +492,7 @@ fn unavailable_alternative_meaning_keeps_independent_full_unit_error() {
         br#"{"info":{},"sdfData":{"A":{"enum":"not-an-array","unit":"urn:ietf:params:unit:kg"}}}"#;
     let cat = Catalogue::from_inputs(&[SourceInput::supplied("fixture", bytes)]).unwrap();
     let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(report.outcome().errors(), 2);
     assert_eq!(report.unit_guidance().require().unwrap().known_primary(), 1);
@@ -606,7 +529,7 @@ fn later_work_limit_and_detail_omission_preserve_earlier_errors_and_coordinate_c
                 .capability_complete()
         );
         let report = cat
-            .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         let units = report.unit_guidance().require().unwrap();
         assert_eq!(report.outcome().errors(), 2);
@@ -631,59 +554,9 @@ fn later_work_limit_and_detail_omission_preserve_earlier_errors_and_coordinate_c
     }
 }
 #[test]
-fn withheld_unused_evidence_and_unresolved_scope_do_not_invent_lookup_counts() {
-    use esdieff::RecordedRegistryPolicy;
-    let bytes = br#"{"info":{},"sdfData":{"A":{"unit":"https://example.test/units/length"}}}"#;
-    let cat = Catalogue::from_inputs(&[SourceInput::supplied("fixture", bytes)]).unwrap();
-    let report = cat
-        .check(
-            CheckRequest::new()
-                .assessment(Assessment::ExpandedUnits)
-                .recorded_registry_policy(RecordedRegistryPolicy::WithholdRecorded),
-        )
-        .unwrap();
-    let units = report.unit_guidance().require().unwrap();
-    assert!(units.complete());
-    assert_eq!((units.uri_names(), units.unavailable()), (1, 0));
-    assert!(matches!(units.source_edition(), Field::Absent));
-    assert!(matches!(
-        report.registry_knowledge("iana.senml-units"),
-        Field::Absent
-    ));
-    let bytes =
-        br#"{"info":{},"sdfData":{"A":{"unit":"kg"},"B":{"sdfRef":"missing:#/sdfData/Base"}}}"#;
-    let cat = Catalogue::from_inputs(&[SourceInput::supplied("fixture", bytes)]).unwrap();
-    let report = cat
-        .check(CheckRequest::new().assessment(Assessment::ExpandedUnits))
-        .unwrap();
-    let units = report.unit_guidance().require().unwrap();
-    assert!(!units.complete());
-    assert_eq!((units.known_primary(), units.unavailable()), (1, 0));
-}
-#[test]
-fn explicit_library_policy_refuses_unrelated_profiles_and_full_exact_cap_is_independent() {
-    use esdieff::{Limits, RecordedRegistryPolicy};
+fn full_registry_report_requires_its_exact_cap() {
+    use esdieff::Limits;
     let bytes = br#"{"info":{},"sdfData":{"A":{"unit":"kg"}}}"#;
-    let cat = Catalogue::from_inputs(&[SourceInput::supplied("fixture", bytes)]).unwrap();
-    for assessment in [
-        Assessment::Initial,
-        Assessment::ExpandedModified,
-        Assessment::ExpandedPatternSyntax,
-    ] {
-        for policy in [
-            RecordedRegistryPolicy::UseRecorded,
-            RecordedRegistryPolicy::WithholdRecorded,
-        ] {
-            assert!(
-                cat.check(
-                    CheckRequest::new()
-                        .assessment(assessment)
-                        .recorded_registry_policy(policy)
-                )
-                .is_err()
-            );
-        }
-    }
     for cap in [52140, 52141] {
         let cat = Catalogue::with_limits(
             &[SourceInput::supplied("fixture", bytes)],

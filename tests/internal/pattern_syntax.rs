@@ -11,7 +11,7 @@ fn pattern_source(pattern: &str) -> String {
 }
 fn status(report: &esdieff::Report<'_>) -> AssessmentStatus {
     report
-        .assessment_area_status("pattern-syntax/1")
+        .producer_status("pattern-syntax/1")
         .present()
         .unwrap()
 }
@@ -23,69 +23,56 @@ fn unbalanced_pattern_is_an_error_without_an_explicit_string_type() {
     let initial = catalogue.check(CheckRequest::new()).unwrap();
     assert_eq!(initial.outcome().errors(), 0);
     assert!(matches!(
-        initial.assessment_area_status("pattern-syntax/1"),
+        initial.producer_status("pattern-syntax/1"),
         Field::Absent
     ));
-    for assessment in [Assessment::ExpandedPatternSyntax, Assessment::FullBaseline] {
-        let report = catalogue
-            .check(CheckRequest::new().assessment(assessment))
-            .unwrap();
-        assert_eq!(report.outcome().errors(), 1);
-        let diagnostics = report.diagnostics();
-        let condition = diagnostics
-            .conditions()
-            .find(|condition| condition.code() == "pattern.syntax")
-            .unwrap();
-        assert_eq!(condition.assessment_unit(), Some("pattern-syntax/1"));
-        assert_eq!(condition.basis().kind(), esdieff::BasisKind::Rfc);
-        assert!(
-            condition
-                .basis()
-                .citation()
-                .unwrap()
-                .contains("ECMA-262 2025")
-        );
-        let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
-        let finding = wire["diagnostics"]["items"]
-            .as_array()
+
+    let report = catalogue
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+        .unwrap();
+    assert_eq!(report.outcome().errors(), 1);
+    let diagnostics = report.diagnostics();
+    let condition = diagnostics
+        .conditions()
+        .find(|condition| condition.code() == "pattern.syntax")
+        .unwrap();
+    assert_eq!(condition.assessment_unit(), Some("pattern-syntax/1"));
+    assert_eq!(condition.basis().kind(), esdieff::BasisKind::Rfc);
+    assert!(
+        condition
+            .basis()
+            .citation()
             .unwrap()
-            .iter()
-            .find(|item| item["code"] == "pattern.syntax")
-            .unwrap();
-        assert_eq!(finding["primary"]["kind"], "effective");
-        assert_eq!(finding["primary"]["pointer"], "/sdfProperty/p/pattern");
-        assert_eq!(
-            finding["related"][0]["source_id"],
-            catalogue.source_id("model").unwrap().get()
-        );
-        let span = finding["related"][0]["span"].as_array().unwrap();
-        assert_eq!(
-            &source[span[0].as_u64().unwrap() as usize..span[1].as_u64().unwrap() as usize],
-            br#""[""#
-        );
-        if assessment == Assessment::ExpandedPatternSyntax {
-            assert!(matches!(
-                report.assessment_area_status("pattern-syntax/1"),
-                Field::Present(AssessmentStatus::Assessed)
-            ));
-            assert_eq!(
-                report.requested_coverage().inventory(),
-                Some("esdieff.expanded.pattern-syntax/1")
-            );
-            assert_eq!(report.requested_coverage().total(), Some(9));
-        } else {
-            assert!(matches!(
-                report.assessment_area_status("pattern-syntax/1"),
-                Field::Absent
-            ));
-            assert_eq!(
-                report.requested_coverage().inventory(),
-                Some("esdieff.full-model/1")
-            );
-            assert_eq!(report.requested_coverage().total(), Some(13));
-            coverage_support::assert_requested_counts(&report);
-        }
-    }
+            .contains("ECMA-262 2025")
+    );
+    let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
+    let finding = wire["diagnostics"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["code"] == "pattern.syntax")
+        .unwrap();
+    assert_eq!(finding["primary"]["kind"], "effective");
+    assert_eq!(finding["primary"]["pointer"], "/sdfProperty/p/pattern");
+    assert_eq!(
+        finding["related"][0]["source_id"],
+        catalogue.source_id("model").unwrap().get()
+    );
+    let span = finding["related"][0]["span"].as_array().unwrap();
+    assert_eq!(
+        &source[span[0].as_u64().unwrap() as usize..span[1].as_u64().unwrap() as usize],
+        br#""[""#
+    );
+    assert!(matches!(
+        report.producer_status("pattern-syntax/1"),
+        Field::Present(AssessmentStatus::Assessed)
+    ));
+    assert_eq!(
+        report.requested_coverage().inventory(),
+        Some("esdieff.full-model/1")
+    );
+    assert_eq!(report.requested_coverage().total(), Some(13));
+    coverage_support::assert_requested_counts(&report);
 }
 
 #[test]
@@ -110,7 +97,7 @@ fn qualified_unicode_name_and_literal_controls_keep_their_distinctions() {
             let catalogue =
                 Catalogue::from_inputs(&[SourceInput::supplied("m", source.as_bytes())]).unwrap();
             let report = catalogue
-                .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+                .check(CheckRequest::new().assessment(Assessment::FullBaseline))
                 .unwrap();
             assert_eq!(status(&report), expected, "{pattern}");
             assert_eq!(report.outcome().errors(), errors, "{pattern}");
@@ -118,7 +105,9 @@ fn qualified_unicode_name_and_literal_controls_keep_their_distinctions() {
                 let diagnostics = report.diagnostics();
                 let finding = diagnostics
                     .conditions()
-                    .find(|item| item.code() == code)
+                    .find(|item| {
+                        item.code() == code && item.assessment_unit() == Some("pattern-syntax/1")
+                    })
                     .unwrap();
                 assert_eq!(finding.assessment_unit(), Some("pattern-syntax/1"));
                 if errors == 0 {
@@ -133,7 +122,7 @@ fn qualified_unicode_name_and_literal_controls_keep_their_distinctions() {
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("m", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(status(&report), AssessmentStatus::Assessed);
         assert_eq!(report.outcome().errors(), 0);
@@ -161,7 +150,7 @@ fn reducing_capacities_and_decimal_endpoints_leave_incomplete_capability() {
             Catalogue::with_limits(&[SourceInput::supplied("m", source.as_bytes())], limits)
                 .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(status(&report), AssessmentStatus::Undetermined, "{pattern}");
         assert_eq!(report.outcome().errors(), 0);
@@ -180,7 +169,7 @@ fn reducing_capacities_and_decimal_endpoints_leave_incomplete_capability() {
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("m", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(status(&report), AssessmentStatus::Assessed);
         assert_eq!(report.outcome().errors(), 1);
@@ -194,7 +183,7 @@ fn absent_and_nonstring_patterns_have_no_string_syntax_operation() {
         let catalogue =
             Catalogue::from_inputs(&[SourceInput::supplied("m", source.as_bytes())]).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(status(&report), AssessmentStatus::NotApplicable);
         assert_eq!(report.outcome().errors(), 1);
@@ -216,7 +205,7 @@ fn absent_and_nonstring_patterns_have_no_string_syntax_operation() {
     let source = br#"{"info":{},"sdfData":{"opaque":{"const":{"pattern":"["},"default":{"pattern":"["}}},"x:extension":{"pattern":"["}}"#;
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("m", source)]).unwrap();
     let report = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(status(&report), AssessmentStatus::NotApplicable);
     assert_eq!(report.outcome().errors(), 0);
@@ -241,7 +230,7 @@ fn full_joins_pattern_findings_with_known_requested_membership() {
         Field::Absent
     ));
     let expanded = catalogue
-        .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
     assert_eq!(status(&expanded), AssessmentStatus::Undetermined);
     assert_eq!(expanded.outcome().errors(), 2);
@@ -260,11 +249,11 @@ fn findings_and_status_survive_count_byte_and_pointer_omission() {
         let catalogue =
             Catalogue::with_limits(&[SourceInput::supplied("m", source)], limits).unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         assert_eq!(report.outcome().errors(), 2);
         assert_eq!(status(&report), AssessmentStatus::Undetermined);
-        assert_eq!(report.requested_coverage().total(), Some(9));
+        assert_eq!(report.requested_coverage().total(), Some(13));
         coverage_support::assert_requested_counts(&report);
         let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
         assert_eq!(wire["outcome"]["errors"], 2);
@@ -272,7 +261,7 @@ fn findings_and_status_survive_count_byte_and_pointer_omission() {
         assert!(
             report
                 .to_human()
-                .contains("Assessment area pattern-syntax/1: undetermined")
+                .contains("Requested inventory: esdieff.full-model/1")
         );
     }
 }
@@ -291,7 +280,7 @@ fn original_work_is_shared_by_successive_patterns() {
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         status(&report) == AssessmentStatus::Assessed
     };
@@ -323,7 +312,7 @@ fn failed_optional_finding_growth_preserves_an_established_invalidity() {
         )
         .unwrap();
         let report = catalogue
-            .check(CheckRequest::new().assessment(Assessment::ExpandedPatternSyntax))
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
             .unwrap();
         (
             status(&report),
@@ -360,33 +349,28 @@ fn failed_optional_finding_growth_preserves_an_established_invalidity() {
 
 #[test]
 fn additive_report_reserve_and_reducing_configuration_are_exact() {
-    for (assessment, extra) in [
-        (Assessment::ExpandedPatternSyntax, 171),
-        (Assessment::FullBaseline, 31448 + 171),
-    ] {
-        let cap = 6 + 4096 + 16384 + extra;
-        let small = Catalogue::with_limits(
-            &[SourceInput::supplied("m", b"{}")],
-            Limits::default().report_bytes(cap - 1),
-        )
+    let cap = 6 + 4096 + 16384 + 31448 + 171;
+    let small = Catalogue::with_limits(
+        &[SourceInput::supplied("m", b"{}")],
+        Limits::default().report_bytes(cap - 1),
+    )
+    .unwrap();
+    assert!(
+        small
+            .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+            .is_err()
+    );
+    let catalogue = Catalogue::with_limits(
+        &[SourceInput::supplied("m", b"{}")],
+        Limits::default().report_bytes(cap),
+    )
+    .unwrap();
+    let report = catalogue
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
         .unwrap();
-        assert!(
-            small
-                .check(CheckRequest::new().assessment(assessment))
-                .is_err()
-        );
-        let catalogue = Catalogue::with_limits(
-            &[SourceInput::supplied("m", b"{}")],
-            Limits::default().report_bytes(cap),
-        )
-        .unwrap();
-        let report = catalogue
-            .check(CheckRequest::new().assessment(assessment))
-            .unwrap();
-        let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
-        assert_eq!(wire["diagnostics"]["retained"], 0);
-        assert!(report.to_json().len() <= cap && report.to_human().len() <= cap);
-    }
+    let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
+    assert_eq!(wire["diagnostics"]["retained"], 0);
+    assert!(report.to_json().len() <= cap && report.to_human().len() <= cap);
     for limits in [
         Limits::default().pattern_bytes(0),
         Limits::default().pattern_bytes(4097),

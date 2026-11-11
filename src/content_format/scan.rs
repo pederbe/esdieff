@@ -12,9 +12,7 @@ pub(crate) enum Rule {
     RegistryWork,
     Known(u8),
     Unknown,
-    Withheld,
     Identity,
-    Parameters,
     MeaningUnsupported,
 }
 impl Rule {
@@ -25,9 +23,7 @@ impl Rule {
             Self::Work | Self::RegistryWork => "operation.limit",
             Self::Known(_) => "content_format.registry_known",
             Self::Unknown => "content_format.registration_unknown",
-            Self::Withheld => "content_format.registry_knowledge_withheld",
             Self::Identity => "content_format.interpretation_unavailable",
-            Self::Parameters => "content_format.parameter_semantics_unassessed",
             Self::MeaningUnsupported => "content_format.model_meaning_unassessed",
         }
     }
@@ -58,14 +54,8 @@ impl Rule {
             Self::Unknown => {
                 "The spelling is absent from the relevant dated positive table; current registration is unknown"
             }
-            Self::Withheld => {
-                "The caller withheld the recorded evidence needed for this registration query"
-            }
             Self::Identity => {
                 "The explicit identity content-coding token is reserved; its declaration meaning is outside this inventory"
-            }
-            Self::Parameters => {
-                "Parameter spelling was checked; parameter meaning and duplicate-parameter meaning are outside this inventory"
             }
             Self::MeaningUnsupported => {
                 "The declaration needs media or parameter meaning outside the supported model capability"
@@ -82,7 +72,7 @@ impl Rule {
     pub(crate) fn severity(self) -> &'static str {
         match self {
             Self::Syntax | Self::Range => "error",
-            Self::Known(_) | Self::Parameters => "notice",
+            Self::Known(_) => "notice",
             _ => "incomplete",
         }
     }
@@ -91,7 +81,7 @@ impl Rule {
             Self::Syntax => "rfc",
             Self::Range | Self::Identity => "interpretation",
             Self::MeaningUnsupported => "interpretation",
-            Self::Work | Self::RegistryWork | Self::Withheld => "operational",
+            Self::Work | Self::RegistryWork => "operational",
             _ => "advice",
         }
     }
@@ -102,9 +92,7 @@ impl Rule {
             Self::Work => Some("content-format-establishment"),
             Self::RegistryWork => Some("content-format-registry-establishment"),
             Self::Known(_) | Self::Unknown => Some(table::EXTRACTION_POLICY),
-            Self::Withheld => Some("recorded-registry-policy"),
             Self::Identity => Some("content-format-identity-meaning"),
-            Self::Parameters => Some("content-format-inventory-exclusions"),
             Self::MeaningUnsupported => Some("content-format-model-meaning/1"),
         }
     }
@@ -239,18 +227,10 @@ impl<'a> Scanner<'a, '_> {
         }
         false
     }
-    fn query(&mut self, registry: u8) -> bool {
+    fn query(&mut self, registry: u8) {
         self.state.assessed(1);
         self.state.needed |= registry;
         self.state.increment(2);
-        if self.registry.policy == crate::RecordedRegistryPolicy::WithholdRecorded {
-            self.registry.withheld |= registry;
-            self.state.withheld |= registry;
-            self.state.reasons |= 1;
-            false
-        } else {
-            true
-        }
     }
     fn numeric(&mut self, number: u16, bytes: usize, meaning: bool) -> Result<Option<u8>, ()> {
         let found = lookup::numeric(number, bytes, self.registry, &mut self.budget.work);
@@ -307,13 +287,8 @@ impl<'a> Scanner<'a, '_> {
         self.record(model, node, rule);
         true
     }
-    fn withheld(&mut self, model: &crate::EffectiveModel<'a>, node: usize) {
-        self.state.statuses[1] = 2;
-        self.state.increment(3);
-        self.record(model, node, Rule::Withheld);
-    }
     fn record(&mut self, model: &crate::EffectiveModel<'a>, node: usize, rule: Rule) {
-        if matches!(rule, Rule::Parameters | Rule::MeaningUnsupported) {
+        if matches!(rule, Rule::MeaningUnsupported) {
             self.structure.coverage.observe(
                 crate::inventory::Requirement::M024,
                 crate::AssessmentStatus::Unassessed,
@@ -385,40 +360,25 @@ impl<'a> Scanner<'a, '_> {
                     self.state.needed |= NUMERIC;
                     self.state.assessed(1);
                 }
-                Some(grammar::Declaration::Media {
-                    codings,
-                    parameters,
-                    ..
-                }) => {
+                Some(grammar::Declaration::Media { codings, .. }) => {
                     self.state.needed |= MEDIA | (u8::from(!codings.is_empty()) * CODINGS);
                     self.state.assessed(1);
-                    if !parameters.is_empty() && !self.structure.coverage.full_requested {
-                        self.record(model, node, Rule::Parameters);
-                    }
                 }
             }
             return true;
         }
-        let meaning = if self.structure.coverage.full_requested {
-            let Some(needed) =
-                (crate::EffectiveJson { model, node }).model_meaning_needed(&mut self.budget.work)
-            else {
-                return self.stop(model, Some(node), Stop::Ancestry);
-            };
-            needed
-        } else {
-            false
+        let Some(meaning) =
+            (crate::EffectiveJson { model, node }).model_meaning_needed(&mut self.budget.work)
+        else {
+            return self.stop(model, Some(node), Stop::Ancestry);
         };
         match declaration {
             None | Some(grammar::Declaration::Number(None)) => {}
             Some(grammar::Declaration::Number(Some(number))) => {
-                if self.query(NUMERIC) {
-                    let result = self.numeric(number, text.len(), meaning);
-                    if !self.result(model, node, result, false) {
-                        return false;
-                    }
-                } else {
-                    self.withheld(model, node);
+                self.query(NUMERIC);
+                let result = self.numeric(number, text.len(), meaning);
+                if !self.result(model, node, result, false) {
+                    return false;
                 }
             }
             Some(grammar::Declaration::Media {
@@ -448,27 +408,21 @@ impl<'a> Scanner<'a, '_> {
                         self.record(model, node, Rule::MeaningUnsupported);
                     }
                 }
-                if self.query(MEDIA) {
-                    let result = self.named(name, Names::Media);
-                    if !self.result(model, node, result, false) {
-                        return false;
-                    }
-                } else {
-                    self.withheld(model, node);
+                self.query(MEDIA);
+                let result = self.named(name, Names::Media);
+                if !self.result(model, node, result, false) {
+                    return false;
                 }
                 for coding in codings.split('@').skip(1) {
-                    if self.query(CODINGS) {
-                        let result = self.named(coding, Names::Codings);
-                        // Reserved identity is separate from positive membership.
-                        if !self.charge(1 + coding.len() + 8) {
-                            return self.stop(model, Some(node), Stop::Identity);
-                        }
-                        let identity = coding.eq_ignore_ascii_case(table::RESERVED_CODINGS[0]);
-                        if !self.result(model, node, result, identity) {
-                            return false;
-                        }
-                    } else {
-                        self.withheld(model, node);
+                    self.query(CODINGS);
+                    let result = self.named(coding, Names::Codings);
+                    // Reserved identity is separate from positive membership.
+                    if !self.charge(1 + coding.len() + 8) {
+                        return self.stop(model, Some(node), Stop::Identity);
+                    }
+                    let identity = coding.eq_ignore_ascii_case(table::RESERVED_CODINGS[0]);
+                    if !self.result(model, node, result, identity) {
+                        return false;
                     }
                 }
             }
@@ -675,18 +629,18 @@ mod temporary_tests {
             )
             .unwrap();
             let report = catalogue
-                .check(CheckRequest::new().assessment(Assessment::ExpandedContentFormat))
+                .check(CheckRequest::new().assessment(Assessment::FullBaseline))
                 .unwrap();
             if let Some((Phase::Registry, site)) = LAST_STOP.get() {
                 assert!(
                     matches!(
-                        report.assessment_area_status(AREAS[0]),
+                        report.producer_status(AREAS[0]),
                         Field::Present(AssessmentStatus::Assessed)
                     ),
                     "{site:?} at{work}"
                 );
                 assert!(matches!(
-                    report.assessment_area_status(AREAS[1]),
+                    report.producer_status(AREAS[1]),
                     Field::Present(AssessmentStatus::Undetermined)
                 ));
                 assert_eq!(

@@ -83,7 +83,7 @@ pub(crate) use json::NumberWork;
 pub use json::{Children, ExactNumber, Field, JsonKind, JsonView};
 pub(crate) use limits::Limits;
 pub use reference::{ReferenceCondition, ReferenceOmissions, ReferenceRequest, ReferenceResult};
-pub use registry::{RecordedRegistryPolicy, RegistryKnowledgeView};
+pub use registry::RegistryKnowledgeView;
 pub use report::{
     Assessment, AssessmentStatus, Basis, BasisKind, CheckRequest, Condition, ConditionDomain,
     Diagnostics, Disposition, EffectiveReportLocation, InspectRequest, Outcome, Report,

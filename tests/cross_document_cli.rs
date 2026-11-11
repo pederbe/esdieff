@@ -103,7 +103,7 @@ fn supplied_controller_inspection_agrees_in_human_json_and_reordered_inputs() {
     }
 }
 #[test]
-fn explicit_root_check_and_dependency_modified_profile_keep_matching_exit_and_scope() {
+fn explicit_root_check_and_full_dependency_metadata_keep_matching_exit_and_scope() {
     let bad = String::from_utf8(LEVEL.to_vec())
         .unwrap()
         .replace(
@@ -138,7 +138,7 @@ fn explicit_root_check_and_dependency_modified_profile_keep_matching_exit_and_sc
                 "--root",
                 "-",
                 "--assessment",
-                "expanded-modified-v1",
+                "full-baseline",
                 "--format",
                 format,
                 "-",
@@ -155,7 +155,7 @@ fn explicit_root_check_and_dependency_modified_profile_keep_matching_exit_and_sc
                 wire["request"]["scope"]["dependencies"],
                 serde_json::json!([2])
             );
-            assert_eq!(wire["coverage"]["requested"]["total"], 9);
+            assert_eq!(wire["coverage"]["requested"]["total"], 13);
             coverage_support::assert_wire_counts(&wire);
             coverage_support::assert_wire_counts(&wire);
             let advisory = wire["coverage"]["rows"]
@@ -168,12 +168,8 @@ fn explicit_root_check_and_dependency_modified_profile_keep_matching_exit_and_sc
         } else {
             let human = String::from_utf8(expanded.stdout).unwrap();
             assert!(human.contains("Errors: 1"));
-            assert!(human.contains("Assessment area modified-date-time/1: assessed"));
-            assert!(
-                human.contains(
-                    "total 9; assessed 8; not applicable 1; unassessed 0; undetermined 0"
-                )
-            );
+            assert!(human.contains("Requested inventory: esdieff.full-model/1"));
+            assert!(human.contains("Requested coverage (assessment_area): total 13;"));
             assert!(human.contains("/info/modified"));
         }
     }
@@ -252,7 +248,7 @@ fn imported_compound_findings_keep_native_uncertainty_and_matching_cli_outcomes(
                 "--root",
                 "-",
                 "--assessment",
-                "expanded-modified-v1",
+                "full-baseline",
                 "--format",
                 format,
                 "-",
@@ -267,7 +263,7 @@ fn imported_compound_findings_keep_native_uncertainty_and_matching_cli_outcomes(
             assert_eq!(wire["outcome"]["errors"], 3);
             assert_eq!(wire["outcome"]["complete"], false);
             assert_eq!(wire["outcome"]["disposition"], "failed");
-            assert_eq!(wire["coverage"]["requested"]["total"], 9);
+            assert_eq!(wire["coverage"]["requested"]["total"], 13);
             coverage_support::assert_wire_counts(&wire);
             assert_eq!(
                 wire["request"]["scope"]["dependencies"],
@@ -296,7 +292,7 @@ fn imported_compound_findings_keep_native_uncertainty_and_matching_cli_outcomes(
             let human = String::from_utf8(output.stdout).unwrap();
             assert!(human.contains("Errors: 3;"));
             assert!(human.contains("Complete: false"));
-            assert!(human.contains("Assessment area modified-date-time/1: undetermined"));
+            assert!(human.contains("Complete: false"));
             for code in ["data.required", "parameter.positive_step", "data.count"] {
                 assert!(human.contains(code));
             }
@@ -316,7 +312,7 @@ fn undecodable_mandatory_reference_reports_unknown_date_scope_in_both_formats() 
                 "--root",
                 "-",
                 "--assessment",
-                "expanded-modified-v1",
+                "full-baseline",
                 "--format",
                 format,
             ];
@@ -333,7 +329,7 @@ fn undecodable_mandatory_reference_reports_unknown_date_scope_in_both_formats() 
                 assert_eq!(wire["outcome"]["errors"], 0);
                 assert_eq!(wire["outcome"]["complete"], false);
                 assert_eq!(wire["outcome"]["disposition"], "undetermined");
-                assert_eq!(wire["coverage"]["requested"]["total"], 9);
+                assert_eq!(wire["coverage"]["requested"]["total"], 13);
                 coverage_support::assert_wire_counts(&wire);
                 coverage_support::assert_wire_counts(&wire);
                 assert_eq!(
@@ -345,7 +341,7 @@ fn undecodable_mandatory_reference_reports_unknown_date_scope_in_both_formats() 
                 let human = String::from_utf8(output.stdout).unwrap();
                 assert!(human.contains("Errors: 0;"));
                 assert!(human.contains("Complete: false"));
-                assert!(human.contains("Assessment area modified-date-time/1: undetermined"));
+                assert!(human.contains("Complete: false"));
             }
         }
     }

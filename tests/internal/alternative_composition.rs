@@ -77,18 +77,18 @@ fn imported_enum_chain_preserves_scalar_sources_outer_consumers_and_dependency_k
             .check(
                 CheckRequest::new()
                     .root(root)
-                    .assessment(Assessment::ExpandedModified),
+                    .assessment(Assessment::FullBaseline),
             )
             .unwrap();
         assert_eq!(report.outcome().errors(), 0);
         assert_eq!(
             report
-                .assessment_area_status("modified-date-time/1")
+                .producer_status("modified-date-time/1")
                 .require()
                 .unwrap(),
             AssessmentStatus::Assessed
         );
-        assert_eq!(report.requested_coverage().total(), Some(9));
+        assert_eq!(report.requested_coverage().total(), Some(13));
         let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
         assert_eq!(
             wire["request"]["scope"]["dependencies"]
@@ -366,17 +366,17 @@ fn unavailable_imported_enum_cannot_fall_back_to_source_and_keeps_modified_uncer
         .check(
             CheckRequest::new()
                 .root(root)
-                .assessment(Assessment::ExpandedModified),
+                .assessment(Assessment::FullBaseline),
         )
         .unwrap();
     assert_eq!(
         report
-            .assessment_area_status("modified-date-time/1")
+            .producer_status("modified-date-time/1")
             .require()
             .unwrap(),
         AssessmentStatus::Undetermined
     );
-    assert_eq!(report.requested_coverage().total(), Some(9));
+    assert_eq!(report.requested_coverage().total(), Some(13));
     let model = report.effective_model().unwrap();
     assert!(matches!(
         model.definition(Class::Data, "Use"),

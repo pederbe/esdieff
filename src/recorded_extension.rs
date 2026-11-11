@@ -67,11 +67,6 @@ impl<'a> Scanner<'a, '_> {
             self.defer();
             return;
         }
-        if self.registry.policy == crate::RecordedRegistryPolicy::WithholdRecorded {
-            self.registry.withheld |= RECORD;
-            self.defer();
-            return;
-        }
         let verdict = match quality.source.number() {
             Field::Present(number) => {
                 crate::formal::uint(number, &mut self.budget.work, &mut self.numbers)

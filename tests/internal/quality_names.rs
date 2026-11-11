@@ -195,7 +195,11 @@ fn inherited_quality_findings_retain_effective_and_source_coordinates() {
 
 #[test]
 fn narrower_assessments_keep_existing_vocabulary_behavior() {
-    for assessment in [Assessment::Initial, Assessment::ExpandedPatternSyntax] {
+    for assessment in [
+        Assessment::Initial,
+        Assessment::ExpandedNumeric,
+        Assessment::ExpandedConsistency,
+    ] {
         let model =
             json!({"info":{},"sdfData":{"D":{"type":"number","bad-name":1,"Bad:quality":1}}});
         let catalogue = catalogue(&model, Limits::default());

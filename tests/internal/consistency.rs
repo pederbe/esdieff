@@ -45,7 +45,7 @@ fn check(bytes: &[u8]) -> Value {
         rows.iter().map(|row| row["id"].as_str().unwrap()).collect();
     assert_eq!(unique.len(), 10);
     for area in [CONST, DEFAULT] {
-        let typed = report.assessment_area_status(area).require().unwrap();
+        let typed = report.producer_status(area).require().unwrap();
         assert_eq!(status(&wire, area), typed.as_str());
         let basis = &rows.iter().find(|row| row["id"] == area).unwrap()["basis"];
         if matches!(
@@ -615,11 +615,11 @@ fn equality_pairs_are_shared_across_model_candidates_and_requests_restart_cleanl
         assert_eq!(report.outcome().warnings(), 1);
         assert!(!report.outcome().complete());
         assert_eq!(
-            report.assessment_area_status(DEFAULT).require().unwrap(),
+            report.producer_status(DEFAULT).require().unwrap(),
             AssessmentStatus::Undetermined
         );
         assert_eq!(
-            report.assessment_area_status(CONST).require().unwrap(),
+            report.producer_status(CONST).require().unwrap(),
             AssessmentStatus::Undetermined
         );
     }
@@ -633,7 +633,7 @@ fn equality_pairs_are_shared_across_model_candidates_and_requests_restart_cleanl
         .unwrap();
     assert_eq!(report.outcome().warnings(), 2);
     assert_eq!(
-        report.assessment_area_status(DEFAULT).require().unwrap(),
+        report.producer_status(DEFAULT).require().unwrap(),
         AssessmentStatus::Assessed
     );
 }
@@ -653,7 +653,7 @@ fn limits_defer_needed_work_and_preserve_independent_warnings_and_denominator() 
     assert!(!report.outcome().complete());
     assert_eq!(report.requested_coverage().total(), Some(10));
     assert_eq!(
-        report.assessment_area_status(DEFAULT).require().unwrap(),
+        report.producer_status(DEFAULT).require().unwrap(),
         AssessmentStatus::Undetermined
     );
     let source_limited = Catalogue::with_limits(
@@ -667,7 +667,7 @@ fn limits_defer_needed_work_and_preserve_independent_warnings_and_denominator() 
     assert_eq!(report.requested_coverage().total(), Some(10));
     for area in [CONST, DEFAULT] {
         assert_eq!(
-            report.assessment_area_status(area).require().unwrap(),
+            report.producer_status(area).require().unwrap(),
             AssessmentStatus::Undetermined
         );
     }
@@ -744,10 +744,6 @@ fn consistency_selection_keeps_every_other_profile_inventory_unchanged() {
     let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("m", bytes)]).unwrap();
     for (profile, total) in [
         (Assessment::Initial, 8),
-        (Assessment::ExpandedModified, 9),
-        (Assessment::ExpandedUnits, 10),
-        (Assessment::ExpandedContentFormat, 10),
-        (Assessment::ExpandedPatternSyntax, 9),
         (Assessment::ExpandedNumeric, 9),
         (Assessment::FullBaseline, 13),
     ] {
@@ -756,7 +752,7 @@ fn consistency_selection_keeps_every_other_profile_inventory_unchanged() {
             .unwrap();
         assert_eq!(report.requested_coverage().total(), Some(total));
         for area in [CONST, DEFAULT] {
-            assert!(matches!(report.assessment_area_status(area), Field::Absent));
+            assert!(matches!(report.producer_status(area), Field::Absent));
         }
         let wire: Value = serde_json::from_str(&report.to_json()).unwrap();
         assert!(conditions(&wire, "consistency.const_excluded").is_empty());

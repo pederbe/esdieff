@@ -340,13 +340,13 @@ fn omitted_reference_findings_and_dependency_temporal_knowledge_keep_semantic_re
             .check(
                 esdieff::CheckRequest::new()
                     .root(root)
-                    .assessment(esdieff::Assessment::ExpandedModified),
+                    .assessment(esdieff::Assessment::FullBaseline),
             )
             .unwrap();
         assert_eq!(report.outcome().errors(), 0);
         assert_eq!(
             report
-                .assessment_area_status("modified-date-time/1")
+                .producer_status("modified-date-time/1")
                 .require()
                 .unwrap(),
             esdieff::AssessmentStatus::Assessed
@@ -457,13 +457,13 @@ fn expanded_modified_assesses_each_needed_source_once_without_unrelated_metadata
             .check(
                 esdieff::CheckRequest::new()
                     .root(root)
-                    .assessment(esdieff::Assessment::ExpandedModified),
+                    .assessment(esdieff::Assessment::FullBaseline),
             )
             .unwrap();
         assert_eq!(report.outcome().errors(), 1);
         assert_eq!(
             report
-                .assessment_area_status("modified-date-time/1")
+                .producer_status("modified-date-time/1")
                 .require()
                 .unwrap(),
             esdieff::AssessmentStatus::Assessed
@@ -631,14 +631,14 @@ fn unknown_critical_context_cannot_establish_namespace_contribution_absence() {
                     .check(
                         esdieff::CheckRequest::new()
                             .root(root)
-                            .assessment(esdieff::Assessment::ExpandedModified),
+                            .assessment(esdieff::Assessment::FullBaseline),
                     )
                     .unwrap();
                 assert!(!selected.outcome().complete());
                 assert_eq!(selected.outcome().errors(), 0);
                 assert_eq!(
                     selected
-                        .assessment_area_status("modified-date-time/1")
+                        .producer_status("modified-date-time/1")
                         .require()
                         .unwrap(),
                     esdieff::AssessmentStatus::Undetermined
@@ -803,18 +803,18 @@ fn source_closure_uncertainty_and_omitted_details_preserve_modified_and_referenc
                 .check(
                     esdieff::CheckRequest::new()
                         .root(root)
-                        .assessment(esdieff::Assessment::ExpandedModified),
+                        .assessment(esdieff::Assessment::FullBaseline),
                 )
                 .unwrap();
             assert_eq!(
                 report
-                    .assessment_area_status("modified-date-time/1")
+                    .producer_status("modified-date-time/1")
                     .require()
                     .unwrap(),
                 esdieff::AssessmentStatus::Undetermined
             );
             assert_eq!(report.outcome().errors(), 0);
-            assert_eq!(report.requested_coverage().total(), Some(9));
+            assert_eq!(report.requested_coverage().total(), Some(13));
             let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
             assert_eq!(wire["sources"].as_array().unwrap().len(), 2);
             assert_eq!(
@@ -962,11 +962,11 @@ fn cumulative_reference_limits_leave_unfinished_dependency_metadata_scope_explic
     let request = esdieff::CheckRequest::new()
         .root(catalogue.source_id("first").unwrap())
         .root(catalogue.source_id("second").unwrap())
-        .assessment(esdieff::Assessment::ExpandedModified);
+        .assessment(esdieff::Assessment::FullBaseline);
     let report = catalogue.check(request).unwrap();
     assert_eq!(
         report
-            .assessment_area_status("modified-date-time/1")
+            .producer_status("modified-date-time/1")
             .require()
             .unwrap(),
         esdieff::AssessmentStatus::Undetermined
@@ -1019,18 +1019,18 @@ fn imported_compound_constraints_keep_object_premises_restricted_items_and_date_
                     .check(
                         esdieff::CheckRequest::new()
                             .root(root)
-                            .assessment(Assessment::ExpandedModified),
+                            .assessment(Assessment::FullBaseline),
                     )
                     .unwrap();
                 assert_eq!(report.outcome().errors(), 3);
                 assert_eq!(
                     report
-                        .assessment_area_status("modified-date-time/1")
+                        .producer_status("modified-date-time/1")
                         .require()
                         .unwrap(),
                     status
                 );
-                assert_eq!(report.requested_coverage().total(), Some(9));
+                assert_eq!(report.requested_coverage().total(), Some(13));
                 let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
                 assert!(wire["baseline"]["temporal_knowledge"].is_object());
                 assert_eq!(
@@ -1241,19 +1241,19 @@ fn undecodable_mandatory_reference_retains_unfinished_dependency_metadata_scope(
                     .check(
                         CheckRequest::new()
                             .root(root)
-                            .assessment(Assessment::ExpandedModified),
+                            .assessment(Assessment::FullBaseline),
                     )
                     .unwrap();
                 assert!(!report.effective_model().unwrap().complete());
                 assert_eq!(report.outcome().errors(), 0);
                 assert_eq!(
                     report
-                        .assessment_area_status("modified-date-time/1")
+                        .producer_status("modified-date-time/1")
                         .require()
                         .unwrap(),
                     AssessmentStatus::Undetermined
                 );
-                assert_eq!(report.requested_coverage().total(), Some(9));
+                assert_eq!(report.requested_coverage().total(), Some(13));
                 coverage_support::assert_requested_counts(&report);
                 let wire: serde_json::Value = serde_json::from_str(&report.to_json()).unwrap();
                 assert_eq!(

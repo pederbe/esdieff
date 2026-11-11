@@ -1,5 +1,9 @@
 # 0038: Recorded extension vocabulary
 
+The public assessment choices and registry-withholding behavior described here
+are superseded by [ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md).
+The validation rules and recorded facts below remain in use where not superseded.
+
 ## Context
 
 [RFC 9880 Section 7.5.2](https://www.rfc-editor.org/rfc/rfc9880.html#section-7.5.2)
