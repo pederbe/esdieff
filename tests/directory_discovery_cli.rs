@@ -652,7 +652,7 @@ fn exclusion_count_and_native_option_bytes_are_admitted_before_model_acquisition
         {
             let output = output.unwrap();
             setup_failure(&output);
-            assert!(String::from_utf8_lossy(&output.stderr).contains("metadata"));
+            assert!(String::from_utf8_lossy(&output.stderr).contains("1 MiB"));
         }
         assert_eq!(stream.stream_position().unwrap(), 0);
     }

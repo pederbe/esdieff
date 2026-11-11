@@ -155,9 +155,29 @@ pub struct Source {
     pub(crate) digest: Option<String>,
     pub(crate) raw_path: Option<Vec<u8>>,
     pub(crate) acquisition: Acquisition,
+    pub(crate) acquisition_error: Option<AcquisitionError>,
     pub(crate) label_omitted: bool,
     pub(crate) complete: bool,
     pub(crate) parsed: crate::json::Parsed,
+}
+/// Fixed-size I/O evidence keeps acquisition failures distinct from size limits.
+pub(crate) struct AcquisitionError {
+    kind: std::io::ErrorKind,
+    code: Option<i32>,
+}
+impl AcquisitionError {
+    fn new(error: std::io::Error) -> Self {
+        Self {
+            kind: error.kind(),
+            code: error.raw_os_error(),
+        }
+    }
+    pub(crate) fn message(&self) -> String {
+        match self.code {
+            Some(code) => std::io::Error::from_raw_os_error(code).to_string(),
+            None => self.kind.to_string(),
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -215,6 +235,7 @@ impl Catalogue {
                     _ => None,
                 };
                 let original = !matches!(input.content, Content::Typed(_) | Content::Projection(_));
+                let mut acquisition_error = None;
                 let (bytes, complete, acquisition) = match input.content {
                     Content::Supplied(bytes) => (
                         bytes[..bytes.len().min(cap)].to_owned(),
@@ -247,14 +268,20 @@ impl Catalogue {
                     ),
                     Content::Failed => (Vec::new(), false, Acquisition::Failed),
                     Content::File(path) => match File::open(path) {
-                        Err(_) => (Vec::new(), false, Acquisition::Failed),
+                        Err(error) => {
+                            acquisition_error = Some(AcquisitionError::new(error));
+                            (Vec::new(), false, Acquisition::Failed)
+                        }
                         Ok(mut file) => {
-                            let (bytes, complete) = read_bounded(&mut file, cap);
+                            let (bytes, complete, error) = read_bounded(&mut file, cap);
+                            acquisition_error = error;
                             (bytes, complete, Acquisition::Acquired)
                         }
                     },
                     Content::Stdin => {
-                        let (bytes, complete) = read_bounded(&mut std::io::stdin().lock(), cap);
+                        let (bytes, complete, error) =
+                            read_bounded(&mut std::io::stdin().lock(), cap);
+                        acquisition_error = error;
                         (bytes, complete, Acquisition::Acquired)
                     }
                 };
@@ -281,6 +308,7 @@ impl Catalogue {
                     raw_path,
                     parsed,
                     acquisition,
+                    acquisition_error,
                     complete,
                     label_omitted: input.label_omitted,
                 }
@@ -445,27 +473,27 @@ pub(crate) fn common_report_supported() -> bool {
         && per_source <= 4 * 4096
         && crate::report::common_owner_bytes() <= 4 * 16384
 }
-fn read_bounded(reader: &mut impl Read, cap: usize) -> (Vec<u8>, bool) {
+fn read_bounded(reader: &mut impl Read, cap: usize) -> (Vec<u8>, bool, Option<AcquisitionError>) {
     let mut bytes = Vec::new();
     let mut chunk = [0u8; 8192];
     while bytes.len() < cap {
         let available = chunk.len().min(cap - bytes.len());
         match reader.read(&mut chunk[..available]) {
-            Ok(0) => return (bytes, true),
+            Ok(0) => return (bytes, true, None),
             Ok(size) => {
                 bytes.reserve_exact(size);
                 bytes.extend_from_slice(&chunk[..size]);
             }
             Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(_) => return (bytes, false),
+            Err(error) => return (bytes, false, Some(AcquisitionError::new(error))),
         }
     }
     loop {
         match reader.read(&mut chunk[..1]) {
-            Ok(0) => return (bytes, true),
-            Ok(_) => return (bytes, false),
+            Ok(0) => return (bytes, true, None),
+            Ok(_) => return (bytes, false, None),
             Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(_) => return (bytes, false),
+            Err(error) => return (bytes, false, Some(AcquisitionError::new(error))),
         }
     }
 }
@@ -486,6 +514,7 @@ impl Source {
             digest: None,
             raw_path: None,
             acquisition: Acquisition::Generated,
+            acquisition_error: None,
             label_omitted: false,
             complete: true,
             parsed,
@@ -506,6 +535,7 @@ impl Source {
             digest: None,
             raw_path: None,
             acquisition: Acquisition::Supplied,
+            acquisition_error: None,
             label_omitted: false,
             complete: true,
             parsed,

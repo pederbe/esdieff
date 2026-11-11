@@ -173,6 +173,7 @@ impl EditRequest {
             digest: None,
             raw_path: None,
             acquisition: Acquisition::Supplied,
+            acquisition_error: None,
             label_omitted: false,
             complete: true,
             parsed,

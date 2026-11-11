@@ -61,11 +61,34 @@ struct Options<'a> {
     strict: bool,
     required: bool,
 }
-fn usage(reason: &str) -> (u8, String) {
-    (2, reason.to_owned())
+fn usage(reason: impl Into<String>) -> (u8, String) {
+    (2, reason.into())
+}
+fn missing_value(flag: &str) -> (u8, String) {
+    usage(format!(
+        "{flag} requires a value. Run esdieff --help for usage"
+    ))
+}
+fn duplicate_option(flag: &str) -> (u8, String) {
+    usage(format!("{flag} may be supplied only once"))
+}
+fn unknown_option(flag: &OsStr) -> (u8, String) {
+    let label = display_label(flag).unwrap_or("[option omitted]".into());
+    usage(format!(
+        "unknown option {label:?}. Run esdieff --help for options"
+    ))
+}
+fn unknown_input_option(flag: &OsStr) -> (u8, String) {
+    let (code, message) = unknown_option(flag);
+    (
+        code,
+        format!("{message}. Use -- before a path beginning with -"),
+    )
 }
 fn sample_kind(value: &str) -> Result<SampleKind, (u8, String)> {
-    SampleKind::from_name(value).ok_or_else(|| usage("unknown sample kind"))
+    SampleKind::from_name(value).ok_or_else(|| {
+        usage("--kind must be property, data, action_input, action_output, event_output or context")
+    })
 }
 fn parse<'a>(
     args: &'a [OsString],
@@ -132,12 +155,13 @@ fn parse<'a>(
                 flag @ ("--root" | "--document" | "--directory" | "--exclude" | "--pointer"
                 | "--view" | "--assessment" | "--format" | "--kind" | "--sample" | "--plan"),
             ) => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| usage("option requires a value"))?;
+                let value = args.get(index).ok_or_else(|| missing_value(flag))?;
                 index += 1;
                 match flag {
-                    "--plan" if command == "check" && options.plan.is_none() => {
+                    "--plan" if command == "check" => {
+                        if options.plan.is_some() {
+                            return Err(duplicate_option(flag));
+                        }
                         options.plan = Some(value);
                     }
                     "--root" if !options.inspect && !options.sample => {
@@ -160,13 +184,13 @@ fn parse<'a>(
                     }
                     "--document" if options.inspect || options.sample => {
                         if options.document.is_some() {
-                            return Err(usage("one inspection document required"));
+                            return Err(duplicate_option(flag));
                         }
                         options.document = Some(value);
                     }
                     "--pointer" if options.inspect || options.sample => {
                         if options.pointer.is_some() {
-                            return Err(usage("one inspection pointer required"));
+                            return Err(duplicate_option(flag));
                         }
                         options.pointer = Some(
                             value
@@ -178,28 +202,38 @@ fn parse<'a>(
                         options.view = match value.to_str() {
                             Some("source") => View::Source,
                             Some("effective") => View::Effective,
-                            _ => return Err(usage("view must be source or effective")),
+                            _ => return Err(usage("--view must be source or effective")),
                         }
                     }
-                    "--kind" if options.sample && options.kind.is_none() => {
+                    "--kind" if options.sample => {
+                        if options.kind.is_some() {
+                            return Err(duplicate_option(flag));
+                        }
                         options.kind = Some(sample_kind(
-                            value.to_str().ok_or_else(|| usage("unknown sample kind"))?,
+                            value
+                                .to_str()
+                                .ok_or_else(|| usage("--kind must be UTF-8"))?,
                         )?);
                     }
-                    "--sample" if options.sample && options.sample_path.is_none() => {
+                    "--sample" if options.sample => {
+                        if options.sample_path.is_some() {
+                            return Err(duplicate_option(flag));
+                        }
                         options.sample_path = Some(value)
                     }
                     "--assessment" if !options.inspect && !options.sample => {
                         options.assessment = assessment(value.to_str())?;
                     }
                     "--format" => format_value = Some(value.as_os_str()),
-                    _ => return Err(usage("option does not apply to this operation")),
+                    _ => {
+                        return Err(usage(format!(
+                            "{flag} does not apply to {command}. Run esdieff --help for options"
+                        )));
+                    }
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(usage(
-                    "unknown option; use -- before a path beginning with -",
-                ));
+                return Err(unknown_input_option(OsStr::new(value)));
             }
             _ => {
                 if options.inputs.len() >= 256 {
@@ -275,7 +309,7 @@ fn parse<'a>(
         .ok_or_else(|| usage("input and selector metadata overflow"))?;
     if metadata > 1024 * 1024 {
         return Err(usage(
-            "input and selector identities exceed metadata budget",
+            "input paths and selectors exceed 1 MiB. Use fewer inputs or shorter paths",
         ));
     }
     Ok(Some(options))
@@ -319,8 +353,8 @@ pub(crate) fn format(value: &OsStr, accepts: &[Format]) -> Result<Format, (u8, S
     }
     let names: Vec<_> = accepts.iter().map(|format| format.name()).collect();
     let (last, rest) = names.split_last().expect("an accepted format");
-    Err(usage(&format!(
-        "format must be {} or {last} for this command",
+    Err(usage(format!(
+        "--format must be {} or {last} for this command",
         rest.join(", ")
     )))
 }
@@ -334,7 +368,9 @@ fn assessment(value: Option<&str>) -> Result<Assessment, (u8, String)> {
         Some("expanded-numeric-v1") => Ok(Assessment::ExpandedNumeric),
         Some("expanded-consistency-v1") => Ok(Assessment::ExpandedConsistency),
         Some("full-baseline") => Ok(Assessment::FullBaseline),
-        _ => Err(usage("unknown assessment")),
+        _ => Err(usage(
+            "--assessment must be initial-v1, expanded-numeric-v1, expanded-consistency-v1 or full-baseline",
+        )),
     }
 }
 fn selected_index(inputs: &[&OsStr], name: &OsStr) -> Result<usize, (u8, String)> {
@@ -342,7 +378,7 @@ fn selected_index(inputs: &[&OsStr], name: &OsStr) -> Result<usize, (u8, String)
     let index = matches
         .next()
         .map(|(index, _)| index)
-        .ok_or_else(|| usage("selected root or document is not a supplied input"))?;
+        .ok_or_else(|| usage(format!("selected path {:?} is not a supplied input. Add it as an input and use exactly the same path spelling", display_label(name).unwrap_or("[path omitted]".into()))))?;
     if matches.next().is_some() {
         return Err(usage(
             "selected path identifies more than one supplied attempt",

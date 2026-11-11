@@ -78,7 +78,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
         bytes.push(b'\n');
         // Refuse an export the reader cannot accept, before committing a destination.
         DifferenceAcknowledgements::from_json(&bytes)
-            .map_err(|reason| usage(&format!("cannot export acknowledgements: {reason}")))?;
+            .map_err(|reason| usage(format!("cannot export acknowledgements: {reason}")))?;
         output.emit(&bytes)?;
     }
     let rendered = match options.format {
@@ -113,7 +113,10 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
         match flag.to_str() {
             Some("--help" | "-h") => help = true,
             Some("--recursive") => recursive = true,
-            Some("--replace-acknowledgements") if !replace_acknowledgements => {
+            Some("--replace-acknowledgements") => {
+                if replace_acknowledgements {
+                    return Err(crate::duplicate_option("--replace-acknowledgements"));
+                }
                 replace_acknowledgements = true;
             }
             Some(
@@ -125,20 +128,17 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
                 | "--perspective"
                 | "--acknowledgements-output"),
             ) => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| usage("option requires a value"))?;
+                let value = args.get(index).ok_or_else(|| crate::missing_value(flag))?;
                 index += 1;
                 metadata = metadata
                     .checked_add(value.as_encoded_bytes().len())
                     .ok_or_else(|| usage("input metadata overflow"))?;
                 match flag {
                     "--perspective" if perspective.is_none() => {
-                        perspective = Some(parse_perspective(
-                            value
-                                .to_str()
-                                .ok_or_else(|| usage("invalid comparison perspective"))?,
-                        )?);
+                        perspective =
+                            Some(parse_perspective(value.to_str().ok_or_else(|| {
+                                usage("--perspective must be client or implementer")
+                            })?)?);
                     }
                     "--old" if earlier.is_none() => earlier = Some(value.as_os_str()),
                     "--new" if later.is_none() => later = Some(value.as_os_str()),
@@ -155,10 +155,10 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
                         exclusions.push(value.as_os_str());
                     }
                     "--format" => format = crate::format(value, ACCEPTED)?,
-                    _ => return Err(usage("duplicate diff option")),
+                    _ => return Err(crate::duplicate_option(flag)),
                 }
             }
-            _ => return Err(usage("unknown diff option")),
+            _ => return Err(crate::unknown_option(flag)),
         }
         if metadata > 1024 * 1024 {
             return Err(usage("diff CLI metadata exceeds whole-request budget"));
@@ -202,7 +202,7 @@ pub(crate) fn parse_perspective(value: &str) -> Result<Perspective, Error> {
     match value {
         "client" => Ok(Perspective::Client),
         "implementer" => Ok(Perspective::Implementer),
-        _ => Err(usage("perspective must be client or implementer")),
+        _ => Err(usage("--perspective must be client or implementer")),
     }
 }
 

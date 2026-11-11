@@ -49,7 +49,13 @@ pub(super) fn run<O: Operation>(args: &[OsString], color: &mut ColorMode) -> Res
     let bytes = read_plan(options.plan, O::NAME)?;
     let catalogue = Catalogue::take_inputs(options.inputs()).map_err(usage)?;
     let mut request = O::from_plan(catalogue, &bytes)
-        .map_err(usage)?
+        .map_err(|reason| {
+            usage(format!(
+                "{} plan {:?}: {reason}",
+                O::NAME,
+                crate::display_label(options.plan).unwrap_or("[path omitted]".into())
+            ))
+        })?
         .strict_warnings(options.strict);
     if let Some(check) = options.check {
         request = request.checking(check).map_err(usage)?;
@@ -115,9 +121,24 @@ pub(super) fn parse<'a>(
         }
         match flag.to_str() {
             Some("--help" | "-h") => help = true,
-            Some("--strict-warnings") if !strict => strict = true,
-            Some("--replace-document") if !replace_document => replace_document = true,
-            Some("--replace-report") if !replace_report => replace_report = true,
+            Some("--strict-warnings") => {
+                if strict {
+                    return Err(crate::duplicate_option("--strict-warnings"));
+                }
+                strict = true;
+            }
+            Some("--replace-document") => {
+                if replace_document {
+                    return Err(crate::duplicate_option("--replace-document"));
+                }
+                replace_document = true;
+            }
+            Some("--replace-report") => {
+                if replace_report {
+                    return Err(crate::duplicate_option("--replace-report"));
+                }
+                replace_report = true;
+            }
             Some("--source") => {
                 if sources.len() >= 255 {
                     return Err(usage(
@@ -132,8 +153,13 @@ pub(super) fn parse<'a>(
                     .get(index + 1)
                     .ok_or_else(|| usage("--source requires key and path"))?;
                 index += 2;
-                if key.len() > 256 || sources.iter().any(|(previous, _)| *previous == key) {
-                    return Err(usage("source keys must be bounded and unique"));
+                if key.len() > 256 {
+                    return Err(usage("--source key must be at most 256 UTF-8 bytes"));
+                }
+                if sources.iter().any(|(previous, _)| *previous == key) {
+                    return Err(usage(format!(
+                        "--source key {key:?} is repeated. Use a unique key for each source"
+                    )));
                 }
                 metadata = metadata
                     .checked_add(key.len() + path.as_encoded_bytes().len())
@@ -144,9 +170,7 @@ pub(super) fn parse<'a>(
                 flag
                 @ ("--plan" | "--document-output" | "--report-output" | "--check" | "--format"),
             ) => {
-                let value = args
-                    .get(index)
-                    .ok_or_else(|| usage("option requires a value"))?;
+                let value = args.get(index).ok_or_else(|| crate::missing_value(flag))?;
                 index += 1;
                 metadata = metadata
                     .checked_add(value.as_encoded_bytes().len())
@@ -161,7 +185,7 @@ pub(super) fn parse<'a>(
                             Some("full-baseline") => Assessment::FullBaseline,
                             _ => {
                                 return Err(usage(format!(
-                                    "{operation} check must be initial-v1 or full-baseline"
+                                    "--check must be initial-v1 or full-baseline for {operation}"
                                 )));
                             }
                         })
@@ -170,13 +194,13 @@ pub(super) fn parse<'a>(
                         json = match value.to_str() {
                             Some("json") => true,
                             Some("human") => false,
-                            _ => return Err(usage("format must be human or json")),
+                            _ => return Err(usage("--format must be human or json")),
                         }
                     }
-                    _ => return Err(usage(format!("duplicate {operation} option"))),
+                    _ => return Err(crate::duplicate_option(flag)),
                 }
             }
-            _ => return Err(usage(format!("unknown {operation} option"))),
+            _ => return Err(crate::unknown_option(flag)),
         }
         if metadata > 1024 * 1024 {
             return Err(usage(format!(
@@ -216,7 +240,9 @@ pub(super) fn parse<'a>(
         return Err(usage("only one plan or source may use standard input"));
     }
     if options.document == OsStr::new("-") && options.report == OsStr::new("-") {
-        return Err(usage("document and report cannot both use standard output"));
+        return Err(usage(
+            "document and report cannot both use standard output. Set --report-output to a file when --document-output is -",
+        ));
     }
     Ok(Some(options))
 }
@@ -260,7 +286,7 @@ fn identity(path: &Path) -> Result<Identity, Error> {
                 .filter(|p| !p.as_os_str().is_empty())
                 .unwrap_or_else(|| Path::new("."));
             let parent = fs::canonicalize(parent)
-                .map_err(|error| usage(format!("output/input parent unavailable: {error}")))?;
+                .map_err(|error| usage(format!("cannot access the parent directory of {:?}: {error}. Create the directory or choose another path", crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into()))))?;
             let parent = same_file::Handle::from_path(parent)
                 .map_err(|error| usage(format!("cannot retain parent identity: {error}")))?;
             let name = path
@@ -316,12 +342,18 @@ impl FileOutput {
             })
             .collect::<Result<Vec<_>, Error>>()?;
         Ok(Self {
-            destination: Destination::validate(path, replace, &protected)?,
+            destination: Destination::validate(
+                path,
+                replace,
+                &protected,
+                "--replace-acknowledgements",
+            )?,
             protected,
         })
     }
     pub(super) fn emit(&self, bytes: &[u8]) -> Result<(), Error> {
-        let stdout = Destination::validate(OsStr::new("-"), false, &[])?;
+        let stdout =
+            Destination::validate(OsStr::new("-"), false, &[], "--replace-acknowledgements")?;
         self.destination
             .emit(bytes, &self.protected, &stdout, InputPolicy::Unchanged)
             .map_err(|error| {
@@ -343,12 +375,17 @@ enum InputPolicy {
     Unchanged,
 }
 impl Destination {
-    fn validate(path: &OsStr, replace: bool, protected: &[ProtectedInput]) -> Result<Self, Error> {
+    fn validate(
+        path: &OsStr,
+        replace: bool,
+        protected: &[ProtectedInput],
+        replacement: &str,
+    ) -> Result<Self, Error> {
         if path == OsStr::new("-") {
             if replace {
-                return Err(usage(
-                    "replacement option does not apply to standard output",
-                ));
+                return Err(usage(format!(
+                    "{replacement} does not apply to standard output. Remove the option or choose a file destination"
+                )));
             }
             return Ok(Self {
                 path: None,
@@ -357,20 +394,37 @@ impl Destination {
             });
         }
         let path = PathBuf::from(path);
-        match fs::symlink_metadata(&path) {
+        let exists = match fs::symlink_metadata(&path) {
             Ok(metadata) => {
-                if !replace || !metadata.is_file() || metadata.file_type().is_symlink() {
-                    return Err(usage(
-                        "existing output requires explicit replacement of a regular non-symlink file",
-                    ));
+                let label =
+                    crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into());
+                if !metadata.is_file() || metadata.file_type().is_symlink() {
+                    return Err(usage(format!(
+                        "output {label:?} is not a regular non-symlink file. Choose another destination"
+                    )));
                 }
+                true
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(usage(format!("cannot validate destination: {error}"))),
-        }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+            Err(error) => {
+                return Err(usage(format!(
+                    "cannot inspect output {:?}: {error}",
+                    crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+                )));
+            }
+        };
         let target = identity(&path)?;
         if protected.iter().any(|input| input.identity == target) {
-            return Err(usage("output aliases a protected source or plan input"));
+            return Err(usage(format!(
+                "output {:?} refers to a protected source or plan input. Choose a different output file",
+                crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+            )));
+        }
+        if exists && !replace {
+            return Err(usage(format!(
+                "output {:?} already exists. Choose another destination or use {replacement} to replace it",
+                crate::display_label(path.as_os_str()).unwrap_or("[path omitted]".into())
+            )));
         }
         Ok(Self {
             path: Some(path),
@@ -511,10 +565,12 @@ pub(super) fn read_plan(path: &OsStr, operation: &str) -> Result<Vec<u8>, Error>
     let mut reader: Box<dyn Read> = if path == OsStr::new("-") {
         Box::new(std::io::stdin())
     } else {
-        Box::new(
-            File::open(path)
-                .map_err(|error| host(format!("cannot acquire {operation} plan: {error}")))?,
-        )
+        Box::new(File::open(path).map_err(|error| {
+            host(format!(
+                "cannot read {operation} plan {:?}: {error}. Check the path and read permissions",
+                crate::display_label(path).unwrap_or("[path omitted]".into())
+            ))
+        })?)
     };
     let mut bytes = Vec::new();
     let mut chunk = [0; 8192];
@@ -527,7 +583,12 @@ pub(super) fn read_plan(path: &OsStr, operation: &str) -> Result<Vec<u8>, Error>
                 bytes.extend_from_slice(&chunk[..size]);
             }
             Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(error) => return Err(host(format!("cannot read {operation} plan: {error}"))),
+            Err(error) => {
+                return Err(host(format!(
+                    "cannot read {operation} plan {:?}: {error}",
+                    crate::display_label(path).unwrap_or("[path omitted]".into())
+                )));
+            }
         }
     }
     Err(usage(format!(
@@ -556,11 +617,22 @@ impl Delivery {
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;
-        let document =
-            Destination::validate(options.document, options.replace_document, &protected)?;
-        let report = Destination::validate(options.report, options.replace_report, &protected)?;
+        let document = Destination::validate(
+            options.document,
+            options.replace_document,
+            &protected,
+            "--replace-document",
+        )?;
+        let report = Destination::validate(
+            options.report,
+            options.replace_report,
+            &protected,
+            "--replace-report",
+        )?;
         if document.identity.is_some() && document.identity == report.identity {
-            return Err(usage("document and report destinations alias"));
+            return Err(usage(
+                "document and report destinations refer to the same file. Choose separate destinations",
+            ));
         }
         Ok(Self {
             document,

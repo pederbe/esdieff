@@ -1905,10 +1905,21 @@ impl Report<'_> {
             }
         }
         for source in &self.catalogue.sources {
+            let label = source
+                .label
+                .as_ref()
+                .map(|label| {
+                    format!(
+                        " {}",
+                        serde_json::to_string(label).expect("source label encoding")
+                    )
+                })
+                .unwrap_or_default();
             output.muted_line(&format!(
-                "Source {} [{}]: {} / {} ({} retained bytes, content complete: {})",
+                "Source {} [{}]{}: {} / {} ({} retained bytes, content complete: {})",
                 source.id.get(),
                 serde_json::to_string(&source.key).expect("source key encoding"),
+                label,
                 source.acquisition.as_str(),
                 source_status(source),
                 source.bytes.len(),
@@ -1927,17 +1938,42 @@ impl Report<'_> {
         let conditions = value["diagnostics"]["items"]
             .as_array()
             .expect("condition array");
+        let mut coverage_seen = [false; 3];
         for condition in conditions {
+            let code = condition["code"].as_str().expect("code");
+            let group = match code {
+                "coverage.unavailable" => Some(0),
+                "coverage.advisory_unavailable" => Some(1),
+                "sample.coverage_unavailable" => Some(2),
+                _ => None,
+            };
+            let count = if let Some(group) = group {
+                if coverage_seen[group] {
+                    continue;
+                }
+                coverage_seen[group] = true;
+                conditions
+                    .iter()
+                    .filter(|item| item["code"] == code)
+                    .count()
+            } else {
+                1
+            };
             output.gap();
             output.status(
                 Role::severity(Severity::from_report(
                     condition["severity"].as_str().expect("severity"),
                 )),
-                condition["code"].as_str().expect("code"),
+                code,
             );
             output.push_str(&format!(
-                ": {}\n",
-                condition["message"].as_str().expect("message")
+                ": {}{}\n",
+                condition["message"].as_str().expect("message"),
+                if count > 1 {
+                    format!(" ({count} assessment areas)")
+                } else {
+                    String::new()
+                }
             ));
             if let Some(quality) = condition["arguments"]["quality"].as_str() {
                 output.push_str(&format!(
@@ -2211,7 +2247,7 @@ impl Report<'_> {
                 total += 1;
                 retain(&mut retained, budget, limits.conditions, || {
                     tag_condition(
-                        json!({"code":if source.acquisition==Acquisition::Failed { "input.acquisition" } else { "operation.limit" },"severity":"incomplete","basis":{"kind":"operational","id":"source-acquisition"},"message":if source.acquisition==Acquisition::Failed { "Source content could not be acquired" } else { "Retained source content is incomplete" },"primary":{"kind":if self.sample.is_some() && source.role == crate::SourceRole::Sample { "sample" } else { "source" },"source_id":source.id.get(),"pointer":null,"span":null},"related":[],"arguments":{}}),
+                        json!({"code":if source.acquisition==Acquisition::Failed { "input.acquisition" } else { "operation.limit" },"severity":"incomplete","basis":{"kind":"operational","id":"source-acquisition"},"message":if let Some(error) = &source.acquisition_error { format!("Could not read source content: {}. Check the path and read permissions", error.message()) } else if source.acquisition==Acquisition::Failed { "Source content could not be acquired".to_owned() } else { "Retained source content is incomplete".to_owned() },"primary":{"kind":if self.sample.is_some() && source.role == crate::SourceRole::Sample { "sample" } else { "source" },"source_id":source.id.get(),"pointer":null,"span":null},"related":[],"arguments":{}}),
                         self.sample.as_ref().map(|_| {
                             if source.acquisition == Acquisition::Failed {
                                 source.role.as_str()
@@ -3003,12 +3039,15 @@ impl Report<'_> {
 fn human_location(location: &Value, output: &mut HumanText) {
     use std::fmt::Write;
     match location["kind"].as_str() {
-        Some("source" | "sample") => write!(
-            output,
-            "source {} {}",
-            location["source_id"], location["pointer"]
-        )
-        .expect("String write"),
+        Some("source" | "sample") => {
+            write!(output, "source {}", location["source_id"]).expect("String write");
+            if !location["pointer"].is_null() {
+                write!(output, " {}", location["pointer"]).expect("String write");
+            }
+            if let Some(span) = location["span"].as_array() {
+                write!(output, " bytes {}..{}", span[0], span[1]).expect("String write");
+            }
+        }
         Some("effective") => write!(
             output,
             "effective {} {}",
