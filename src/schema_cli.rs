@@ -56,7 +56,7 @@ pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error>
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(crate::unknown_option(OsStr::new(value)));
+                return Err(crate::unknown_input_option(OsStr::new(value)));
             }
             _ => {
                 if inputs.len() >= 256 {

@@ -75,8 +75,15 @@ fn duplicate_option(flag: &str) -> (u8, String) {
 fn unknown_option(flag: &OsStr) -> (u8, String) {
     let label = display_label(flag).unwrap_or("[option omitted]".into());
     usage(format!(
-        "unknown option {label:?}. Run esdieff --help for options. Use -- before a path beginning with -"
+        "unknown option {label:?}. Run esdieff --help for options"
     ))
+}
+fn unknown_input_option(flag: &OsStr) -> (u8, String) {
+    let (code, message) = unknown_option(flag);
+    (
+        code,
+        format!("{message}. Use -- before a path beginning with -"),
+    )
 }
 fn sample_kind(value: &str) -> Result<SampleKind, (u8, String)> {
     SampleKind::from_name(value).ok_or_else(|| {
@@ -226,7 +233,7 @@ fn parse<'a>(
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(unknown_option(OsStr::new(value)));
+                return Err(unknown_input_option(OsStr::new(value)));
             }
             _ => {
                 if options.inputs.len() >= 256 {

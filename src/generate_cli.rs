@@ -96,7 +96,7 @@ fn parse<'a>(args: &'a [OsString], color: &mut ColorMode) -> Result<Option<Optio
                 }
             }
             Some(value) if value.starts_with('-') && value != "-" => {
-                return Err(crate::unknown_option(OsStr::new(value)));
+                return Err(crate::unknown_input_option(OsStr::new(value)));
             }
             _ => {
                 if inputs.len() >= 256 {

@@ -106,6 +106,13 @@ fn missing_and_repeated_options_name_the_option_across_all_parsers() {
     let unknown = usage(files.run(&["check", "--formt", "json"]));
     assert!(unknown.contains("--formt"));
     assert!(unknown.contains("esdieff --help"));
+    assert!(unknown.contains("Use -- before a path"));
+    for command in ["author", "edit", "diff"] {
+        let message = usage(files.run(&[command, "--unknown"]));
+        assert!(message.contains("--unknown"));
+        assert!(message.contains("esdieff --help"));
+        assert!(!message.contains("Use --"));
+    }
     let wrong_command = usage(files.run(&["check", "--document", "model"]));
     assert!(wrong_command.contains("--document does not apply to check"));
 }
