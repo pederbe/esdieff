@@ -214,7 +214,7 @@ fn help_and_failed_output_writing() {
         "reference",
         "--document MODEL",
         "Markdown",
-        "supplied dependencies",
+        "its dependencies",
         "does not check",
     ] {
         assert!(text.contains(text_part));

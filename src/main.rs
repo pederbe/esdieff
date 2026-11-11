@@ -15,6 +15,7 @@ use std::{
 };
 mod author_cli;
 mod check_plan;
+mod cli_help;
 mod cli_style;
 mod diff_cli;
 mod directory_discovery;
@@ -386,10 +387,10 @@ fn selected_index(inputs: &[&OsStr], name: &OsStr) -> Result<usize, (u8, String)
     }
     Ok(index)
 }
-fn emit_help(color: ColorMode) -> Result<u8, (u8, String)> {
+fn emit_help(color: ColorMode, command: Option<&str>) -> Result<u8, (u8, String)> {
     std::io::stdout()
         .lock()
-        .write_all(cli_style::help(color.stdout()).as_bytes())
+        .write_all(cli_help::render(color.stdout(), command).as_bytes())
         .map_err(|error| (4, format!("cannot emit requested help: {error}")))?;
     Ok(0)
 }
@@ -440,7 +441,7 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
         break;
     }
     if help {
-        return emit_help(*color);
+        return emit_help(*color, None);
     }
     let args = &args[index..];
     if args.first().is_some_and(|arg| arg == "author") {
@@ -465,7 +466,7 @@ fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, (u8, String)> {
         return trace_cli::run(args, color);
     }
     let Some(options) = parse(args, color)? else {
-        return emit_help(*color);
+        return emit_help(*color, args.first().and_then(|value| value.to_str()));
     };
     if let Some(path) = options.plan {
         return check_plan::run(Path::new(path), options.format == Format::Json, *color);

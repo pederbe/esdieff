@@ -26,26 +26,32 @@ fn help_accepts_both_control_forms_and_only_styles_syntax() {
     let ordinary = run(&["--color", "never", "--help"], b"", &[]);
     assert_eq!(ordinary.status.code(), Some(0));
     assert!(!ordinary.stdout.contains(&0x1b));
-    for args in [
-        vec!["--color", "always", "--help"],
-        vec!["--help", "--color=always"],
-        vec!["check", "--color", "always", "--help"],
-        vec!["--color=always", "author", "--help"],
+    for (args, scope) in [
+        (vec!["--color", "always", "--help"], None),
+        (vec!["--help", "--color=always"], None),
+        (vec!["check", "--color", "always", "--help"], Some("check")),
+        (vec!["--color=always", "author", "--help"], Some("author")),
     ] {
         let output = run(&args, b"", &[]);
         assert_eq!(output.status.code(), Some(0), "{args:?}");
         assert!(output.stderr.is_empty());
         assert!(output.stdout.contains(&0x1b));
-        assert_eq!(plain(&output.stdout), plain(&ordinary.stdout));
+        let expected = match scope {
+            Some(command) => run(&["--color=never", command, "--help"], b"", &[]),
+            None => run(&["--color=never", "--help"], b"", &[]),
+        };
+        assert_eq!(plain(&output.stdout), plain(&expected.stdout));
         let text = String::from_utf8(output.stdout).unwrap();
         assert!(text.contains("\x1b[1;38;2;189;147;249mUsage:\x1b[0m"));
         // Commands and options are bold, placeholders gray and values plain.
         assert!(text.contains("\x1b[1m--color\x1b[0m auto|always|never"));
         assert!(text.contains("\x1b[1m--color\x1b[0m=\x1b[38;2;112;120;140mMODE\x1b[0m"));
-        assert!(text.contains("\x1b[1m--plan\x1b[0m \x1b[38;2;112;120;140mPLAN\x1b[0m ["));
+        if scope.is_some() {
+            assert!(text.contains("\x1b[1m--plan\x1b[0m \x1b[38;2;112;120;140mPLAN\x1b[0m"));
+        }
         assert!(!text.contains("\x1b[1mauto"));
         assert!(!text.contains("\x1b[38;2;112;120;140mhuman"));
-        assert!(text.ends_with("standard input.\n"));
+        assert!(text.contains("Guide: https://esdieff.com/docs/command-line"));
     }
 }
 

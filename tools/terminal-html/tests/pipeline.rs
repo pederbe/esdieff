@@ -68,7 +68,7 @@ fn the_esdieff_palette_becomes_classes_and_other_colours_stay_plain() {
 #[test]
 fn captured_esdieff_outputs_keep_their_reviewed_html() {
     // Captured with --color=always: check examples/thermostat-check/thermostat.sdf.json,
-    // and the first three lines of --help.
+    // and the first seven lines of --help.
     for (input, expected) in [
         (
             include_str!("fixtures/check.ansi"),

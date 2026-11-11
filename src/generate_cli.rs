@@ -16,7 +16,7 @@ struct Options<'a> {
 
 pub(crate) fn run(args: &[OsString], color: &mut ColorMode) -> Result<u8, Error> {
     let Some(options) = parse(args, color)? else {
-        return crate::emit_help(*color);
+        return crate::emit_help(*color, Some("generate"));
     };
     let document = crate::selected_index(&options.inputs, options.document)?;
     let catalogue = crate::acquire(&options.inputs, None)?;

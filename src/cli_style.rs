@@ -153,7 +153,7 @@ impl Style {
 
     /// The supplied help rows contain only fixed option syntax, never source content.
     /// Options are bold and uppercase placeholders are gray.
-    fn syntax(self, text: &str) -> String {
+    pub(crate) fn syntax(self, text: &str) -> String {
         let mut rendered = String::new();
         let mut remaining = text;
         while !remaining.is_empty() {
@@ -186,80 +186,4 @@ impl Style {
         }
         rendered
     }
-}
-
-pub(crate) fn help(style: Style) -> String {
-    let mut help = format!("{}\n", style.span(Role::Heading, "Usage:"));
-    help.push_str(&format!(
-        "{} {}\n",
-        style.span(Role::Command, "esdieff"),
-        style.span(Role::Command, "--version")
-    ));
-    help.push_str("Reference selects one effective Thing or Object from supplied dependencies and writes Markdown. It does not check the model.\n");
-    for (command, options) in [
-        ("check", "--plan PLAN [--format human|json]"),
-        (
-            "check",
-            "[--directory DIR] [--recursive] [--exclude RELATIVE_PATH] [--root INPUT] [--assessment initial-v1|expanded-numeric-v1|expanded-consistency-v1|full-baseline] [--strict-warnings] [--format human|json|sarif] [INPUT...]",
-        ),
-        (
-            "inspect",
-            "--view source|effective --document INPUT --pointer POINTER [--required-declarations] [--format human|json] INPUT...",
-        ),
-        (
-            "sample",
-            "--document MODEL --kind property|data|action_input|action_output|event_output|context --pointer POINTER --sample SAMPLE [--strict-warnings] [--format human|json] MODEL_INPUT...",
-        ),
-        (
-            "generate",
-            "--document MODEL [--kind property|data|action_input|action_output|event_output|context --pointer POINTER] [--format human|json|jsonl] MODEL_INPUT...",
-        ),
-        (
-            "schema",
-            "--document MODEL --kind KIND --pointer POINTER [--format json|schema] INPUT...",
-        ),
-        (
-            "reference",
-            "[--uses] --document MODEL --pointer POINTER INPUT...",
-        ),
-        (
-            "trace",
-            "--document MODEL --trace FILE [--format human|json] MODEL_INPUT...",
-        ),
-        (
-            "author",
-            "--plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH...",
-        ),
-        (
-            "edit",
-            "--plan PLAN --document-output DEST [--report-output DEST] [--check initial-v1|full-baseline] [--strict-warnings] [--format human|json] [--replace-document] [--replace-report] --source KEY PATH...",
-        ),
-        (
-            "diff",
-            "--old PATH --new PATH [--recursive] [--exclude RELATIVE_PATH] [--perspective client|implementer] [--acknowledged FILE] [--acknowledgements-output FILE] [--replace-acknowledgements] [--format human|json|sarif|markdown]",
-        ),
-    ] {
-        help.push_str(&format!(
-            "{} {} {}\n",
-            style.span(Role::Command, "esdieff"),
-            style.span(Role::Command, command),
-            style.syntax(options)
-        ));
-    }
-    help.push_str("\nDirect check accepts files, one stdin document, and repeatable --directory DIR.\nDirectory selection includes immediate regular files ending exactly in .sdf.json.\n--recursive descends through all supplied directories, including hidden entries.\nRepeat --exclude RELATIVE_PATH for literal, case-sensitive file or subtree paths\nrelative to each directory. No globbing or parent/current components are allowed.\nTraversal options require directories and apply to direct check and diff.\nDiff takes two files or two directories and pairs documents by relative path.\nDescendant links and special files are skipped. Explicit directory links are allowed.\nRoots select exact joined paths relative to the invocation directory.\nDiscovery stops before checking on empty selections, overlaps or setup failures.\nFixed ceilings: 256 directories, 256 exclusions, 64 levels below each root,\n10,000 entries, 256 sources, 1 MiB path metadata.\n");
-    help.push_str(&global_options(style));
-    help.push_str("\nUse - once across model, sample and trace standard input.\n");
-    help
-}
-
-fn global_options(style: Style) -> String {
-    format!(
-        "\n{}\n  {} auto|always|never, {}={}  Choose styling (default: auto).\n  {}, {}                         Show this help.\n",
-        style.span(Role::Heading, "Global options:"),
-        style.span(Role::Command, "--color"),
-        style.span(Role::Command, "--color"),
-        style.span(Role::Placeholder, "MODE"),
-        style.span(Role::Command, "-h"),
-        style.span(Role::Command, "--help"),
-    )
 }

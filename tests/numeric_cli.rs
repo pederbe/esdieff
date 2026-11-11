@@ -85,7 +85,7 @@ fn explicit_const_advice_preserves_cli_identity_and_strict_policy() {
     assert!(human.contains("esdieff.expanded.numeric/1"));
     assert!(human.contains("proof.numeric_const_bound"));
     assert!(human.contains("warnings: 1"));
-    let help = run(&["--help"], b"");
+    let help = run(&["check", "--help"], b"");
     assert!(
         String::from_utf8(help.stdout)
             .unwrap()
