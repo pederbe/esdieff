@@ -87,16 +87,33 @@ jobs:
           rustup target add "$gnu"
           for target in "$gnu" "$TARGET"; do
             cargo build --locked --profile dist --target "$target" \
-              --example profiling_workload --example pattern_qualification_consumers
+              --bin esdieff --example profiling_workload --example pattern_qualification_consumers
           done
           out=target/runtime-qualification
           mkdir -p "$out"
           rustc -Vv > "$out/compiler.txt"
           uname -a > "$out/host.txt"
+          cat > "$out/reports.sh" <<'REPORTS'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          binary=$1
+          prefix=$2
+          case_number=0
+          for plan in examples/{thermostat,rgb-lamp,door-lock,power-strip,irrigation,coffee-machine}-check/*plan.json; do
+            for format in json human; do
+              if [[ "$format" == human && "$plan" != */rich-plan.json ]]; then continue; fi
+              status=0
+              "$binary" check --plan "$plan" --format "$format" > "$prefix-$case_number.report" || status=$?
+              case "$status" in 0|1|3) ;; *) exit "$status" ;; esac
+              printf '%s %s %s\n' "$plan" "$format" "$status"
+              case_number=$((case_number + 1))
+            done
+          done
+          REPORTS
           for round in {0..14}; do
-            for workload in catalogue patterns; do
-              if [[ "$workload" == catalogue ]]; then arms='gnu musl equal double'; else arms='gnu musl'; fi
-              for arm in $(printf '%s\n' $arms | shuf); do
+            for workload in catalogue patterns reports; do
+              if [[ "$workload" == catalogue ]]; then arms=(gnu musl equal double); else arms=(gnu musl); fi
+              for arm in $(printf '%s\n' "${arms[@]}" | shuf); do
                 printf '%s %s %s\n' "$round" "$workload" "$arm" >> "$out/order.txt"
                 target=$gnu
                 [[ "$arm" != musl ]] || target=$TARGET
@@ -106,9 +123,12 @@ jobs:
                   [[ "$arm" != double ]] || count=20
                   /usr/bin/time -f '%e %M' -o "$prefix.time" \
                     "target/$target/dist/examples/profiling_workload" "$count" > "$prefix.stdout"
-                else
+                elif [[ "$workload" == patterns ]]; then
                   /usr/bin/time -f '%e %M' -o "$prefix.time" \
                     "target/$target/dist/examples/pattern_qualification_consumers" > "$prefix.stdout"
+                else
+                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
+                    bash "$out/reports.sh" "target/$target/dist/esdieff" "$prefix" > "$prefix.stdout"
                 fi
               done
             done
@@ -219,6 +239,8 @@ jobs:
           sudo apt-get install -qy --no-install-recommends rpm cpio apt-utils createrepo-c gnupg gnupg2 xz-utils
           for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
       - name: Prepare native packages and check signed upgrades
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
@@ -227,8 +249,22 @@ jobs:
           archive=$PWD/target/distrib/esdieff-$TARGET.tar.xz
           mkdir -p "$RUNNER_TEMP/packages" "$RUNNER_TEMP/previous"
           "$tool" package-linux "$archive" "$TARGET" "$version" "$RUNNER_TEMP/packages"
-          # This older package is an upgrade fixture using the retained binary.
-          "$tool" package-linux "$archive" "$TARGET" 0.0.0 "$RUNNER_TEMP/previous"
+          # Use the current release's GNU payload when available, so the upgrade
+          # also exercises the C runtime transition before the first musl release.
+          previous_archive=$archive
+          previous_target=$TARGET
+          gnu=${TARGET%-musl}-gnu
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/previous-release.json"
+          if jq -e --arg name "esdieff-$gnu.tar.xz" '.assets | any(.name == $name)' "$RUNNER_TEMP/previous-release.json" >/dev/null; then
+            tag=$(jq -r .tag_name "$RUNNER_TEMP/previous-release.json")
+            mkdir "$RUNNER_TEMP/gnu-previous"
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/gnu-previous" \
+              --pattern "esdieff-$gnu.tar.xz" --pattern "esdieff-$gnu.tar.xz.sha256"
+            (cd "$RUNNER_TEMP/gnu-previous"; sha256sum -c "esdieff-$gnu.tar.xz.sha256")
+            previous_archive=$RUNNER_TEMP/gnu-previous/esdieff-$gnu.tar.xz
+            previous_target=$gnu
+          fi
+          "$tool" package-linux "$previous_archive" "$previous_target" 0.0.0 "$RUNNER_TEMP/previous"
           export GNUPGHOME=$RUNNER_TEMP/signing
           mkdir -m 700 "$GNUPGHOME"
           gpg --batch --passphrase '' --quick-gen-key 'Esdieff package check' rsa4096 sign 0
