@@ -1,5 +1,12 @@
 # 0046: Inline Context draft support
 
+[ADR 0047: Context reuse with existing composition](0047-context-reuse-with-existing-composition.md)
+supersedes the reference-reuse limitation below for consumers inside Context.
+[ADR 0060: Link sdfType draft support](0060-link-sdftype-draft-support.md)
+supersedes the general link-meaning limitation. Absent nullability, undefined
+Context requiredness and the restriction on reusing Context descriptions in
+non-Context roles remain unresolved.
+
 Esdieff records `draft-ietf-asdf-sdf-nonaffordance-06`, dated 27 October 2026, as the basis for inline Context checking and inspection. Its SHA-256 is `404e5d06747cf5c78ae10e2867729cb751a40d3d35af58e3fdc7f5876a922661`. This deliberately adopted draft support extends the [recorded standards baseline](0002-recorded-standards-baseline.md) without attributing a new class or its placement rules to RFC 9880.
 
 Sections 4.1 and 4.2 define named Context data descriptions only under Objects and Things. They have the supported common and data qualities, without Property characteristics or interactive endpoints. Existing bounded checking and inspection apply, including nested map descriptions, alternatives and arrays. General `sdfType: "link"` meaning remains unavailable. An unrelated unknown critical feature still prevents the conclusions that require it.

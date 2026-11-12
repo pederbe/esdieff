@@ -1,5 +1,13 @@
 # 0054: Implementer declaration requiredness
 
+Later decisions replace the undetermined boundaries below for
+[declaration presence inside corresponding groupings](0055-implementer-declaration-presence.md),
+[grouping counts](0058-implementer-grouping-counts.md) and
+[Property capabilities](0059-implementer-property-capabilities.md).
+This record's corresponding-declaration requiredness policy remains in force,
+as do the exclusions for whole Action/Event input/output presence and Context
+metadata compatibility.
+
 Extend [ADR 0053: Implementer revision comparison](0053-implementer-revision-comparison.md)
 to classify declaration obligations for corresponding groupings. An existing
 implementation satisfying the earlier model may omit an optional declaration.
