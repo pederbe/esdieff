@@ -3,7 +3,10 @@
 Bug reports, examples and improvements are welcome. Open an issue to discuss a
 substantial change before implementing it.
 
-Use the Rust toolchain pinned in `rust-toolchain.toml` and run the maintained checks:
+Use the Rust toolchain selected by `rust-toolchain.toml`. On Linux, install the
+`git-cliff` version pinned in the [release workflow](.github/workflows/release-plz.yml)
+first. The release-note tests use local Git fixtures without contacting GitHub.
+Run the maintained checks:
 
 ```sh
 bash scripts/check.sh
