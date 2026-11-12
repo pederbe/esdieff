@@ -27,11 +27,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
             ext: ''
-          - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-musl
             ext: ''
           - os: macos-15
             target: aarch64-apple-darwin
@@ -51,6 +51,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2.9.3
         with:
           workspaces: |
@@ -74,6 +75,51 @@ jobs:
           test "$tag" = "v$version"
           cargo run --locked --manifest-path tools/release/Cargo.toml -- licenses "$TARGET" target/THIRD-PARTY-LICENSES.md
           dist build --artifacts local --target "$TARGET" --tag "$tag"
+      - name: Check the native musl application
+        if: runner.os == 'Linux'
+        run: cargo test --locked --target "$TARGET" --no-fail-fast
+      # Candidate-only comparison. Remove after the migration decision.
+      - name: Compare native ARM runtime candidates
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        run: |
+          set -euo pipefail
+          gnu=${TARGET%-musl}-gnu
+          rustup target add "$gnu"
+          for target in "$gnu" "$TARGET"; do
+            cargo build --locked --profile dist --target "$target" \
+              --example profiling_workload --example pattern_qualification_consumers
+          done
+          out=target/runtime-qualification
+          mkdir -p "$out"
+          rustc -Vv > "$out/compiler.txt"
+          uname -a > "$out/host.txt"
+          for round in {0..14}; do
+            for workload in catalogue patterns; do
+              if [[ "$workload" == catalogue ]]; then arms='gnu musl equal double'; else arms='gnu musl'; fi
+              for arm in $(printf '%s\n' $arms | shuf); do
+                printf '%s %s %s\n' "$round" "$workload" "$arm" >> "$out/order.txt"
+                target=$gnu
+                [[ "$arm" != musl ]] || target=$TARGET
+                prefix=$out/$round-$workload-$arm
+                if [[ "$workload" == catalogue ]]; then
+                  count=10
+                  [[ "$arm" != double ]] || count=20
+                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
+                    "target/$target/dist/examples/profiling_workload" "$count" > "$prefix.stdout"
+                else
+                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
+                    "target/$target/dist/examples/pattern_qualification_consumers" > "$prefix.stdout"
+                fi
+              done
+            done
+          done
+      - uses: actions/upload-artifact@v7.0.2
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        with:
+          name: runtime-qualification-${{ matrix.target }}
+          path: target/runtime-qualification
+          retention-days: 7
+          if-no-files-found: error
       - name: Make tar entries compatible with Binstall
         if: runner.os != 'Windows'
         run: |
@@ -110,8 +156,18 @@ jobs:
           cd ../..
           cargo run --locked --manifest-path tools/release/Cargo.toml -- smoke "$RUNNER_TEMP/esdieff-install/esdieff${{ matrix.ext }}"
           if [[ "$TARGET" == *linux* ]]; then
-            ldd "$RUNNER_TEMP/esdieff-install/esdieff" | tee "$RUNNER_TEMP/linkage.txt"
-            if grep -Ei 'not found|libssl|libcrypto|libcurl' "$RUNNER_TEMP/linkage.txt"; then exit 1; fi
+            binary=$RUNNER_TEMP/esdieff-install/esdieff
+            readelf -l "$binary" > "$RUNNER_TEMP/program-headers.txt"
+            readelf -d "$binary" > "$RUNNER_TEMP/dynamic-section.txt"
+            if grep -E '^[[:space:]]*INTERP[[:space:]]' "$RUNNER_TEMP/program-headers.txt" ||
+               grep -F '(NEEDED)' "$RUNNER_TEMP/dynamic-section.txt"; then exit 1; fi
+            # This root has no loader or libraries, so the delivered binary must
+            # perform useful work without an installed C runtime.
+            mkdir "$RUNNER_TEMP/static-root"
+            cp "$binary" "$RUNNER_TEMP/static-root/esdieff"
+            cp examples/thermostat-check/rich.sdf.json "$RUNNER_TEMP/static-root/model.sdf.json"
+            sudo chroot "$RUNNER_TEMP/static-root" /esdieff check /model.sdf.json
+            sudo rm -rf "$RUNNER_TEMP/static-root"
           fi
           rm -rf "$RUNNER_TEMP/esdieff-install"
       - uses: actions/upload-artifact@v7.0.2
@@ -137,10 +193,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     env:
       TARGET: ${{ matrix.target }}
@@ -198,8 +254,8 @@ jobs:
         include:
           - os: macos-15
             target: aarch64-apple-darwin
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -376,26 +432,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
             format: txz
             archive: tar.xz
-            binary: esdieff-x86_64-unknown-linux-gnu/esdieff
-          - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-musl
             format: txz
             archive: tar.xz
-            binary: esdieff-aarch64-unknown-linux-gnu/esdieff
           - os: macos-15
             target: aarch64-apple-darwin
             format: txz
             archive: tar.xz
-            binary: esdieff-aarch64-apple-darwin/esdieff
           - os: windows-2022
             target: x86_64-pc-windows-msvc
             format: zip
             archive: zip
-            binary: esdieff.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -421,7 +473,6 @@ jobs:
           TARGET: ${{ matrix.target }}
           ARCHIVE: ${{ matrix.archive }}
           PACKAGE_FORMAT: ${{ matrix.format }}
-          BIN_DIR: ${{ matrix.binary }}
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -1)
@@ -435,9 +486,9 @@ jobs:
           for _ in {1..100}; do test ! -f "$RUNNER_TEMP/binstall-port" || break; sleep 0.1; done
           port=$(cat "$RUNNER_TEMP/binstall-port")
           cargo binstall --no-confirm --allow-insecure-http --disable-strategies compile,quick-install \
-            --manifest-path Cargo.toml --version "$version" --target "$TARGET" \
-            --pkg-url "http://127.0.0.1:$port/esdieff-$TARGET.$ARCHIVE" \
-            --pkg-fmt "$PACKAGE_FORMAT" --bin-dir "$BIN_DIR" \
+            --manifest-path Cargo.toml --version "$version" \
+            --pkg-url "http://127.0.0.1:$port/esdieff-{target}.$ARCHIVE" \
+            --pkg-fmt "$PACKAGE_FORMAT" \
             --install-path "$RUNNER_TEMP/binstall-bin" esdieff
           "$tool" smoke "$RUNNER_TEMP/binstall-bin/esdieff$suffix" "$version"
           rm -rf "$RUNNER_TEMP/binstall-bin"

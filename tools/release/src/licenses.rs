@@ -2,6 +2,28 @@
 use crate::Result;
 use std::{fs, path::Path, process::Command};
 
+fn runtime_notices(report: &mut String, target: &str) {
+    if !target.ends_with("-linux-musl") {
+        return;
+    }
+    for (name, source, notice) in [
+        (
+            "musl runtime",
+            "https://git.musl-libc.org/cgit/musl/plain/COPYRIGHT?h=v1.2.5",
+            include_str!("../licenses/musl-COPYRIGHT.txt"),
+        ),
+        (
+            "LLVM libunwind",
+            "https://github.com/rust-lang/llvm-project/blob/1b9c0d5ff9bbe7634aead059efe6b11a7eeba145/libunwind/LICENSE.TXT",
+            include_str!("../licenses/libunwind-LICENSE.txt"),
+        ),
+    ] {
+        report.push_str(&format!("\n## {name}\n\nSource: <{source}>\n\n```text\n"));
+        report.push_str(notice);
+        report.push_str("\n```\n");
+    }
+}
+
 fn command_output(command: &mut Command) -> Result<String> {
     let output = command.output()?;
     if !output.status.success() {
@@ -22,6 +44,8 @@ pub fn run(args: &[String]) -> Result<()> {
         return Err("usage: esdieff-release licenses TARGET OUTPUT".into());
     };
     if ![
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
         "aarch64-apple-darwin",
@@ -58,6 +82,7 @@ pub fn run(args: &[String]) -> Result<()> {
     report.push_str("\n## Rust standard library\n\nThe following copyright notices accompany the Rust standard library.\n\n```html\n");
     report.push_str(&standard_library);
     report.push_str("\n```\n");
+    runtime_notices(&mut report, target);
     let output = Path::new(output);
     if let Some(parent) = output
         .parent()
@@ -67,4 +92,34 @@ pub fn run(args: &[String]) -> Result<()> {
     }
     fs::write(output, report)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn static_linux_notices_include_both_complete_runtime_licenses() {
+        for target in ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl"] {
+            let mut report = String::new();
+            runtime_notices(&mut report, target);
+            assert!(report.contains(include_str!("../licenses/musl-COPYRIGHT.txt")));
+            assert!(report.contains(include_str!("../licenses/libunwind-LICENSE.txt")));
+            assert!(report.contains("Copyright © 2005-2020 Rich Felker"));
+            assert!(report.contains("The libunwind library is dual licensed"));
+        }
+    }
+
+    #[test]
+    fn other_targets_keep_their_existing_notices() {
+        for target in [
+            "x86_64-unknown-linux-gnu",
+            "aarch64-apple-darwin",
+            "x86_64-pc-windows-msvc",
+        ] {
+            let mut report = String::from("existing notices");
+            runtime_notices(&mut report, target);
+            assert_eq!(report, "existing notices");
+        }
+    }
 }

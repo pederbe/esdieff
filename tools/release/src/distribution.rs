@@ -21,6 +21,9 @@ const DOCS: &[&str] = &[
     "THIRD-PARTY-LICENSES.md",
 ];
 const TARGETS: &[(&str, &str, &str)] = &[
+    ("x86_64-unknown-linux-musl", "amd64", "x86_64"),
+    ("aarch64-unknown-linux-musl", "arm64", "aarch64"),
+    // Retained GNU archives can still be repackaged when repairing old releases.
     ("x86_64-unknown-linux-gnu", "amd64", "x86_64"),
     ("aarch64-unknown-linux-gnu", "arm64", "aarch64"),
 ];
@@ -152,6 +155,19 @@ fn extract_archive(archive: &Path, prefix: &str, extracted: &Path) -> Result<()>
     Ok(())
 }
 
+fn require_static(binary: &Path) -> Result<()> {
+    let headers = text(Command::new("readelf").arg("-l").arg(binary))?;
+    let dynamic = text(Command::new("readelf").arg("-d").arg(binary))?;
+    if headers
+        .lines()
+        .any(|line| line.split_whitespace().next() == Some("INTERP"))
+        || dynamic.contains("(NEEDED)")
+    {
+        return Err("musl package executable requires a dynamic loader or shared library".into());
+    }
+    Ok(())
+}
+
 fn package_linux(args: &[String]) -> Result<()> {
     let [archive, target, version, out] = args else {
         return Err("usage: esdieff-release package-linux ARCHIVE TARGET VERSION OUT".into());
@@ -173,6 +189,20 @@ fn package_linux(args: &[String]) -> Result<()> {
     let work = Work::new(&out)?;
     let extracted = work.0.join("archive");
     extract_archive(&archive, &prefix, &extracted)?;
+    let static_runtime = target.ends_with("-musl");
+    if static_runtime {
+        require_static(&extracted.join("esdieff"))?;
+    }
+    let deb_dependencies = if static_runtime {
+        ""
+    } else {
+        "Depends: libc6 (>= 2.35), libgcc-s1\n"
+    };
+    let rpm_dependencies = if static_runtime {
+        ""
+    } else {
+        "Requires: glibc >= 2.35\nRequires: libgcc\n"
+    };
     let deb_root = work.0.join("deb");
     fs::create_dir_all(deb_root.join("usr/bin"))?;
     fs::create_dir_all(deb_root.join("usr/share/doc/esdieff"))?;
@@ -187,7 +217,7 @@ fn package_linux(args: &[String]) -> Result<()> {
     fs::write(
         deb_root.join("DEBIAN/control"),
         format!(
-            "Package: esdieff\nVersion: {version}\nArchitecture: {deb_arch}\nMaintainer: Peder Bergan <16326438+pederbe@users.noreply.github.com>\nDepends: libc6 (>= 2.35), libgcc-s1\nSection: devel\nPriority: optional\nHomepage: https://esdieff.com\nDescription: An SDF toolkit for connected-device models\n Inspect, check, compare and test connected-device models.\n"
+            "Package: esdieff\nVersion: {version}\nArchitecture: {deb_arch}\nMaintainer: Peder Bergan <16326438+pederbe@users.noreply.github.com>\n{deb_dependencies}Section: devel\nPriority: optional\nHomepage: https://esdieff.com\nDescription: An SDF toolkit for connected-device models\n Inspect, check, compare and test connected-device models.\n"
         ),
     )?;
     let deb = out.join(format!("esdieff_{version}_{deb_arch}.deb"));
@@ -197,6 +227,18 @@ fn package_linux(args: &[String]) -> Result<()> {
             .arg(&deb_root)
             .arg(&deb),
     )?;
+    if static_runtime
+        && !text(
+            Command::new("dpkg-deb")
+                .args(["-f"])
+                .arg(&deb)
+                .arg("Depends"),
+        )?
+        .trim()
+        .is_empty()
+    {
+        return Err("static musl Debian package has runtime dependencies".into());
+    }
     let deb_check = work.0.join("deb-check");
     output(Command::new("dpkg-deb").arg("-x").arg(&deb).arg(&deb_check))?;
     compare_package(&extracted, &deb_check)?;
@@ -215,7 +257,7 @@ fn package_linux(args: &[String]) -> Result<()> {
     fs::write(
         &spec,
         format!(
-            "%global debug_package %{{nil}}\n%global __os_install_post %{{nil}}\n%global _build_id_links none\nName: esdieff\nVersion: {version}\nRelease: 1\nSummary: An SDF toolkit for connected-device models\nLicense: MIT OR Apache-2.0\nURL: https://esdieff.com\nAutoReqProv: no\nRequires: glibc >= 2.35\nRequires: libgcc\n%description\nInspect, check, compare and test connected-device models.\n%install\nmkdir -p %{{buildroot}}/usr\ncp -a %{{_sourcedir}}/usr/. %{{buildroot}}/usr/\n%files\n/usr/bin/esdieff\n/usr/share/doc/esdieff\n"
+            "%global debug_package %{{nil}}\n%global __os_install_post %{{nil}}\n%global _build_id_links none\nName: esdieff\nVersion: {version}\nRelease: 1\nSummary: An SDF toolkit for connected-device models\nLicense: MIT OR Apache-2.0\nURL: https://esdieff.com\nAutoReqProv: no\n{rpm_dependencies}%description\nInspect, check, compare and test connected-device models.\n%install\nmkdir -p %{{buildroot}}/usr\ncp -a %{{_sourcedir}}/usr/. %{{buildroot}}/usr/\n%files\n/usr/bin/esdieff\n/usr/share/doc/esdieff\n"
         ),
     )?;
     output(
@@ -227,6 +269,13 @@ fn package_linux(args: &[String]) -> Result<()> {
     let rpm_name = format!("esdieff-{version}-1.{rpm_arch}.rpm");
     let rpm = out.join(&rpm_name);
     fs::copy(rpm_root.join("RPMS").join(rpm_arch).join(&rpm_name), &rpm)?;
+    if static_runtime
+        && text(Command::new("rpm").args(["-qp", "--requires"]).arg(&rpm))?
+            .lines()
+            .any(|line| line.starts_with("glibc") || line.starts_with("libgcc"))
+    {
+        return Err("static musl RPM package has C runtime dependencies".into());
+    }
     let rpm_check = work.0.join("rpm-check");
     fs::create_dir(&rpm_check)?;
     let mut producer = Command::new("rpm2cpio")
@@ -652,8 +701,8 @@ fn homebrew(args: &[String]) -> Result<()> {
     let mut hashes = Vec::new();
     for target in [
         "aarch64-apple-darwin",
-        "x86_64-unknown-linux-gnu",
-        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
     ] {
         hashes.push(hash(
             &directory.join(format!("esdieff-{target}.tar.xz")),
@@ -666,7 +715,7 @@ fn homebrew(args: &[String]) -> Result<()> {
 
 fn formula(version: &str, hashes: &[String]) -> String {
     format!(
-        "class Esdieff < Formula\n  desc \"SDF toolkit for connected-device models\"\n  homepage \"https://esdieff.com\"\n  url \"{RELEASES}/v{version}/esdieff-aarch64-apple-darwin.tar.xz\"\n  sha256 \"{}\"\n  license any_of: [\"MIT\", \"Apache-2.0\"]\n\n  on_macos do\n    depends_on arch: :arm64\n    depends_on macos: :sequoia\n  end\n\n  on_linux do\n    on_intel do\n      url \"{RELEASES}/v{version}/esdieff-x86_64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n    on_arm do\n      url \"{RELEASES}/v{version}/esdieff-aarch64-unknown-linux-gnu.tar.xz\"\n      sha256 \"{}\"\n    end\n  end\n\n  def install\n    bin.install \"esdieff\"\n    doc.install \"README.md\", \"CHANGELOG.md\", \"LICENSE-MIT\", \"LICENSE-APACHE\", \"THIRD-PARTY-LICENSES.md\"\n  end\n\n  test do\n    assert_equal \"esdieff #{{version}}\\n\", shell_output(\"#{{bin}}/esdieff --version\")\n    (testpath/\"model.sdf.json\").write '{{\"sdfObject\":{{\"Thermostat\":{{\"sdfProperty\":{{\"temperature\":{{\"type\":\"number\"}}}}}}}}}}'\n    system bin/\"esdieff\", \"check\", \"model.sdf.json\"\n  end\nend\n",
+        "class Esdieff < Formula\n  desc \"SDF toolkit for connected-device models\"\n  homepage \"https://esdieff.com\"\n  url \"{RELEASES}/v{version}/esdieff-aarch64-apple-darwin.tar.xz\"\n  sha256 \"{}\"\n  license any_of: [\"MIT\", \"Apache-2.0\"]\n\n  on_macos do\n    depends_on arch: :arm64\n    depends_on macos: :sequoia\n  end\n\n  on_linux do\n    on_intel do\n      url \"{RELEASES}/v{version}/esdieff-x86_64-unknown-linux-musl.tar.xz\"\n      sha256 \"{}\"\n    end\n    on_arm do\n      url \"{RELEASES}/v{version}/esdieff-aarch64-unknown-linux-musl.tar.xz\"\n      sha256 \"{}\"\n    end\n  end\n\n  def install\n    bin.install \"esdieff\"\n    doc.install \"README.md\", \"CHANGELOG.md\", \"LICENSE-MIT\", \"LICENSE-APACHE\", \"THIRD-PARTY-LICENSES.md\"\n  end\n\n  test do\n    assert_equal \"esdieff #{{version}}\\n\", shell_output(\"#{{bin}}/esdieff --version\")\n    (testpath/\"model.sdf.json\").write '{{\"sdfObject\":{{\"Thermostat\":{{\"sdfProperty\":{{\"temperature\":{{\"type\":\"number\"}}}}}}}}}}'\n    system bin/\"esdieff\", \"check\", \"model.sdf.json\"\n  end\nend\n",
         hashes[0], hashes[1], hashes[2]
     )
 }
@@ -776,6 +825,9 @@ mod tests {
         assert!(formula.contains("depends_on macos: :sequoia"));
         assert!(formula.contains("depends_on arch: :arm64"));
         assert!(!formula.contains("x86_64-apple-darwin"));
+        assert!(formula.contains("esdieff-x86_64-unknown-linux-musl.tar.xz"));
+        assert!(formula.contains("esdieff-aarch64-unknown-linux-musl.tar.xz"));
+        assert!(!formula.contains("unknown-linux-gnu"));
         assert_eq!(formula.matches("sha256").count(), 3);
         assert!(formula.contains("system bin/\"esdieff\", \"check\", \"model.sdf.json\""));
     }

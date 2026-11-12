@@ -93,7 +93,7 @@ fn tar(root: &Path, entry: &str, archive: &Path) {
 #[test]
 fn distribution_unpacks_the_prefixed_tar_without_changing_contents() {
     let work = fixture();
-    let prefix = "esdieff-x86_64-unknown-linux-gnu";
+    let prefix = "esdieff-x86_64-unknown-linux-musl";
     let source = work.0.join("source");
     archive_files(&source.join(prefix));
     let archive = work.0.join("archive.tar");
@@ -113,7 +113,7 @@ fn distribution_unpacks_the_prefixed_tar_without_changing_contents() {
 fn distribution_refuses_a_different_root_and_unexpected_or_missing_files() {
     for fault in ["wrong root", "extra file", "missing license"] {
         let work = fixture();
-        let prefix = "esdieff-x86_64-unknown-linux-gnu";
+        let prefix = "esdieff-x86_64-unknown-linux-musl";
         let source = work.0.join("source");
         let directory = if fault == "wrong root" {
             "other-project"

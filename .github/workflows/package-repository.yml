@@ -64,7 +64,7 @@ jobs:
         id: release
         run: |
           set -euo pipefail
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName > "$RUNNER_TEMP/release.json"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,tagName,assets > "$RUNNER_TEMP/release.json"
           jq -e --arg tag "$TAG" '.tagName == $tag and .isDraft == false and .isPrerelease == false' "$RUNNER_TEMP/release.json"
           test "$TAG" = "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq '.[].tagName' |
@@ -87,7 +87,11 @@ jobs:
               done
             done
           done
-          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+          for arch in x86_64 aarch64; do
+            target=$arch-unknown-linux-musl
+            if ! jq -e --arg name "esdieff-$target.tar.xz" '.assets | any(.name == $name)' "$RUNNER_TEMP/release.json" >/dev/null; then
+              target=$arch-unknown-linux-gnu
+            fi
             name=esdieff-$target.tar.xz
             gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$name" --pattern "$name.sha256"
             sha256sum -c "$name.sha256"
@@ -201,10 +205,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
@@ -224,8 +228,10 @@ jobs:
         run: |
           set -euo pipefail
           for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
+          archive=$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz
+          if [[ ! -f "$archive" ]]; then archive=${archive%-musl.tar.xz}-gnu.tar.xz; fi
           bash scripts/check-packages.sh "$RUNNER_TEMP/candidate/repository" "$VERSION" \
-            "$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz"
+            "$archive"
 
   publish:
     needs: [prepare, check]
@@ -278,10 +284,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
@@ -301,8 +307,10 @@ jobs:
         run: |
           set -euo pipefail
           for image in ubuntu:22.04 ubuntu:24.04 fedora:44; do docker pull "$image"; done
+          archive=$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz
+          if [[ ! -f "$archive" ]]; then archive=${archive%-musl.tar.xz}-gnu.tar.xz; fi
           bash scripts/check-packages.sh "$RUNNER_TEMP/candidate/repository" "$VERSION" \
-            "$RUNNER_TEMP/candidate/assets/esdieff-$TARGET.tar.xz"
+            "$archive"
       - name: Check the one-command Linux installer
         env:
           VERSION: ${{ needs.prepare.outputs.version }}

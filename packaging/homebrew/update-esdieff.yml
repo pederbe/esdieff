@@ -20,7 +20,7 @@ defaults:
 jobs:
   candidate:
     if: github.repository == 'pederbe/homebrew-tap' && !github.event.repository.private
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     outputs:
       changed: ${{ steps.release.outputs.changed }}
@@ -55,7 +55,16 @@ jobs:
           fi
           mkdir "$RUNNER_TEMP/candidate"
           cd "$RUNNER_TEMP/candidate"
-          for name in esdieff.rb esdieff-aarch64-apple-darwin.tar.xz esdieff-x86_64-unknown-linux-gnu.tar.xz esdieff-aarch64-unknown-linux-gnu.tar.xz; do
+          for name in esdieff.rb esdieff-aarch64-apple-darwin.tar.xz; do
+            gh release download "$tag" --repo pederbe/esdieff --pattern "$name" --pattern "$name.sha256"
+            sha256sum -c "$name.sha256"
+          done
+          for arch in x86_64 aarch64; do
+            target=$arch-unknown-linux-musl
+            if ! jq -e --arg name "esdieff-$target.tar.xz" '.assets | any(.name == $name)' "$RUNNER_TEMP/release.json" >/dev/null; then
+              target=$arch-unknown-linux-gnu
+            fi
+            name=esdieff-$target.tar.xz
             gh release download "$tag" --repo pederbe/esdieff --pattern "$name" --pattern "$name.sha256"
             sha256sum -c "$name.sha256"
           done
@@ -87,8 +96,8 @@ jobs:
         include:
           - os: macos-15
             target: aarch64-apple-darwin
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
@@ -129,7 +138,9 @@ jobs:
           brew test pederbe/tap/esdieff
           test "$(esdieff --version)" = "esdieff $VERSION"
           mkdir "$RUNNER_TEMP/extracted"
-          tar -xJf "$RUNNER_TEMP/candidate/esdieff-$TARGET.tar.xz" --strip-components=1 -C "$RUNNER_TEMP/extracted"
+          archive=$RUNNER_TEMP/candidate/esdieff-$TARGET.tar.xz
+          if [[ ! -f "$archive" && "$TARGET" == *-musl ]]; then archive=${archive%-musl.tar.xz}-gnu.tar.xz; fi
+          tar -xJf "$archive" --strip-components=1 -C "$RUNNER_TEMP/extracted"
           cmp "$RUNNER_TEMP/extracted/esdieff" "$(brew --prefix)/bin/esdieff"
           brew uninstall --force pederbe/tap/esdieff
           test ! -e "$(brew --prefix)/bin/esdieff"
@@ -138,7 +149,7 @@ jobs:
   update:
     needs: [candidate, check]
     if: needs.candidate.outputs.changed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write
