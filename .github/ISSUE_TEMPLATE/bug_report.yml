@@ -3,27 +3,26 @@ description: Something failed or produced an unexpected result.
 labels: [bug]
 body:
   - type: textarea
-    id: behavior
+    id: problem
     attributes:
-      label: What happened
-      description: What did you expect, and what happened instead? Include relevant output.
+      label: Problem
+      description: |
+        What happened, and how does it affect your task?
     validations:
       required: true
   - type: textarea
-    id: reproduce
+    id: outcome
     attributes:
-      label: How to reproduce
-      description: Include the smallest example and the commands needed to reproduce it.
+      label: Desired outcome
+      description: |
+        What should happen instead? You do not need to propose a fix.
     validations:
       required: true
-  - type: input
-    id: version
+  - type: textarea
+    id: evidence
     attributes:
-      label: Version or commit
+      label: Evidence
+      description: |
+        Include the smallest model or input, commands, output or error, version or commit, operating system and architecture where available. Describe your observations even if you cannot reproduce the problem yet, and say which details are unknown.
     validations:
       required: true
-  - type: input
-    id: platform
-    attributes:
-      label: Operating system and architecture
-      placeholder: For example, Linux x86_64 or Windows ARM64

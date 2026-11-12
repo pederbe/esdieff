@@ -32,6 +32,29 @@ toolchain, packaging and license configuration, release workflows and actions,
 and CI selection. CI restores its pinned tools from the Actions cache and
 downloads them only when a version changes.
 
+## Public issues and pull requests
+
+Issue descriptions use **Problem**, **Desired outcome** and **Evidence**.
+Describe the task and its impact, the result that would resolve it, and available
+reproduction details or examples. Incomplete observations are welcome.
+Pull requests use **Problem**, **Solution** and **Validation**. Explain the
+reason for the change, its behavior and compatibility effects, and meaningful
+checks. Put migration or upgrade instructions in Solution. Keep small changes
+brief and links and examples within these sections.
+
+Public descriptions and comments cover software behavior, technical rationale
+and evidence. Keep private discussions, authorization exchanges, personal
+decision history and handoffs out of them. State technical outcomes directly
+and attribute checks accurately. Comments are for technical questions, findings
+and review discussion.
+
+Edit descriptions only to keep technical facts, scope, evidence and acceptance
+criteria accurate within the work at hand. Preserve the reporter's observations
+and human-written wording unless a rewrite is requested. Leave merged PR
+descriptions alone unless a correction is requested. Track progress with
+checklists, linked issues and labels. These rules also apply to API updates.
+Check these limits before posting or editing.
+
 ## Changelog and releases
 
 The [changelog](CHANGELOG.md) is generated from the titles of merged pull
@@ -53,18 +76,17 @@ groups those titles by their conventional prefix:
 
 Titles without a prefix are listed under Other changes. Write the rest of the
 title for users, describing the new behavior rather than the implementation.
-Each entry links to its pull request, so explain compatibility consequences,
-report format versions and any action users need to take in the description.
+Each short entry links to its pull request. Explain compatibility consequences,
+report format versions and any action users need to take in the Solution section.
 Keep `## [Unreleased]` in the changelog empty.
 
-For a breaking change, add `!` after the prefix, such as `feat!:`. End the
-description with a `BREAKING CHANGE:` paragraph, after all other sections, that
-gives the full upgrade instructions. The change is listed under Changed, marked
-as breaking, with those instructions.
+For a breaking change, add `!` after the prefix, such as `feat!:`. The entry is
+marked **Breaking** and links to the pull request's Solution section for migration
+or upgrade instructions. No changelog or breaking-change footer is required.
 
-Only changes to files in the published crate count towards a release. Workflow,
-packaging and release-helper changes are not released on their own and stay out
-of the changelog.
+Release-plz selects versions from changes to the published crate. Each prepared
+release includes short entries from the whole repository, so relevant installer
+and packaging changes also reach the notes. Internal changes stay out.
 
 Every Monday at 07:17 UTC, the Release-plz workflow opens or updates one
 release pull request when `main` has changes for the changelog. It raises the

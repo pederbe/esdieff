@@ -1,5 +1,7 @@
 # Issue tracker: GitHub
 
+Before any public write or edit, follow the [public content and editing rules](../../CONTRIBUTING.md#public-issues-and-pull-requests). Use only the template's sections and keep working notes in private records.
+
 Issues, specs, and tickets live in this repository's GitHub Issues. Use the `gh` CLI. Infer the repository from `git remote -v` when working inside the checkout. Outside it, pass `-R <owner>/<repo>` to `gh issue` and `gh pr` commands. For `gh api`, put the owner and repository in the endpoint path or set `GH_REPO`.
 
 ## Conventions
@@ -25,7 +27,7 @@ When a skill says "publish to the issue tracker", create a GitHub issue. When it
 
 ## Wayfinding operations
 
-- Map: one issue labelled `wayfinder:map`, with Notes, Decisions-so-far, and Fog sections.
+- Map: one issue labelled `wayfinder:map`, using Problem, Desired outcome and Evidence. Keep technical findings and open questions within those sections.
 - Child ticket: an issue linked to the map through GitHub sub-issues, labelled `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`, or `wayfinder:task`. If sub-issues are unavailable, use a task list in the map and a `Part of #<map>` line in each child.
 - Blocking: use native issue dependencies. Add an edge with `gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`. The blocker ID is the numeric database ID from `gh api repos/<owner>/<repo>/issues/<number> --jq .id`, not its issue number or node ID. If dependencies are unavailable, put `Blocked by: #<number>, #<number>` at the top of the child body.
 - Frontier: examine the map's open children in map order. Exclude assigned tickets and tickets with open blockers. Query the blocked-by endpoint or resolve every fallback reference; a ticket is unblocked when all blockers are closed.
