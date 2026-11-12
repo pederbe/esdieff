@@ -67,13 +67,15 @@ pub(super) struct Selectors<'s, 'm> {
     model: &'s EffectiveModel<'m>,
     /// The resolution of each pointer for each kind, in `SampleKind::ALL` order.
     resolved: HashMap<String, [Option<Resolution>; SampleKind::ALL.len()]>,
+    compiled: crate::pattern::Compiled,
 }
 
 impl<'s, 'm> Selectors<'s, 'm> {
-    pub(super) fn new(model: &'s EffectiveModel<'m>) -> Self {
+    pub(super) fn new(model: &'s EffectiveModel<'m>, compiled: crate::pattern::Compiled) -> Self {
         Self {
             model,
             resolved: HashMap::new(),
+            compiled,
         }
     }
 
@@ -161,7 +163,11 @@ impl<'s, 'm> Selectors<'s, 'm> {
             decoding.numeric,
             limits.equality_pairs,
         );
+        // Reuse construction, while every entry still receives fresh counters and
+        // every match starts its own engine timeout.
+        allowance.budget.patterns.compiled = std::mem::take(&mut self.compiled);
         let outcome = self.settle(&source, &mut allowance, &mut checked, &mut conditions);
+        self.compiled = std::mem::take(&mut allowance.budget.patterns.compiled);
         checked.entry.outcome = outcome;
         if outcome != TraceOutcome::Passed {
             checked.entry.conditions = conditions.kept;

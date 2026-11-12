@@ -69,7 +69,7 @@ the current workload and code. Report rendering is not part of the workload.
 | `trace::check_trace` | Recorded trace checking |
 | `generation::generate` | Generation of test values |
 | `pattern::compile` | Qualified guards and Corvus compilation for syntax or matching |
-| `pattern::matches` | One Corvus match, including compilation |
+| `pattern::matches` | One Corvus match, including compilation when the expression changes |
 
 Times include nested calls. Model checking, Sample-value checking, Revision
 comparison and Recorded trace checking each compose the documents they need,
@@ -77,9 +77,11 @@ so composition time appears both under `effective::compose_mode` and under the
 operation that asked for it. A Recorded trace check composes its document
 once, however many entries it holds, so each trace adds one
 `effective::compose_mode` call per round. Pattern operations run directly through Corvus. There is no toolkit pattern
-worker or JavaScript engine-start span. Each match compiles its expression with
-the fixed internal timeout. Corvus may reuse thread-local scratch according to
-its own capacity policy. The `pattern::compile` span also includes compile-only
+worker or JavaScript engine-start span. An operation retains its last compiled
+expression and reuses it for repeated checks of the same pattern. A different
+pattern replaces it. Each match starts its own fixed internal timeout, and the
+expression is released when the operation ends. Corvus may reuse thread-local
+scratch according to its own capacity policy. The `pattern::compile` span also includes compile-only
 Model checking. Other programs built with the feature record
 nothing, because only the workload starts the profiler.
 
