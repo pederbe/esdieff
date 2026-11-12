@@ -69,7 +69,6 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
             false,
             false,
         ),
-        ("release-plz.toml", false, false, false, false),
     ] {
         assert_eq!(
             selected("pull_request", "checked-base", path, ""),
@@ -95,6 +94,8 @@ fn website_selection_tracks_published_inputs_without_publishing_source_only_chan
     }
     for (path, artifacts) in [
         ("tools/release/tests/ci_gate.rs", false),
+        ("release-plz.toml", false),
+        ("tools/release/changelog.sh", false),
         ("tools/release/tests/fixtures/gh.rs", false),
         ("tools/release/src/distribution_checks.rs", false),
         ("tools/release/src/metadata.rs", false),
