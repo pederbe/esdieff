@@ -66,7 +66,7 @@ jobs:
             git diff --no-renames --name-only -z "$BASE" HEAD > "$RUNNER_TEMP/changed-paths"
             while IFS= read -r -d '' path; do
               case "$path" in
-                tools/release/tests/*|tools/release/src/distribution_checks.rs|tools/release/src/metadata.rs)
+                tools/release/tests/*|tools/release/src/distribution_checks.rs|tools/release/src/metadata.rs|tools/release/changelog.sh|release-plz.toml)
                   release_tools=true
                   ;;
                 tools/release/*|.github/workflows/artifacts.yml|.github/workflows/release.yml|.github/workflows/distribution.yml|.github/workflows/package-repository.yml)
@@ -97,7 +97,7 @@ jobs:
                 *.md)
                   docs=true
                   ;;
-                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml|.github/workflows/release-plz.yml|release-plz.toml)
+                .github/ISSUE_TEMPLATE/*|.github/FUNDING.yml|.github/workflows/release-plz.yml)
                   ;;
                 *)
                   rust=true
@@ -144,6 +144,10 @@ jobs:
             tools/release -> target
             tools/terminal-html -> target
           shared-key: checks-${{ matrix.os }}
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
+        if: runner.os == 'Linux'
+        with:
+          tool: git-cliff@2.14.2
       - name: Run maintained checks
         run: bash scripts/check.sh ${{ needs.changes.outputs.rust == 'true' && '--all' || '--release-tools-only' }}
 

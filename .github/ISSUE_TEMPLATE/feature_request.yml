@@ -6,18 +6,21 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: What are you trying to do, and what gets in the way?
+      description: |
+        What are you trying to do, and what gets in the way?
     validations:
       required: true
   - type: textarea
     id: outcome
     attributes:
-      label: Proposed outcome
-      description: What would a useful result look like?
+      label: Desired outcome
+      description: |
+        What would a useful result look like? You do not need to design the solution.
     validations:
       required: true
   - type: textarea
-    id: alternatives
+    id: evidence
     attributes:
-      label: Alternatives considered
-      description: Include any workarounds you have tried.
+      label: Evidence
+      description: |
+        Examples, workarounds you have tried or relevant links, if available.

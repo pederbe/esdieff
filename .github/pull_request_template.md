@@ -1,17 +1,15 @@
-## Change
+## Problem
 
-<!-- Explain what changes and why. Link the relevant issue, if any. -->
+<!-- What problem does this solve, and why does it matter? -->
 
-## Changelog
+## Solution
 
-<!-- The pull request title becomes the changelog entry, so start it with a
-     conventional prefix such as feat:, fix: or ci:. For a user-visible change,
-     summarize compatibility consequences, report format versions and any
-     required user action here. For a breaking change, end the description
-     with a BREAKING CHANGE: paragraph holding the full upgrade instructions,
-     after all other sections. See CONTRIBUTING.md. -->
+<!-- What changes, and why is this approach appropriate? Include relevant
+     compatibility effects, tradeoffs and any migration or upgrade steps.
+     Link the relevant issue when useful. -->
 
-## Validation and limitations
+## Validation
 
-<!-- Describe meaningful tests or manual checks and any material limitations.
-     Omit routine CI results. Delete this section when it adds nothing. -->
+<!-- How was the result checked, what do those checks establish, and what
+     material uncertainty remains? Include relevant tests, manual checks,
+     documentation checks or measurements. -->
