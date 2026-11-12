@@ -1,5 +1,14 @@
 # 0053: Implementer revision comparison
 
+Later decisions extend this initial scope with
+[declaration requiredness](0054-implementer-declaration-requiredness.md),
+[declaration presence inside corresponding groupings](0055-implementer-declaration-presence.md),
+[grouping counts](0058-implementer-grouping-counts.md) and
+[Property capabilities](0059-implementer-property-capabilities.md).
+They replace the respective undetermined boundaries below. One-sided top-level
+groupings and whole Action/Event input or output additions and removals remain
+undetermined. The original data-comparison policy remains in force.
+
 A device implementer needs to know whether an implementation satisfying the
 earlier model still satisfies the later model. This differs from whether a
 later implementation can replace an earlier one. Esdieff adds an explicit

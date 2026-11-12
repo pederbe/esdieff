@@ -8,6 +8,4 @@ Downloading and verifying a public file requires no SDF knowledge, and no
 established model workflow justifies maintaining a transport inside Esdieff.
 
 Local file input and descriptive source metadata remain useful to model work.
-They do not retrieve URIs or unsupplied references. A proposed capability should
-identify the SDF-specific work it performs and the recurring user task it serves
-before adding general-purpose infrastructure or an implementation ticket.
+They do not retrieve URIs or unsupplied references.

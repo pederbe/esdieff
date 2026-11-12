@@ -1,5 +1,11 @@
 # 0039: Client-side revision comparison
 
+[ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md)
+removes the caller's option to withhold recorded registry evidence. Registry
+checks use the bundled evidence. The client comparison rules and scoped
+undetermined outcomes for genuinely unavailable or failed evidence remain in
+force.
+
 ## Context
 
 A manufacturer that changes a shared definition needs to know which device

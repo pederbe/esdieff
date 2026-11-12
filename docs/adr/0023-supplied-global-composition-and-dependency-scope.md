@@ -1,5 +1,10 @@
 # 0023: Supplied global composition and dependency scope
 
+[ADR 0061: Public assessments and bundled registry evidence](0061-public-assessments-and-bundled-registry-evidence.md)
+removes the explicit expanded modified assessment preset described below.
+Its checks remain in FullBaseline. The composition and dependency-scope
+decisions remain in force.
+
 Reusable device definitions can span supplied documents. Input order must not choose a definition, erase ambiguity or broaden selected-model work into a catalogue check. The existing effective owner and shared evaluator establish composition, following [ADR 0006: Scoped reference failures](0006-scoped-reference-failures.md), [ADR 0013: Shared workflow and report guarantees](0013-shared-workflow-and-report-guarantees.md), and [ADR 0020: Owned effective views and nearest origins](0020-owned-effective-views-and-nearest-origins.md).
 
 [RFC 9880 Sections 3.2 and 4](https://www.rfc-editor.org/rfc/rfc9880.html#section-4) establish namespace contributions and name references. [CURIE Syntax Section 3](https://www.w3.org/TR/2010/NOTE-curie-20101216/#s_syntax) assembles a prefix binding and reference tail by literal concatenation. Esdieff's supported supplied lookup compares exact decoded namespace text and percent-decoded RFC 6901 target pointers. It supports ASCII NCName prefixes `[A-Za-z_][A-Za-z0-9_.-]*`; wider valid prefix characters or unsupported assembled forms produce capability limitations. URI normalization, relative-URL resolution and retrieval are not part of that relation. A binding with path or fragment content retains that content during assembly.
