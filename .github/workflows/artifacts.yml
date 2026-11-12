@@ -47,6 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -85,12 +86,23 @@ jobs:
           set -euo pipefail
           gnu=${TARGET%-musl}-gnu
           rustup target add "$gnu"
+          root=$PWD
+          out=$root/target/runtime-qualification
+          mkdir -p "$out"
+          baseline=$RUNNER_TEMP/regex-baseline
+          findmnt -T "$RUNNER_TEMP" > "$out/storage.txt"
+          mkdir "$baseline"
+          git archive 50faf97406ec58ce5d1c81d5eca59854d673c710 | tar -x -C "$baseline"
+          diff -qr "$baseline/examples" examples
+          printf '%s\n' 50faf97406ec58ce5d1c81d5eca59854d673c710 > "$out/baseline.txt"
+          git rev-parse HEAD > "$out/candidate.txt"
           for target in "$gnu" "$TARGET"; do
             cargo build --locked --profile dist --target "$target" \
               --bin esdieff --example profiling_workload --example pattern_qualification_consumers
+            cargo build --locked --manifest-path "$baseline/Cargo.toml" --target-dir "$baseline/target" \
+              --profile dist --target "$target" --bin esdieff \
+              --example profiling_workload --example pattern_qualification_consumers
           done
-          out=target/runtime-qualification
-          mkdir -p "$out"
           rustc -Vv > "$out/compiler.txt"
           uname -a > "$out/host.txt"
           cat > "$out/reports.sh" <<'REPORTS'
@@ -112,23 +124,26 @@ jobs:
           REPORTS
           for round in {0..14}; do
             for workload in catalogue patterns reports; do
-              if [[ "$workload" == catalogue ]]; then arms=(gnu musl equal double); else arms=(gnu musl); fi
+              arms=(base-gnu base-musl reuse-gnu reuse-musl)
+              if [[ "$workload" == catalogue ]]; then arms+=(equal double); fi
               for arm in $(printf '%s\n' "${arms[@]}" | shuf); do
-                printf '%s %s %s\n' "$round" "$workload" "$arm" >> "$out/order.txt"
+                printf '%s %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" "$round" "$workload" "$arm" >> "$out/order.txt"
                 target=$gnu
-                [[ "$arm" != musl ]] || target=$TARGET
+                [[ "$arm" != *musl ]] || target=$TARGET
+                base=$baseline
+                [[ "$arm" != reuse-* ]] || base=$root
                 prefix=$out/$round-$workload-$arm
                 if [[ "$workload" == catalogue ]]; then
                   count=10
                   [[ "$arm" != double ]] || count=20
                   /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    "target/$target/dist/examples/profiling_workload" "$count" > "$prefix.stdout"
+                    "$base/target/$target/dist/examples/profiling_workload" "$count" > "$prefix.stdout"
                 elif [[ "$workload" == patterns ]]; then
                   /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    "target/$target/dist/examples/pattern_qualification_consumers" > "$prefix.stdout"
+                    "$base/target/$target/dist/examples/pattern_qualification_consumers" > "$prefix.stdout"
                 else
                   /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    bash "$out/reports.sh" "target/$target/dist/esdieff" "$prefix" > "$prefix.stdout"
+                    bash "$out/reports.sh" "$base/target/$target/dist/esdieff" "$prefix" > "$prefix.stdout"
                 fi
               done
             done
