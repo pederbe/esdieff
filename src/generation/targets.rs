@@ -766,7 +766,11 @@ impl<'m> Run<'_, 'm, '_> {
         // check leaves only its own value undetermined.
         let value = CheckedValue::new(value);
         let mut lent = ValueAllowance::new(self.root.json().model.catalogue);
+        lent.budget.patterns.compiled =
+            std::mem::take(&mut self.generator.allowance.budget.patterns.compiled);
         let checked = check_generated_observed(self.root, &value, &mut lent, self.choices);
+        self.generator.allowance.budget.patterns.compiled =
+            std::mem::take(&mut lent.budget.patterns.compiled);
         let checked = checked.map_err(|_| Exhausted::Work)?;
         self.generated.interpretations |= checked.interpretations;
         self.generated.set_aside |= lent.budget.set_aside;

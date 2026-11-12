@@ -344,7 +344,8 @@ impl Catalogue {
         result.scope.composed(&model);
         result.scope.set_aside |= budget.set_aside;
         let mut room = self.limits.report_bytes - reserve;
-        let mut selectors = entry::Selectors::new(&model);
+        let mut selectors =
+            entry::Selectors::new(&model, std::mem::take(&mut budget.patterns.compiled));
         for (index, range) in lines.into_iter().enumerate() {
             let checked = selectors.check(entry::Line {
                 id,

@@ -82,7 +82,7 @@ fn a_backreference_timeout_is_incomplete_and_does_not_poison_later_samples_or_en
     );
     assert!(easy.outcome().complete());
     let mut lines = String::new();
-    for value in [&hard, "aa", "b", "a"] {
+    for value in [&hard, "aa", &hard, "b", "a"] {
         lines.push_str(
             &serde_json::json!({"kind":"property","pointer":"/sdfProperty/p","value":value})
                 .to_string(),
@@ -97,12 +97,79 @@ fn a_backreference_timeout_is_incomplete_and_does_not_poison_later_samples_or_en
         .unwrap();
     assert_eq!(
         result.count(TraceOutcome::Undetermined),
-        1,
+        2,
         "{}",
         result.to_human()
     );
     assert_eq!(result.count(TraceOutcome::Passed), 2);
     assert_eq!(result.count(TraceOutcome::Failed), 1);
+}
+
+#[test]
+fn trace_pattern_reuse_distinguishes_expressions_and_recovers_from_invalid_syntax() {
+    let model = br#"{"sdfProperty":{
+        "latin":{"type":"string","pattern":"^a$"},
+        "greek":{"type":"string","pattern":"^\\u03b2$"},
+        "invalid":{"type":"string","pattern":"["},
+        "unsupported":{"type":"string","pattern":"(?<x>a)|(?<x>b)"}
+    }}"#;
+    let catalogue = Catalogue::from_inputs(&[SourceInput::supplied("model", model)]).unwrap();
+    let report = catalogue
+        .check(CheckRequest::new().assessment(Assessment::FullBaseline))
+        .unwrap();
+    let diagnostics = report.diagnostics();
+    let codes: Vec<_> = diagnostics
+        .conditions()
+        .map(|condition| condition.code())
+        .collect();
+    assert!(codes.contains(&"pattern.syntax"), "{}", report.to_human());
+    assert!(
+        codes.contains(&"pattern.unsupported"),
+        "{}",
+        report.to_human()
+    );
+    let mut lines = String::new();
+    for (property, value) in [
+        ("latin", "a"),
+        ("greek", "a"),
+        ("greek", "β"),
+        ("invalid", "a"),
+        ("unsupported", "a"),
+        ("latin", "β"),
+        ("latin", "a"),
+    ] {
+        lines.push_str(
+            &serde_json::json!({"kind":"property","pointer":format!("/sdfProperty/{property}"),"value":value})
+                .to_string(),
+        );
+        lines.push('\n');
+    }
+    for _ in 0..2 {
+        let result = catalogue
+            .check_trace(TraceRequest::new(
+                catalogue.source_id("model").unwrap(),
+                lines.as_bytes(),
+            ))
+            .unwrap();
+        assert_eq!(
+            result.count(TraceOutcome::Passed),
+            3,
+            "{}",
+            result.to_human()
+        );
+        assert_eq!(
+            result.count(TraceOutcome::Failed),
+            2,
+            "{}",
+            result.to_human()
+        );
+        assert_eq!(
+            result.count(TraceOutcome::Undetermined),
+            2,
+            "{}",
+            result.to_human()
+        );
+    }
 }
 
 #[test]

@@ -75,6 +75,13 @@ pub(crate) enum Verdict {
 pub(crate) struct MatchingWork {
     pub(crate) model_patterns: Vec<ModelPattern>,
     pub(crate) reported_models: usize,
+    pub(crate) compiled: Compiled,
+}
+/// The last expression used by one operation. Retaining one bounds live engine
+/// storage without keeping a copy of the pattern outside the compiled expression.
+#[derive(Default)]
+pub(crate) struct Compiled {
+    regex: Option<corvus_regex_ecma262::Regex>,
 }
 pub(crate) struct ModelPattern {
     pub(crate) source: crate::SourceId,
@@ -156,13 +163,33 @@ fn compile(
         _ => Verdict::Unsupported,
     })
 }
+
+fn prepare(
+    pattern: &str,
+    limits: &crate::Limits,
+    budget: &mut crate::allowance::OperationBudget,
+) -> Result<(), Verdict> {
+    if let Some(regex) = &budget.patterns.compiled.regex {
+        if !crate::allowance::charge(&mut budget.work, pattern.len() + 1) {
+            return Err(Verdict::Limit);
+        }
+        if regex.as_str() == pattern {
+            return Ok(());
+        }
+    }
+    // Drop the previous program before constructing another. An unsuccessful
+    // compilation leaves the slot empty and never reuses a different expression.
+    budget.patterns.compiled.regex = None;
+    budget.patterns.compiled.regex = Some(compile(pattern, limits, budget)?);
+    Ok(())
+}
 pub(crate) fn evaluate(
     pattern: &str,
     limits: &crate::Limits,
     budget: &mut crate::allowance::OperationBudget,
 ) -> Verdict {
-    match compile(pattern, limits, budget) {
-        Ok(_) => Verdict::Valid,
+    match prepare(pattern, limits, budget) {
+        Ok(()) => Verdict::Valid,
         Err(verdict) => verdict,
     }
 }
@@ -185,12 +212,18 @@ pub(crate) fn matches(
     {
         return MatchVerdict::Limit;
     }
-    let regex = match compile(pattern, limits, budget) {
-        Ok(regex) => regex,
+    match prepare(pattern, limits, budget) {
+        Ok(()) => {}
         Err(Verdict::Invalid) => return MatchVerdict::Invalid,
         Err(Verdict::Unsupported) => return MatchVerdict::Unsupported,
         Err(_) => return MatchVerdict::Limit,
-    };
+    }
+    let regex = budget
+        .patterns
+        .compiled
+        .regex
+        .as_ref()
+        .expect("prepared expression");
     match regex.is_match(subject) {
         Ok(true) => MatchVerdict::Matched,
         Ok(false) => MatchVerdict::Mismatched,

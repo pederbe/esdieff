@@ -355,7 +355,13 @@ impl Catalogue {
                 result.unselected += 1;
                 continue;
             }
-            if let Some(description) = settle(kind, pointer, json, &mut result) {
+            if let Some(description) = settle(
+                kind,
+                pointer,
+                json,
+                &mut result,
+                &mut allowance.budget.patterns.compiled,
+            ) {
                 result.descriptions.push(description);
             }
         }
@@ -520,6 +526,7 @@ fn settle(
     pointer: String,
     selected: crate::Field<EffectiveJson<'_>>,
     result: &mut GenerationResult<'_>,
+    compiled: &mut crate::pattern::Compiled,
 ) -> Option<Description> {
     let overhead = report::description_bytes(result.scope.document(), kind, &pointer);
     if overhead > result.room {
@@ -548,6 +555,7 @@ fn settle(
         });
     };
     let mut allowance = ValueAllowance::new(result.catalogue);
+    allowance.budget.patterns.compiled = std::mem::take(compiled);
     let size = |target: &str, value: &str, admission: Admission, codes: &[&'static str]| {
         report::value_bytes(kind, &pointer, target, value, admission, codes)
     };
@@ -559,6 +567,7 @@ fn settle(
     };
     let mut choices = choice::Collection::new(Some(json), &result.catalogue.limits);
     let generated = targets::generate(json, VALUES, &mut allowance, room, &mut choices);
+    *compiled = std::mem::take(&mut allowance.budget.patterns.compiled);
     result.scope.interpretations |= generated.interpretations;
     result.scope.set_aside |= allowance.budget.set_aside;
     result.scope.set_aside |= generated.set_aside;
@@ -605,6 +614,7 @@ fn limit_reason(error: Exhausted) -> &'static str {
 pub(crate) struct ReferenceExamples<'a> {
     result: GenerationResult<'a>,
     searched: usize,
+    compiled: crate::pattern::Compiled,
 }
 pub(crate) struct ReferenceExample {
     pub(crate) value: Option<String>,
@@ -625,6 +635,7 @@ impl<'a> ReferenceExamples<'a> {
                 scope: SelectedScope::new(document),
             },
             searched: 0,
+            compiled: Default::default(),
         }
     }
     pub(crate) fn search(
@@ -643,7 +654,13 @@ impl<'a> ReferenceExamples<'a> {
         // Candidate retention is transient for one description. Presentation of the selected
         // example is charged independently by the reference renderer.
         self.result.room = self.result.catalogue.limits.report_bytes;
-        let description = settle(kind, pointer, crate::Field::Present(json), &mut self.result);
+        let description = settle(
+            kind,
+            pointer,
+            crate::Field::Present(json),
+            &mut self.result,
+            &mut self.compiled,
+        );
         let value = description.as_ref().and_then(|description| {
             description
                 .values
