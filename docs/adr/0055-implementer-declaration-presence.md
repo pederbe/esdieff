@@ -1,5 +1,10 @@
 # 0055: Implementer declaration presence
 
+[ADR 0058: Implementer grouping counts](0058-implementer-grouping-counts.md) and
+[ADR 0059: Implementer Property capabilities](0059-implementer-property-capabilities.md)
+replace the respective undetermined boundaries below. This record's presence
+policy and its other exclusions remain in force.
+
 Extend [ADR 0054: Implementer declaration requiredness](0054-implementer-declaration-requiredness.md)
 with a bounded presence policy for Property, Action, Event, nested Object and
 nested Thing declarations inside corresponding groupings. Optional additions

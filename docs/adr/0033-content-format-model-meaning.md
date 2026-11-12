@@ -39,14 +39,12 @@ Unsupported semantic observations occur before finding-retention decisions.
 All scans, tuple accesses and parameter comparisons consume the original shared
 work allowance.
 
-The complete Full report can carry ten interpretation IDs, beyond the registry
-module's four, including `copied-reference-relocation/1` from
-[ADR 0036: Copied reference relocation](0036-copied-reference-relocation.md).
-Requalify both complete report generations, interpretation Vec
-growth, registry records, retained-result fallback and optional omission against
-the original reserves. The compiled backend fits those reserves; qualification
-checks the combined graph rather than assuming a free fourth array slot.
-This follows [ADR 0009: Bounded processing and reporting](0009-bounded-processing-and-reporting.md).
+The complete combined report graph must fit the original reserves, including
+both complete report generations, interpretation storage growth, registry
+records, retained-result fallback and optional omission. The
+[content-format contract](../content-format-contract.md#finite-ownership-and-work)
+owns the current bounds and qualification details. This follows
+[ADR 0009: Bounded processing and reporting](0009-bounded-processing-and-reporting.md).
 
 ## Considered Options
 
