@@ -149,12 +149,12 @@ jobs:
             done
           done
       - uses: actions/upload-artifact@v7.0.2
-        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        if: always() && runner.os == 'Linux' && runner.arch == 'ARM64'
         with:
           name: runtime-qualification-${{ matrix.target }}
           path: target/runtime-qualification
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ignore
       - name: Make tar entries compatible with Binstall
         if: runner.os != 'Windows'
         run: |
