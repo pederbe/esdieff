@@ -10,9 +10,8 @@ examples and improvements are welcome.
   maps the main parts of the code and how data flows between them.
 - [Changelog](https://github.com/pederbe/esdieff/blob/main/CHANGELOG.md) lists
   what changed in each release.
-- [Decision records](https://github.com/pederbe/esdieff/tree/main/docs/adr)
-  record why Esdieff behaves as it does, from exact numbers to client-side
-  revision comparison.
+- [Design decisions](https://github.com/pederbe/esdieff/tree/main/docs/adr)
+  explain the reasoning behind important technical choices.
 - [Security policy](https://github.com/pederbe/esdieff/blob/main/SECURITY.md)
   explains how to report a suspected vulnerability privately.
 - [Issues](https://github.com/pederbe/esdieff/issues) is the place for bug
