@@ -47,7 +47,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -79,82 +78,6 @@ jobs:
       - name: Check the native musl application
         if: runner.os == 'Linux'
         run: cargo test --locked --target "$TARGET" --no-fail-fast
-      # Candidate-only comparison. Remove after the migration decision.
-      - name: Compare native ARM runtime candidates
-        if: runner.os == 'Linux' && runner.arch == 'ARM64'
-        run: |
-          set -euo pipefail
-          gnu=${TARGET%-musl}-gnu
-          rustup target add "$gnu"
-          root=$PWD
-          out=$root/target/runtime-qualification
-          mkdir -p "$out"
-          baseline=$RUNNER_TEMP/regex-baseline
-          findmnt -T "$RUNNER_TEMP" > "$out/storage.txt"
-          mkdir "$baseline"
-          git archive 50faf97406ec58ce5d1c81d5eca59854d673c710 | tar -x -C "$baseline"
-          diff -qr "$baseline/examples" examples
-          printf '%s\n' 50faf97406ec58ce5d1c81d5eca59854d673c710 > "$out/baseline.txt"
-          git rev-parse HEAD > "$out/candidate.txt"
-          for target in "$gnu" "$TARGET"; do
-            cargo build --locked --profile dist --target "$target" \
-              --bin esdieff --example profiling_workload --example pattern_qualification_consumers
-            cargo build --locked --manifest-path "$baseline/Cargo.toml" --target-dir "$baseline/target" \
-              --profile dist --target "$target" --bin esdieff \
-              --example profiling_workload --example pattern_qualification_consumers
-          done
-          rustc -Vv > "$out/compiler.txt"
-          uname -a > "$out/host.txt"
-          cat > "$out/reports.sh" <<'REPORTS'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          binary=$1
-          prefix=$2
-          case_number=0
-          for plan in examples/{thermostat,rgb-lamp,door-lock,power-strip,irrigation,coffee-machine}-check/*plan.json; do
-            for format in json human; do
-              if [[ "$format" == human && "$plan" != */rich-plan.json ]]; then continue; fi
-              status=0
-              "$binary" check --plan "$plan" --format "$format" > "$prefix-$case_number.report" || status=$?
-              case "$status" in 0|1|3) ;; *) exit "$status" ;; esac
-              printf '%s %s %s\n' "$plan" "$format" "$status"
-              case_number=$((case_number + 1))
-            done
-          done
-          REPORTS
-          for round in {0..14}; do
-            for workload in catalogue patterns reports; do
-              arms=(base-gnu base-musl reuse-gnu reuse-musl)
-              if [[ "$workload" == catalogue ]]; then arms+=(equal double); fi
-              for arm in $(printf '%s\n' "${arms[@]}" | shuf); do
-                printf '%s %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" "$round" "$workload" "$arm" >> "$out/order.txt"
-                target=$gnu
-                [[ "$arm" != *musl ]] || target=$TARGET
-                base=$baseline
-                [[ "$arm" != reuse-* ]] || base=$root
-                prefix=$out/$round-$workload-$arm
-                if [[ "$workload" == catalogue ]]; then
-                  count=10
-                  [[ "$arm" != double ]] || count=20
-                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    "$base/target/$target/dist/examples/profiling_workload" "$count" > "$prefix.stdout"
-                elif [[ "$workload" == patterns ]]; then
-                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    "$base/target/$target/dist/examples/pattern_qualification_consumers" > "$prefix.stdout"
-                else
-                  /usr/bin/time -f '%e %M' -o "$prefix.time" \
-                    bash "$out/reports.sh" "$base/target/$target/dist/esdieff" "$prefix" > "$prefix.stdout"
-                fi
-              done
-            done
-          done
-      - uses: actions/upload-artifact@v7.0.2
-        if: always() && runner.os == 'Linux' && runner.arch == 'ARM64'
-        with:
-          name: runtime-qualification-${{ matrix.target }}
-          path: target/runtime-qualification
-          retention-days: 7
-          if-no-files-found: ignore
       - name: Make tar entries compatible with Binstall
         if: runner.os != 'Windows'
         run: |
