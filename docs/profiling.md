@@ -51,10 +51,8 @@ more entries fail. Finally the round generates values for every affordance descr
 the rich door lock model, as
 `generate --document examples/door-lock-check/rich.sdf.json` would.
 
-The previously documented totals were 138 sources, 23 effective views, 40 model checks,
-116 sample checks, one comparison, 2,000 trace entries and 83 generated values per
-round. These are historical observations. Use the totals printed by your run for
-the current workload and code. Report rendering is not part of the workload.
+Use the totals printed by your run for the current workload and code. Report
+rendering is not part of the workload.
 
 ## Instrumented operations
 
@@ -87,9 +85,14 @@ nothing, because only the workload starts the profiler.
 
 ## Live view and JSON reports
 
-The hotpath CLI shows the same measurements live. Install the matching version
-with `cargo install hotpath --version 0.30.3 --features tui`. Start
-`hotpath console` in one terminal, then run the workload with the `hotpath`
+The hotpath CLI shows the measurements live. From the repository root, install
+the version selected by [Cargo.toml](../Cargo.toml) and the lock file:
+
+```sh
+bash -c 'cargo install hotpath --version "$(cargo pkgid --locked hotpath | sed "s/.*@//")" --locked --features tui'
+```
+
+Start `hotpath console` in one terminal, then run the workload with the `hotpath`
 feature and enough rounds to watch, such as `-- 20000`, in another.
 
 For a machine-readable report, set `HOTPATH_OUTPUT_FORMAT=json` and
