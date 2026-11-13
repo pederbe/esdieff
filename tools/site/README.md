@@ -128,27 +128,16 @@ the Cloudflare Workers static-assets deployment.
 ## Deployment
 
 Website and documentation changes merged into `main` deploy automatically to
-esdieff.com after the required CI checks pass. CI calls the existing Website
-workflow to build and deploy that revision. Pull requests only validate the
+esdieff.com after the required CI checks pass. Pull requests only validate the
 changes. Source-only changes and repository overview edits do not publish the site.
-Merged revisions queue without replacing pending runs, so a later source-only
-merge cannot cancel an earlier website deployment.
+Merged revisions queue without replacing pending deployments.
 
-Automatic builds and deployments appear as `website / build` and
-`website / deploy` jobs in the CI run for the merge. Manual runs appear under
-the Website workflow.
+The [CI workflow](../../.github/workflows/ci.yml) selects when to call the
+[Website workflow](../../.github/workflows/website.yml). Those workflows define
+the deployment controls and required hosting credentials. Manual Website runs
+default to building without publishing.
 
-The `WEBSITE_ENABLED` repository variable must be `true`. Deployment uses the
-existing `website` environment and its Cloudflare credentials.
-
-You can still start a deployment manually:
-
-```sh
-gh workflow run website.yml --ref main -F deploy=true
-```
-
-The workflow builds the selected source revision. Before deployment, it checks
-the latest published release. To require that release to have a particular tag,
-add `-f tag=vX.Y.Z`. This checks the release identity without selecting different
-website sources. An explicit tag must match the latest release. Omitting
-`deploy=true` builds the website without publishing it.
+Deployment builds the selected source revision and checks the latest published
+release. If a tag is supplied, it must match that latest release. The tag checks
+release identity without selecting different website sources. Local builds and
+`--serve` previews never deploy.
