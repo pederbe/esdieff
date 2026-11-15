@@ -63,6 +63,9 @@ jobs:
           if ((Get-FileHash artifacts/esdieff-winget-manifests.tar.gz -Algorithm SHA256).Hash.ToLower() -ne $expected) { throw 'Manifest checksum mismatch' }
           tar -xzf artifacts/esdieff-winget-manifests.tar.gz -C artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Cannot extract manifests' }
+          # Earlier releases retain the old publisher in their immutable archives.
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-rename artifacts/manifests ($env:TAG.Substring(1))
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot prepare the WinGet publisher identifier' }
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: winget-update-${{ inputs.tag }}
@@ -75,7 +78,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $manifest = "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))"
+          $manifest = "artifacts/manifests/p/pederbe/Esdieff/$($env:TAG.Substring(1))"
           Install-PSResource -Name Microsoft.WinGet.Client -Scope CurrentUser -Repository PSGallery -TrustRepository
           Import-Module Microsoft.WinGet.Client
           $clientVersion = gh api repos/microsoft/winget-cli/releases/latest --jq .tag_name
@@ -138,9 +141,9 @@ jobs:
           $env:WINGET_SUBMIT = "$env:RUNNER_TEMP/komac.exe"
           $mode = if ($env:SUBMIT -eq 'true') { '--submit' } else { '--prepare' }
           $env:GITHUB_TOKEN = $env:GH_TOKEN
-          & $env:WINGET_SUBMIT submit "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))" --dry-run
+          & $env:WINGET_SUBMIT submit "artifacts/manifests/p/pederbe/Esdieff/$($env:TAG.Substring(1))" --dry-run
           if ($LASTEXITCODE -ne 0) { throw 'Komac manifest preparation failed' }
-          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-submit "artifacts/manifests/p/PederBergan/Esdieff/$($env:TAG.Substring(1))" PederBergan.Esdieff ($env:TAG.Substring(1)) $mode
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-submit "artifacts/manifests/p/pederbe/Esdieff/$($env:TAG.Substring(1))" pederbe.Esdieff ($env:TAG.Substring(1)) $mode
           if ($LASTEXITCODE -ne 0) { throw 'WinGet preparation or submission failed; retry this version' }
       - uses: actions/upload-artifact@v7.0.2
         if: always()

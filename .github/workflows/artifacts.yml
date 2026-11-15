@@ -325,7 +325,7 @@ jobs:
           winget settings --enable LocalManifestFiles
           if ($LASTEXITCODE -ne 0) { throw 'Cannot enable local manifests' }
           $version = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          $manifest = "target/distrib/winget/manifests/p/PederBergan/Esdieff/$version"
+          $manifest = "target/distrib/winget/manifests/p/pederbe/Esdieff/$version"
           winget validate --manifest $manifest
           if ($LASTEXITCODE -ne 0) { throw 'Manifest validation failed' }
           $tool = (Resolve-Path target/release-tool/esdieff-release.exe).Path

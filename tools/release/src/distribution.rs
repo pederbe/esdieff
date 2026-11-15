@@ -31,7 +31,8 @@ pub fn run(args: &[String]) -> Result<()> {
         Some("repository") => repository(&args[1..]),
         Some("homebrew") => homebrew(&args[1..]),
         Some("winget") => winget(&args[1..]),
-        _ => Err("expected package-linux, repository, homebrew or winget".into()),
+        Some("winget-rename") => winget_rename(&args[1..]),
+        _ => Err("expected package-linux, repository, homebrew, winget or winget-rename".into()),
     }
 }
 
@@ -671,6 +672,40 @@ fn formula(version: &str, hashes: &[String]) -> String {
     )
 }
 
+fn winget_rename(args: &[String]) -> Result<()> {
+    let [directory, version] = args else {
+        return Err("usage: esdieff-release winget-rename MANIFESTS VERSION".into());
+    };
+    if !stable(version) {
+        return Err("expected a stable x.y.z version".into());
+    }
+    let directory = Path::new(directory);
+    let legacy = directory.join("p/PederBergan/Esdieff").join(version);
+    if !legacy.exists() {
+        return Ok(());
+    }
+    let current = directory.join("p/pederbe/Esdieff").join(version);
+    if current.exists() {
+        return Err("both old and current WinGet manifest directories exist".into());
+    }
+    fs::create_dir_all(&current)?;
+    for suffix in ["yaml", "installer.yaml", "locale.en-US.yaml"] {
+        let source = legacy.join(format!("PederBergan.Esdieff.{suffix}"));
+        let text = fs::read_to_string(&source)?;
+        fs::write(
+            current.join(format!("pederbe.Esdieff.{suffix}")),
+            text.replacen(
+                "PackageIdentifier: PederBergan.Esdieff",
+                "PackageIdentifier: pederbe.Esdieff",
+                1,
+            ),
+        )?;
+        fs::remove_file(source)?;
+    }
+    fs::remove_dir(legacy)?;
+    Ok(())
+}
+
 fn winget(args: &[String]) -> Result<()> {
     let [directory, version] = args else {
         return Err("usage: esdieff-release winget DISTDIR VERSION".into());
@@ -682,26 +717,26 @@ fn winget(args: &[String]) -> Result<()> {
     let archive = "esdieff-x86_64-pc-windows-msvc.zip";
     let checksum = hash(&directory.join(archive), "sha256")?;
     let out = directory
-        .join("winget/manifests/p/PederBergan/Esdieff")
+        .join("winget/manifests/p/pederbe/Esdieff")
         .join(version);
     fs::create_dir_all(&out)?;
     // Use the community repository's current recommended manifest schema.
     let schema = "1.28.0";
-    let identity = format!("PackageIdentifier: PederBergan.Esdieff\nPackageVersion: {version}\n");
+    let identity = format!("PackageIdentifier: pederbe.Esdieff\nPackageVersion: {version}\n");
     let header = |kind| {
         format!(
             "# yaml-language-server: $schema=https://aka.ms/winget-manifest.{kind}.{schema}.schema.json\n\n"
         )
     };
     fs::write(
-        out.join("PederBergan.Esdieff.yaml"),
+        out.join("pederbe.Esdieff.yaml"),
         format!(
             "{}{identity}DefaultLocale: en-US\nManifestType: version\nManifestVersion: {schema}\n",
             header("version")
         ),
     )?;
     fs::write(
-        out.join("PederBergan.Esdieff.installer.yaml"),
+        out.join("pederbe.Esdieff.installer.yaml"),
         format!(
             "{}{identity}InstallerType: zip\nNestedInstallerType: portable\nNestedInstallerFiles:\n- RelativeFilePath: esdieff.exe\n  PortableCommandAlias: esdieff\nMinimumOSVersion: 10.0.22000.0\nInstallers:\n- Architecture: x64\n  InstallerUrl: {RELEASES}/v{version}/{archive}\n  InstallerSha256: {}\nManifestType: installer\nManifestVersion: {schema}\n",
             header("installer"),
@@ -709,7 +744,7 @@ fn winget(args: &[String]) -> Result<()> {
         ),
     )?;
     fs::write(
-        out.join("PederBergan.Esdieff.locale.en-US.yaml"),
+        out.join("pederbe.Esdieff.locale.en-US.yaml"),
         format!(
             "{}{identity}PackageLocale: en-US\nPublisher: Peder Bergan\nPublisherUrl: https://github.com/pederbe\nPublisherSupportUrl: https://github.com/pederbe/esdieff/issues\nPackageName: Esdieff\nPackageUrl: https://esdieff.com/\nLicense: MIT OR Apache-2.0\nLicenseUrl: https://github.com/pederbe/esdieff/blob/v{version}/README.md#license\nShortDescription: An SDF toolkit for connected-device models\nMoniker: esdieff\nReleaseNotesUrl: https://github.com/pederbe/esdieff/releases/tag/v{version}\nManifestType: defaultLocale\nManifestVersion: {schema}\n",
             header("defaultLocale")
@@ -781,17 +816,47 @@ mod tests {
     }
 
     #[test]
+    fn winget_renames_retained_manifests_without_changing_release_metadata() {
+        let work = Work::new(&std::env::temp_dir()).unwrap();
+        let legacy = work.0.join("p/PederBergan/Esdieff/0.3.0");
+        fs::create_dir_all(&legacy).unwrap();
+        for suffix in ["yaml", "installer.yaml", "locale.en-US.yaml"] {
+            fs::write(
+                legacy.join(format!("PederBergan.Esdieff.{suffix}")),
+                "# Retained release metadata\r\nPackageIdentifier: PederBergan.Esdieff\r\nPackageVersion: 0.3.0\r\nPublisher: Peder Bergan\r\nManifestVersion: 1.12.0\r\n",
+            )
+            .unwrap();
+        }
+        let args = [work.0.to_str().unwrap().to_owned(), "0.3.0".to_owned()];
+        winget_rename(&args).unwrap();
+        assert!(!legacy.exists());
+        for suffix in ["yaml", "installer.yaml", "locale.en-US.yaml"] {
+            assert_eq!(
+                fs::read_to_string(
+                    work.0
+                        .join("p/pederbe/Esdieff/0.3.0")
+                        .join(format!("pederbe.Esdieff.{suffix}"))
+                )
+                .unwrap(),
+                "# Retained release metadata\r\nPackageIdentifier: pederbe.Esdieff\r\nPackageVersion: 0.3.0\r\nPublisher: Peder Bergan\r\nManifestVersion: 1.12.0\r\n"
+            );
+        }
+        winget_rename(&args).unwrap();
+    }
+
+    #[test]
     fn winget_uses_community_schema_headers_and_the_actual_archive_digest() {
         let work = Work::new(&std::env::temp_dir()).unwrap();
         fs::write(work.0.join("esdieff-x86_64-pc-windows-msvc.zip"), b"abc").unwrap();
         winget(&[work.0.to_str().unwrap().to_owned(), "0.1.0".to_owned()]).unwrap();
-        let out = work.0.join("winget/manifests/p/PederBergan/Esdieff/0.1.0");
+        let out = work.0.join("winget/manifests/p/pederbe/Esdieff/0.1.0");
         for (name, kind) in [
-            ("PederBergan.Esdieff.yaml", "version"),
-            ("PederBergan.Esdieff.installer.yaml", "installer"),
-            ("PederBergan.Esdieff.locale.en-US.yaml", "defaultLocale"),
+            ("pederbe.Esdieff.yaml", "version"),
+            ("pederbe.Esdieff.installer.yaml", "installer"),
+            ("pederbe.Esdieff.locale.en-US.yaml", "defaultLocale"),
         ] {
             let text = fs::read_to_string(out.join(name)).unwrap();
+            assert!(text.contains("PackageIdentifier: pederbe.Esdieff\n"));
             assert_eq!(
                 text.lines().next().unwrap(),
                 format!(
