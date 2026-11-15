@@ -133,7 +133,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           toolchain: stable
           components: rustfmt, clippy
@@ -144,7 +144,7 @@ jobs:
             tools/release -> target
             tools/terminal-html -> target
           shared-key: checks-${{ matrix.os }}
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
+      - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21 # v2
         if: runner.os == 'Linux'
         with:
           tool: git-cliff@2.14.2
@@ -176,7 +176,7 @@ jobs:
           tool: mdbook@0.5.4
           binary: mdbook
       - if: matrix.os != 'ubuntu-26.04'
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           toolchain: stable
           components: rustfmt, clippy
@@ -235,7 +235,7 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund --prefix tools/site
           npm run build:landing --prefix tools/site
           git diff --exit-code -- site/landing.css
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           toolchain: stable
       - name: Check documentation for release numbers
