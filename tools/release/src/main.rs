@@ -17,7 +17,9 @@ fn run(args: &[String]) -> Result<()> {
         "serve-artifacts" => serve::run(rest),
         "release-notes" => metadata::notes(rest),
         "winget-submit" => winget_submission::run(rest),
-        "package-linux" | "repository" | "homebrew" | "winget" => distribution::run(args),
+        "package-linux" | "repository" | "homebrew" | "winget" | "winget-rename" => {
+            distribution::run(args)
+        }
         _ => Err(format!("unknown release command: {command}").into()),
     }
 }
