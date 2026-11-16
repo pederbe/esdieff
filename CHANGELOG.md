@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-16
+
+### Changed
+
+- **Breaking:** Remove the redundant --no-color option ([#123](https://github.com/pederbe/esdieff/pull/123))
+- **Breaking:** Simplify assessment choices and use bundled registry evidence ([#125](https://github.com/pederbe/esdieff/pull/125))
+
+### Fixed
+
+- Offer only the latest release for installation ([#121](https://github.com/pederbe/esdieff/pull/121))
+- Make CLI errors easier to understand and resolve ([#126](https://github.com/pederbe/esdieff/pull/126))
+- Explain CLI commands with focused help and examples ([#127](https://github.com/pederbe/esdieff/pull/127))
+- Lead sample and trace reports with results and inputs ([#128](https://github.com/pederbe/esdieff/pull/128))
+- Make CLI reports and recovery guidance easier to understand ([#130](https://github.com/pederbe/esdieff/pull/130))
+- Use the GitHub publisher identifier ([#142](https://github.com/pederbe/esdieff/pull/142))
+
+### Performance
+
+- Speed up repeated pattern checks ([#134](https://github.com/pederbe/esdieff/pull/134))
+
+### Dependencies
+
+- Update daily dependencies ([#119](https://github.com/pederbe/esdieff/pull/119))
+- Update daily dependencies ([#141](https://github.com/pederbe/esdieff/pull/141))
+
+### Documentation
+
+- Reorganise the README and the documentation book ([#120](https://github.com/pederbe/esdieff/pull/120))
+- Clarify the contributor link to design decisions ([#135](https://github.com/pederbe/esdieff/pull/135))
+- Clarify superseded ADR scope and current Context link support ([#136](https://github.com/pederbe/esdieff/pull/136))
+- Separate contribution tasks from release operations ([#139](https://github.com/pederbe/esdieff/pull/139))
+
+
 ## [0.4.0] - 2026-11-09
 
 ### Added
