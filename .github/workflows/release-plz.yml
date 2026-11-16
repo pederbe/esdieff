@@ -50,7 +50,7 @@ jobs:
       - run: rustup toolchain install
         if: steps.prepare.outputs.run == 'true'
       # CI runs only on pull requests opened with a personal token, not with the workflow token.
-      - uses: taiki-e/install-action@4a76afe23f9e08d2d9550fb56e556444e8611d21 # v2
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2
         if: steps.prepare.outputs.run == 'true'
         with:
           tool: git-cliff@2.14.2
