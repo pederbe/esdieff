@@ -214,7 +214,7 @@ jobs:
         with:
           name: release-tool-${{ matrix.target }}
           path: target/release-tool
-      - uses: Homebrew/actions/setup-homebrew@61cb4f206b442f05f5efe126f3e7d48218f0da02 # main
+      - uses: Homebrew/actions/setup-homebrew@61b401267256bb9c047d6d1481b176d5772a0ba7 # main
         with:
           stable: true
       - name: Check formula, installation, upgrade and removal from a temporary tap
