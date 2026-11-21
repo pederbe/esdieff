@@ -130,7 +130,7 @@ fn matches_version(title: &str, package: &str, version: &str) -> bool {
             .any(|word| *word == version || word.strip_prefix('v') == Some(version))
 }
 
-fn find_pr(package: &str, version: &str) -> Result<Option<u64>> {
+fn open_prs(query: &str) -> Result<Vec<Value>> {
     let search = gh(
         &[
             "api",
@@ -138,24 +138,27 @@ fn find_pr(package: &str, version: &str) -> Result<Option<u64>> {
             "GET",
             "search/issues",
             "-f",
-            &format!("q=repo:{REPO} is:pr is:open {package} in:title"),
+            &format!("q=repo:{REPO} is:pr is:open {query}"),
             "-f",
             "per_page=100",
         ],
         None,
     )?;
-    let search: Value = serde_json::from_str(&search)?;
+    let mut search: Value = serde_json::from_str(&search)?;
     if search["incomplete_results"] != false
         || search["total_count"]
             .as_u64()
             .ok_or("missing search count")?
             > 100
     {
-        return Err("incomplete WinGet duplicate search".into());
+        return Err("incomplete WinGet pull request search".into());
     }
-    let matches: Vec<_> = search["items"]
-        .as_array()
-        .ok_or("missing search results")?
+    Ok(serde_json::from_value(search["items"].take())?)
+}
+
+fn find_pr(package: &str, version: &str) -> Result<Option<u64>> {
+    let items = open_prs(&format!("{package} in:title"))?;
+    let matches: Vec<_> = items
         .iter()
         .filter(|pr| matches_version(pr["title"].as_str().unwrap_or(""), package, version))
         .collect();
@@ -170,6 +173,119 @@ fn find_pr(package: &str, version: &str) -> Result<Option<u64>> {
                 .ok_or_else(|| "missing PR number".into())
         })
         .transpose()
+}
+
+fn stable_version(text: &str) -> Option<[u64; 3]> {
+    let mut numbers = [0; 3];
+    let mut parts = text.split('.');
+    for number in &mut numbers {
+        let part = parts.next()?;
+        if !part.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        *number = part.parse().ok()?;
+    }
+    parts.next().is_none().then_some(numbers)
+}
+
+fn check_latest(release: &Value, tag: &str) -> Result<[u64; 3]> {
+    let latest = release["tag_name"].as_str().ok_or("missing release tag")?;
+    let version = latest
+        .strip_prefix('v')
+        .and_then(stable_version)
+        .filter(|_| release["draft"] == false && release["prerelease"] == false)
+        .ok_or("expected a published stable Esdieff release")?;
+    if tag != latest {
+        return Err(format!("submit the latest Esdieff release {latest}, received {tag}").into());
+    }
+    Ok(version)
+}
+
+fn require_latest(tag: &str) -> Result<[u64; 3]> {
+    check_latest(&api("repos/pederbe/esdieff/releases/latest")?, tag)
+}
+
+fn older_submission(title: &str, latest: [u64; 3]) -> Option<(&'static str, &str)> {
+    let title = title
+        .strip_prefix("New package: ")
+        .or_else(|| title.strip_prefix("Add version: "))
+        .or_else(|| title.strip_prefix("New version: "))
+        .unwrap_or(title);
+    let (package, version) = title.split_once(" version ")?;
+    let publisher = if package.eq_ignore_ascii_case("pederbe.Esdieff") {
+        "pederbe"
+    } else if package.eq_ignore_ascii_case("PederBergan.Esdieff") {
+        "PederBergan"
+    } else {
+        return None;
+    };
+    let version = version.strip_prefix('v').unwrap_or(version);
+    (stable_version(version)? < latest).then_some((publisher, version))
+}
+
+fn is_release_addition(files: &Value, publisher: &str, version: &str) -> bool {
+    let prefix = format!("manifests/p/{publisher}/Esdieff/{version}/{publisher}.Esdieff");
+    files.as_array().is_some_and(|files| {
+        files.len() == 3
+            && [".yaml", ".installer.yaml", ".locale.en-US.yaml"]
+                .iter()
+                .all(|suffix| {
+                    let name = format!("{prefix}{suffix}");
+                    files
+                        .iter()
+                        .any(|file| file["status"] == "added" && file["filename"] == name)
+                })
+    })
+}
+
+pub fn retire(args: &[String]) -> Result<()> {
+    let [tag] = args else {
+        return Err("usage: winget-retire TAG".into());
+    };
+    let latest = require_latest(tag)?;
+    let user = api("user")?;
+    let login = user["login"]
+        .as_str()
+        .ok_or("missing authenticated login")?;
+    let fork = format!("{login}/winget-pkgs");
+    for item in open_prs(&format!("author:{login} Esdieff in:title"))? {
+        let Some(submission) = older_submission(item["title"].as_str().unwrap_or(""), latest)
+        else {
+            continue;
+        };
+        let number = item["number"]
+            .as_u64()
+            .ok_or("missing pull request number")?;
+        let endpoint = format!("repos/{REPO}/pulls/{number}");
+        let pr = api(&endpoint)?;
+        if pr["state"] == "closed" {
+            continue;
+        }
+        if pr["state"] != "open"
+            || pr["merged"] != false
+            || pr["user"]["login"] != login
+            || pr["base"]["repo"]["full_name"] != REPO
+            || pr["head"]["repo"]["full_name"] != fork
+            || older_submission(pr["title"].as_str().unwrap_or(""), latest) != Some(submission)
+            || pr["changed_files"] != 3
+            || !is_release_addition(
+                &api(&format!("{endpoint}/files"))?,
+                submission.0,
+                submission.1,
+            )
+        {
+            return Err(format!("WinGet PR #{number} needs manual review before closure").into());
+        }
+        let response: Value = serde_json::from_str(&gh(
+            &["api", "--method", "PATCH", &endpoint, "--input", "-"],
+            Some(&json!({"state": "closed"})),
+        )?)?;
+        if response["state"] != "closed" || response["merged"] != false {
+            return Err(format!("could not verify closure of WinGet PR #{number}").into());
+        }
+        println!("Closed superseded submission https://github.com/{REPO}/pull/{number}.");
+    }
+    Ok(())
 }
 
 fn complete_body(
@@ -260,16 +376,16 @@ pub fn run(args: &[String]) -> Result<()> {
         || !package
             .split('.')
             .all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
-        || version.split('.').count() != 3
-        || !version
-            .split('.')
-            .all(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
+        || stable_version(version).is_none()
     {
         return Err("expected a package identifier and stable numeric version".into());
     }
     let (schema, files) = manifests(Path::new(directory), package, version)?;
     if std::env::var("WINGET_CHECKED").as_deref() != Ok("true") {
         return Err("Windows manifest checks have not passed".into());
+    }
+    if mode == "--submit" {
+        require_latest(&format!("v{version}"))?;
     }
     let prefix = format!(
         "manifests/{}/{}/{}",
@@ -474,6 +590,56 @@ pub fn run(args: &[String]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_latest_stable_tag_can_submit() {
+        let mut release = json!({"tag_name":"v0.10.0", "draft":false, "prerelease":false});
+        assert_eq!(check_latest(&release, "v0.10.0").unwrap(), [0, 10, 0]);
+        let error = check_latest(&release, "v0.9.0").unwrap_err();
+        assert!(error.to_string().contains("latest Esdieff release v0.10.0"));
+        release["prerelease"] = json!(true);
+        assert!(check_latest(&release, "v0.10.0").is_err());
+    }
+
+    #[test]
+    fn selects_only_older_esdieff_submissions() {
+        let latest = [0, 10, 0];
+        assert_eq!(
+            older_submission("Add version: pederbe.Esdieff version 0.9.0", latest),
+            Some(("pederbe", "0.9.0"))
+        );
+        assert_eq!(
+            older_submission("PederBergan.Esdieff version 0.4.0", latest),
+            Some(("PederBergan", "0.4.0"))
+        );
+        for title in [
+            "New package: pederbe.Esdieff version 0.10.0",
+            "New version: pederbe.Esdieff version 0.10.1",
+            "New version: pederbe.Esdieff version 0.9.0-rc.1",
+            "New package: pederbe.Other version 0.9.0",
+            "Remove pederbe.Esdieff version 0.9.0",
+        ] {
+            assert_eq!(older_submission(title, latest), None, "{title}");
+        }
+    }
+
+    #[test]
+    fn closes_only_single_version_manifest_additions() {
+        let prefix = "manifests/p/pederbe/Esdieff/0.9.0/pederbe.Esdieff";
+        let mut files = json!([
+            {"filename":format!("{prefix}.yaml"),"status":"added"},
+            {"filename":format!("{prefix}.installer.yaml"),"status":"added"},
+            {"filename":format!("{prefix}.locale.en-US.yaml"),"status":"added"}
+        ]);
+        assert!(is_release_addition(&files, "pederbe", "0.9.0"));
+        assert!(!is_release_addition(&files, "PederBergan", "0.9.0"));
+        assert!(!is_release_addition(&files, "pederbe", "0.8.0"));
+        files[0]["status"] = json!("modified");
+        assert!(!is_release_addition(&files, "pederbe", "0.9.0"));
+        files[0]["status"] = json!("added");
+        files[0]["filename"] = json!("README.md");
+        assert!(!is_release_addition(&files, "pederbe", "0.9.0"));
+    }
     #[test]
     fn komac_template_seeding_preserves_same_line_and_later_edits() {
         let body = "### Pull request has been created with [komac](https://github.com/russellbanks/Komac) v2.17.2 :rocket: Same-line note.\n\nLater note.\n";
