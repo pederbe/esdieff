@@ -18,6 +18,7 @@ permissions:
 concurrency:
   group: distribution
   cancel-in-progress: false
+  queue: max
 
 jobs:
   manifests:
@@ -44,6 +45,15 @@ jobs:
           if ($env:PRIVATE -ne 'false' -or $env:RELEASE_ENABLED -ne 'true') { throw 'Release publication is not enabled' }
           if ($env:ENABLED -ne 'true') { throw 'Automatic WinGet submission is disabled' }
           if (!$env:TOKEN) { throw 'WINGET_TOKEN is not configured in the distribution environment' }
+      - name: Retire superseded WinGet submissions
+        if: inputs.submit_winget
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          cargo run --locked --manifest-path tools/release/Cargo.toml -- winget-retire $env:TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot retire superseded WinGet submissions' }
       - name: Download the published manifests and check their identity
         shell: pwsh
         env:

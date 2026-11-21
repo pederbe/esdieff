@@ -2,7 +2,7 @@
 use std::{
     env, fs,
     io::{self, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 fn quoted(s: &str) -> String {
@@ -15,9 +15,66 @@ fn quoted(s: &str) -> String {
     )
 }
 
+fn retire(root: &Path, args: &[String]) {
+    match args {
+        [api, path] if api == "api" && path == "repos/pederbe/esdieff/releases/latest" => {
+            println!(r#"{{"tag_name":"v0.10.0","draft":false,"prerelease":false}}"#);
+        }
+        [api, path] if api == "api" && path == "user" => {
+            println!(r#"{{"login":"fixture"}}"#);
+        }
+        _ if args.iter().any(|arg| arg == "search/issues") => {
+            assert!(
+                args.iter()
+                    .any(|arg| arg.contains("is:open author:fixture"))
+            );
+            println!(
+                r#"{{"incomplete_results":false,"total_count":2,"items":[{{"number":8,"title":"Add version: pederbe.Esdieff version 0.9.0"}},{{"number":9,"title":"New package: pederbe.Esdieff version 0.10.0"}}]}}"#
+            );
+        }
+        [api, path] if api == "api" && path == "repos/microsoft/winget-pkgs/pulls/8" => {
+            let state = if root.join("closed").exists() {
+                "closed"
+            } else {
+                "open"
+            };
+            println!(
+                r#"{{"title":"Add version: pederbe.Esdieff version 0.9.0","state":"{state}","merged":false,"changed_files":3,"user":{{"login":"fixture"}},"base":{{"repo":{{"full_name":"microsoft/winget-pkgs"}}}},"head":{{"repo":{{"full_name":"fixture/winget-pkgs"}}}}}}"#
+            );
+        }
+        [api, path] if api == "api" && path == "repos/microsoft/winget-pkgs/pulls/8/files" => {
+            let prefix = "manifests/p/pederbe/Esdieff/0.9.0/pederbe.Esdieff";
+            println!(
+                r#"[{{"filename":"{prefix}.yaml","status":"added"}},{{"filename":"{prefix}.installer.yaml","status":"added"}},{{"filename":"{prefix}.locale.en-US.yaml","status":"added"}}]"#
+            );
+        }
+        _ if args
+            == [
+                "api",
+                "--method",
+                "PATCH",
+                "repos/microsoft/winget-pkgs/pulls/8",
+                "--input",
+                "-",
+            ] =>
+        {
+            assert!(!root.join("closed").exists(), "closed the same PR twice");
+            let mut input = String::new();
+            io::stdin().read_to_string(&mut input).unwrap();
+            assert_eq!(input, r#"{"state":"closed"}"#);
+            fs::write(root.join("closed"), "yes").unwrap();
+            println!(r#"{{"state":"closed","merged":false}}"#);
+        }
+        _ => panic!("unexpected cleanup invocation: {args:?}"),
+    }
+}
+
 fn main() {
     let root = PathBuf::from(env::var_os("FIXTURE_ROOT").unwrap());
     let args: Vec<_> = env::args().skip(1).collect();
+    if env::var_os("FIXTURE_RETIRE").is_some() {
+        return retire(&root, &args);
+    }
     if args.first().map(String::as_str) == Some("submit") {
         assert!(!root.join("created").exists(), "created a duplicate PR");
         assert_eq!(args.last().unwrap(), "--yes");
@@ -29,7 +86,9 @@ fn main() {
         fs::write(root.join("created"), "yes").unwrap();
         return;
     }
-    if args.iter().any(|a| a == "search/issues") {
+    if args == ["api", "repos/pederbe/esdieff/releases/latest"] {
+        println!(r#"{{"tag_name":"v1.2.3","draft":false,"prerelease":false}}"#);
+    } else if args.iter().any(|a| a == "search/issues") {
         if root.join("created").exists() {
             println!(
                 "{{\"incomplete_results\":false,\"total_count\":1,\"items\":[{{\"number\":7,\"title\":\"Publisher.Tool version 1.2.3\"}}]}}"

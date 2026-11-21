@@ -16,6 +16,7 @@ fn run(args: &[String]) -> Result<()> {
         "licenses" => licenses::run(rest),
         "serve-artifacts" => serve::run(rest),
         "release-notes" => metadata::notes(rest),
+        "winget-retire" => winget_submission::retire(rest),
         "winget-submit" => winget_submission::run(rest),
         "package-linux" | "repository" | "homebrew" | "winget" | "winget-rename" => {
             distribution::run(args)

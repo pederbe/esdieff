@@ -76,7 +76,8 @@ controls.
   that released formula.
 - The [distribution workflow](../../.github/workflows/distribution.yml) validates
   and installs the published WinGet manifest before submitting it with Komac.
-  Microsoft controls catalog admission.
+  Submission accepts only the latest stable Esdieff release and closes older
+  pending Esdieff submissions before validation. Microsoft controls catalog admission.
 - The [website guide](../site/README.md#deployment) explains how a deployment's
   source revision relates to the latest published release.
 
@@ -86,7 +87,7 @@ synchronization, with the submission credential restricted to public repositorie
 Synchronization does not force or overwrite a divergent fork.
 
 To finish an interrupted WinGet submission or description update, retry the
-distribution workflow on `main` for the same release tag with submission enabled.
+distribution workflow on `main` with submission enabled for the latest release tag.
 It reuses matching PRs and preserves manual description edits. The PR description
 comes from check evidence. Its CLA checkbox reflects Microsoft's check and never
 signs an agreement.
