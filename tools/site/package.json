@@ -5,14 +5,14 @@
   "description": "Build-time tools for the Esdieff website. Not shipped to visitors.",
   "devDependencies": {
     "@tailwindcss/cli": "4.3.5",
-    "daisyui": "5.8.1",
+    "daisyui": "5.8.2",
     "tailwindcss": "4.3.5",
-    "wrangler": "4.165.0"
+    "wrangler": "4.166.0"
   },
   "overrides": {
     "miniflare": {
       "sharp": "0.35.5",
-      "undici": "8.12.4"
+      "undici": "8.13.1"
     }
   },
   "scripts": {
