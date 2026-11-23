@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-23
+
+### Dependencies
+
+- Update daily dependencies ([#145](https://github.com/pederbe/esdieff/pull/145))
+- Update daily dependencies ([#146](https://github.com/pederbe/esdieff/pull/146))
+- Update daily dependencies ([#153](https://github.com/pederbe/esdieff/pull/153))
+
+
 ## [0.5.0] - 2026-11-16
 
 ### Changed
