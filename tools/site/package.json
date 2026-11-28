@@ -7,12 +7,12 @@
     "@tailwindcss/cli": "4.3.5",
     "daisyui": "5.8.3",
     "tailwindcss": "4.3.5",
-    "wrangler": "4.168.0"
+    "wrangler": "4.169.0"
   },
   "overrides": {
     "miniflare": {
       "sharp": "0.35.5",
-      "undici": "8.13.1"
+      "undici": "8.14.0"
     }
   },
   "scripts": {
